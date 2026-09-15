@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<!-- 本地视觉测试台：模拟宿主深色聊天背景，直接加载本扩展的 style.css + index.js。
+     用法：test.html            → 只出现悬浮球
+           test.html?open=1     → 自动打开手机界面
+           test.html?app=qq     → 自动打开手机并进入 QQ 占位页
+           test.html?app=settings → 自动打开手机并进入设置页
+           test.html?app=settings&api=1 → 再推入「API 连接」子页
+           test.html?app=qq&menu=1 → 弹出消息页右上角「+」菜单
+           test.html?app=qq&addfriend=1 / &addgroup=1 → 直达添加好友 / 创建群聊表单
+           test.html?app=wechat → 自动打开手机并进入微信
+           test.html?app=wechat&wxtab=contacts|discover|me → 直达微信对应 Tab
+           test.html?app=wechat&wxchat=N → 进微信后点开第 N 个会话（1 起）
+           test.html?app=wechat&wxprofile=1 / &wxavatar=1 → 编辑资料页 / 选择头像浮层
+           test.html?app=wechat&wxmenu=1 / &wxaddfriend=1 / &wxaddgroup=1 → 加号菜单 / 添加朋友 / 发起群聊
+           test.html?app=wechat&wxgprof=1（配合 &wxchat=N）→ 群聊资料页
+           test.html?app=wechat&wxfprof=1（配合 &wxchat=N）→ 联系人资料页
+           test.html?app=wechat&wxvmoments=1（配合 &wxchat=N）→ 经资料页直达 TA 的朋友圈
+           test.html?app=wechat&wxmoments=1 → 直达朋友圈动态流（全局）
+           test.html?app=wechat&wxservice=1 → 切「我」Tab 后点「服务」行，进服务页
+           test.html?app=wechat&wxwallet=1（配合 &wxservice=1）→ 再点「钱包」行进钱包页
+           test.html?app=qq&fqzone=1（配合 &chat=N）→ 经好友资料页直达她的QQ空间
+           test.html?app=settings&wxpreset=1 → 再推入「微信私聊提示词」子页
+           任意 URL 加 &st=1 → 安装模拟宿主上下文（酒馆聊天楼层 + 设置持久化，
+           镜像到 localStorage 的 iPhone_mock_host），用于 iPhone_Message 楼层同步测试 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iPhone 扩展 · 本地测试台</title>
+<link rel="stylesheet" href="style.css?v=0.25.0">
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #1f2233 0%, #171a26 100%);
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    color: #cfd3e0;
+  }
+  .fake-chat { max-width: 720px; margin: 0 auto; padding: 48px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .bubble { max-width: 70%; padding: 12px 16px; border-radius: 14px; line-height: 1.7; font-size: 14px; }
+  .bubble--ai { align-self: flex-start; background: #2a2e42; border-top-left-radius: 4px; }
+  .bubble--user { align-self: flex-end; background: #3b5bd6; color: #fff; border-top-right-radius: 4px; }
+</style>
+</head>
+<body>
+  <div class="fake-chat">
+    <div class="bubble bubble--ai">这里是模拟的宿主聊天背景，用来检查扩展浮层在真实界面上的观感。</div>
+    <div class="bubble bubble--user">点击悬浮球打开手机～</div>
+    <div class="bubble bubble--ai">遮罩、动画与状态栏都应显示在这层内容之上。</div>
+  </div>
+  <script>
+    // ?st=1：模拟宿主上下文（须在 index.js 之前安装）。chat 楼层数组与
+    // extensionSettings 一起镜像到 localStorage（iPhone_mock_host），跨刷新保持，
+    // 用来端到端测试 iPhone_Message 楼层同步（新建 / 复用 / 追加）。测试脚本可经
+    // globalThis.__iPhoneMockST 直接改 chat、读 __rendered / __updated / __saves 计数。
+    if (new URLSearchParams(location.search).has('st')) {
+      const MOCK_KEY = 'iPhone_mock_host';
+      const loadMockState = () => {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(MOCK_KEY) || 'null');
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch { return {}; }
+      };
+      const initial = loadMockState();
+      const mockCtx = {
+        name1: '测试用户',
+        name2: '测试角色',
+        chat: Array.isArray(initial.chat) ? initial.chat : [],
+        extensionSettings: (initial.extensionSettings && typeof initial.extensionSettings === 'object')
+          ? initial.extensionSettings : {},
+        // chatMetadata（jsonl 首行）一并镜像：v0.15.0 起剧情数据（联系人 / 动态 /
+        // 我的资料）都存 chatMetadata.IPhone，随「聊天文件」走，这里跨刷新保持。
+        chatMetadata: (() => {
+          const restored = (initial.chatMetadata && typeof initial.chatMetadata === 'object')
+            ? initial.chatMetadata : {};
+          return { world_info: [], ...restored };
+        })(),
+        addOneMessage: (mes) => { mockCtx.__rendered.push(JSON.parse(JSON.stringify(mes))); },
+        updateMessageBlock: (index, mes) => { mockCtx.__updated.push({ index, mes: mes ? mes.mes : null }); },
+        saveChat: () => { mockCtx.__saves += 1; persistMockState(); },
+        saveSettingsDebounced: () => { persistMockState(); },
+        saveSettings: () => { persistMockState(); },
+        __rendered: [],
+        __updated: [],
+        __saves: 0,
+      };
+      const persistMockState = () => {
+        try {
+          localStorage.setItem(MOCK_KEY, JSON.stringify({
+            chat: mockCtx.chat,
+            extensionSettings: mockCtx.extensionSettings,
+            chatMetadata: mockCtx.chatMetadata,
+          }));
+        } catch {}
+      };
+      // ---- 模拟宿主的世界书引擎（对齐 TauriTavern ctx 的最小接口） ----
+      // 一本「测试世界书」：uid10 常驻（永远激活）、uid11 关键词触发（魔法/知世/
+      // 秘密/歌）、uid12 禁用。loadWorldInfo 返回标准 ST 条目结构（disable 字段）。
+      const MOCK_WORLDBOOK_NAME = '测试世界书';
+      const MOCK_WORLDBOOK_ENTRIES = {
+        10: { uid: 10, comment: '世界观·魔法', content: '世界设定：这是一个魔法与剑的世界，魔法由星辰之力驱动。', disable: false, constant: true, position: 0, key: ['魔法', '世界'] },
+        11: { uid: 11, comment: '知世的秘密', content: '知世隐藏着一个关于歌声的秘密。', disable: false, constant: false, position: 1, key: ['知世', '秘密', '歌'] },
+        12: { uid: 12, comment: '被禁用条目', content: '这段内容不该出现在任何提示词里。', disable: true, constant: false, position: 0, key: [] },
+      };
+      mockCtx.maxContext = 4096;
+      mockCtx.characters = [{ name: '测试角色', data: { extensions: { world: MOCK_WORLDBOOK_NAME } } }];
+      mockCtx.characterId = 0;
+      mockCtx.powerUserSettings = { persona_description_lorebook: '' };
+      mockCtx.getCharacterCardFields = () => ({
+        personaDescription: '', characterDescription: '测试角色卡描述。', characterPersonality: '',
+        characterDepthPrompt: '', scenario: '', creatorNotes: '',
+      });
+      mockCtx.loadWorldInfo = async (name) => (name === MOCK_WORLDBOOK_NAME
+        ? { entries: JSON.parse(JSON.stringify(MOCK_WORLDBOOK_ENTRIES)) }
+        : null);
+      mockCtx.getWorldInfoPrompt = async (scanChat) => {
+        const scanText = (scanChat || []).join('\n');
+        const entries = [];
+        for (const entry of Object.values(MOCK_WORLDBOOK_ENTRIES)) {
+          if (entry.disable) continue;
+          const hit = entry.constant
+            || (entry.key || []).some((k) => scanText.includes(k));
+          if (hit) {
+            entries.push({ world: MOCK_WORLDBOOK_NAME, uid: entry.uid, content: entry.content, position: entry.position });
+          }
+        }
+        return { worldInfoActivation: { entries }, worldInfoBefore: '', worldInfoAfter: '' };
+      };
+      // ---- 最小事件源（订阅 / 退订 / emit）：端到端测 CHAT_CHANGED 重建 ----
+      const mockListeners = {};
+      mockCtx.event_types = { CHAT_CHANGED: 'CHAT_CHANGED' };
+      mockCtx.eventSource = {
+        on: (type, fn) => { (mockListeners[type] || (mockListeners[type] = [])).push(fn); },
+        removeListener: (type, fn) => {
+          mockListeners[type] = (mockListeners[type] || []).filter((f) => f !== fn);
+        },
+        emit: (type, ...args) => {
+          for (const fn of mockListeners[type] || []) {
+            try { fn(...args); } catch {}
+          }
+        },
+      };
+      globalThis.__iPhoneMockST = mockCtx;
+      globalThis.SillyTavern = { getContext: () => mockCtx };
+    }
+  </script>
+  <script src="index.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    if (params.has('open') || params.has('app')) {
+      setTimeout(() => {
+        openIphoneUi();
+        const appId = params.get('app');
+        if (appId) {
+          // 后台标签里动画会被节流，openIphoneApp 的防重入锁可能未释放：轮询重试直到进入成功。
+          const openAppWhenReady = (retries) => {
+            const app = getIphoneAppById(appId);
+            const cell = document.querySelector(`.iphone-app-cell[data-app-id="${appId}"]`);
+            if (app && cell) openIphoneApp(app, cell);
+            if (!iphoneAppOpen && retries > 0) setTimeout(() => openAppWhenReady(retries - 1), 150);
+          };
+          setTimeout(() => openAppWhenReady(20), 500);
+          if (params.has('chat')) {
+            // ?chat=N：进入 QQ 后再点开第 N 个会话（1 起），直达聊天页做视觉验证。
+            const openChatWhenReady = (retries) => {
+              const item = document.querySelectorAll('.iphone-qq__chat')[Number(params.get('chat')) - 1];
+              if (item) item.click();
+              else if (retries > 0) setTimeout(() => openChatWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openChatWhenReady(20), 1200);
+          }
+          if (params.has('fprof') || params.has('fqzone')) {
+            // ?fprof=1（配合 ?chat=N）：进聊天页后再点右上角菜单，直达好友资料页；
+            // &fqzone=1 再点「她的QQ空间」行，直达她的空间（只显示她的动态）。
+            const openFprofWhenReady = (retries) => {
+              const menu = document.querySelector('.iphone-qqc__menu');
+              if (menu) menu.click();
+              else if (retries > 0) setTimeout(() => openFprofWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openFprofWhenReady(30), 1400);
+            if (params.has('fqzone')) {
+              const openFqzoneWhenReady = (retries) => {
+                const row = [...document.querySelectorAll('.iphone-qq__prof-link')]
+                  .find((el) => el.textContent.includes('QQ空间'));
+                if (row) row.click();
+                else if (retries > 0) setTimeout(() => openFqzoneWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openFqzoneWhenReady(30), 1800);
+            }
+          }
+          if (params.has('api')) {
+            // ?api=1：进入设置后再点「API 连接」行，直达 API 连接子页做视觉验证。
+            const openApiWhenReady = (retries) => {
+              const row = document.querySelector('.iphone-st__row');
+              if (row) row.click();
+              else if (retries > 0) setTimeout(() => openApiWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openApiWhenReady(20), 1200);
+          }
+          if (params.has('profile')) {
+            // ?profile=1：进入 QQ 后点消息页头部「我的头像」，直达编辑资料页做视觉验证。
+            const openProfWhenReady = (retries) => {
+              const av = document.querySelector('.iphone-qq__header .iphone-qq__me-avatar');
+              if (av) av.click();
+              else if (retries > 0) setTimeout(() => openProfWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openProfWhenReady(20), 1200);
+            if (params.has('avatar')) {
+              // ?profile=1&avatar=1：再点「点击更换头像」卡，直达选择头像浮层。
+              const openPickWhenReady = (retries) => {
+                const card = document.querySelector('.iphone-qq__prof-avcard');
+                if (card) card.click();
+                else if (retries > 0) setTimeout(() => openPickWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openPickWhenReady(20), 1600);
+            }
+          }
+          if (params.has('menu') || params.has('addfriend') || params.has('addgroup')) {
+            // ?menu=1：进入 QQ 后点右上角「+」弹出菜单；?addfriend=1 / ?addgroup=1
+            // 再点对应菜单项，直达添加好友 / 创建群聊表单做视觉验证。
+            const act = params.has('addgroup') ? 'group' : 'friend';
+            const openAddWhenReady = (retries) => {
+              const add = document.querySelector('.iphone-qq__add');
+              if (!add) {
+                if (retries > 0) setTimeout(() => openAddWhenReady(retries - 1), 150);
+                return;
+              }
+              add.click();
+              if (!params.has('menu')) {
+                const item = document.querySelector(`.iphone-qq__addmenu-item[data-act="${act}"]`);
+                if (item) item.click();
+                else if (retries > 0) setTimeout(() => openAddWhenReady(retries - 1), 150);
+              }
+            };
+            setTimeout(() => openAddWhenReady(20), 1200);
+          }
+          if (params.get('tab') || params.has('qzone')) {
+            // ?tab=contacts|dynamics 直达对应标签页；?qzone=1 再点开空间动态。
+            const openTabWhenReady = (retries) => {
+              const qq = document.querySelector('.iphone-qq');
+              if (qq && typeof qq._switchQqTab === 'function') {
+                const tab = params.get('tab');
+                if (tab === 'contacts') qq._switchQqTab(1);
+                if (tab === 'dynamics' || params.has('qzone')) qq._switchQqTab(2);
+                if (params.has('qzone')) {
+                  const dyn = document.querySelector('.iphone-qq__dyn2-row.is-click');
+                  if (dyn) dyn.click();
+                  else if (retries > 0) setTimeout(() => openTabWhenReady(retries - 1), 150);
+                  return;
+                }
+              } else if (retries > 0) {
+                setTimeout(() => openTabWhenReady(retries - 1), 150);
+              }
+            };
+            setTimeout(() => openTabWhenReady(20), 1400);
+          }
+          /* ---------- 微信（v0.18.0）：与 QQ 平行的同一套深链 ---------- */
+          if (params.get('wxtab')) {
+            // ?wxtab=contacts|discover|me 直达微信对应 Tab。
+            const wxtab = params.get('wxtab');
+            const idx = wxtab === 'contacts' ? 1 : wxtab === 'discover' ? 2 : wxtab === 'me' ? 3 : 0;
+            const openWxTabWhenReady = (retries) => {
+              const wx = document.querySelector('.iphone-wx');
+              if (wx && typeof wx._switchWechatTab === 'function') wx._switchWechatTab(idx);
+              else if (retries > 0) setTimeout(() => openWxTabWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openWxTabWhenReady(20), 1400);
+          }
+          if (params.has('wxchat')) {
+            // ?wxchat=N：进微信后点开第 N 个会话（1 起），直达聊天页；
+            // &wxfprof=1 再点右上角菜单直达联系人资料页；
+            // &wxvmoments=1 再点「她的朋友圈」行，直达 TA 的朋友圈（只显示 TA 的动态）。
+            const openWxChatWhenReady = (retries) => {
+              const item = document.querySelectorAll('.iphone-wx__chat')[Number(params.get('wxchat')) - 1];
+              if (item) item.click();
+              else if (retries > 0) setTimeout(() => openWxChatWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openWxChatWhenReady(20), 1200);
+            if (params.has('wxgprof') || params.has('wxfprof') || params.has('wxvmoments')) {
+              const openWxGprofWhenReady = (retries) => {
+                const menu = document.querySelector('.iphone-wxc__menu');
+                if (menu) menu.click();
+                else if (retries > 0) setTimeout(() => openWxGprofWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openWxGprofWhenReady(30), 1400);
+            }
+            if (params.has('wxvmoments')) {
+              const openWxVMomentsWhenReady = (retries) => {
+                const row = [...document.querySelectorAll('.iphone-wx__prof-link')]
+                  .find((el) => el.textContent.includes('朋友圈'));
+                if (row) row.click();
+                else if (retries > 0) setTimeout(() => openWxVMomentsWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openWxVMomentsWhenReady(30), 1800);
+            }
+          }
+          if (params.has('wxprofile') || params.has('wxavatar')) {
+            // ?wxprofile=1：切到「我」Tab 再点资料卡，直达编辑资料页；
+            // ?wxavatar=1 再点头像卡，直达选择头像浮层。
+            const openWxProfWhenReady = (retries) => {
+              const wx = document.querySelector('.iphone-wx');
+              if (wx && typeof wx._switchWechatTab === 'function') {
+                wx._switchWechatTab(3);
+                const card = document.querySelector('.iphone-wx__me-card');
+                if (card) card.click();
+                else if (retries > 0) setTimeout(() => openWxProfWhenReady(retries - 1), 150);
+              } else if (retries > 0) {
+                setTimeout(() => openWxProfWhenReady(retries - 1), 150);
+              }
+            };
+            setTimeout(() => openWxProfWhenReady(20), 1300);
+            if (params.has('wxavatar')) {
+              const openWxPickWhenReady = (retries) => {
+                const card = document.querySelector('.iphone-wx__prof-avcard');
+                if (card) card.click();
+                else if (retries > 0) setTimeout(() => openWxPickWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openWxPickWhenReady(20), 1700);
+            }
+          }
+          if (params.has('wxmenu') || params.has('wxaddfriend') || params.has('wxaddgroup')) {
+            // ?wxmenu=1：弹出微信右上角「+」菜单；&wxaddfriend=1 / &wxaddgroup=1
+            // 再点对应菜单项，直达添加朋友 / 发起群聊表单。
+            const act = params.has('wxaddgroup') ? 'group' : 'friend';
+            const openWxAddWhenReady = (retries) => {
+              const add = document.querySelector('.iphone-wx__add');
+              if (!add) {
+                if (retries > 0) setTimeout(() => openWxAddWhenReady(retries - 1), 150);
+                return;
+              }
+              add.click();
+              if (!params.has('wxmenu')) {
+                const item = document.querySelector(`.iphone-wx__addmenu-item[data-act="${act}"]`);
+                if (item) item.click();
+                else if (retries > 0) setTimeout(() => openWxAddWhenReady(retries - 1), 150);
+              }
+            };
+            setTimeout(() => openWxAddWhenReady(20), 1200);
+          }
+          if (params.has('wxmoments')) {
+            // ?wxmoments=1：切到「发现」Tab 再点「朋友圈」，直达动态流。
+            const openWxMomentsWhenReady = (retries) => {
+              const wx = document.querySelector('.iphone-wx');
+              if (wx && typeof wx._switchWechatTab === 'function') {
+                wx._switchWechatTab(2);
+                const row = document.querySelector('.iphone-wx__dsc-row.is-click');
+                if (row) row.click();
+                else if (retries > 0) setTimeout(() => openWxMomentsWhenReady(retries - 1), 150);
+              } else if (retries > 0) {
+                setTimeout(() => openWxMomentsWhenReady(retries - 1), 150);
+              }
+            };
+            setTimeout(() => openWxMomentsWhenReady(20), 1400);
+          }
+          if (params.has('wxservice') || params.has('wxwallet')) {
+            // ?wxservice=1：切到「我」Tab 再点「服务」行，直达服务页；
+            // &wxwallet=1 再点顶部「钱包」行，直达钱包页（余额在那里）。
+            const openWxServiceWhenReady = (retries) => {
+              const wx = document.querySelector('.iphone-wx');
+              if (wx && typeof wx._switchWechatTab === 'function') {
+                wx._switchWechatTab(3);
+                const row = document.querySelector('.iphone-wx__me-row[data-act="service"]');
+                if (row) row.click();
+                else if (retries > 0) setTimeout(() => openWxServiceWhenReady(retries - 1), 150);
+              } else if (retries > 0) {
+                setTimeout(() => openWxServiceWhenReady(retries - 1), 150);
+              }
+            };
+            setTimeout(() => openWxServiceWhenReady(20), 1300);
+            if (params.has('wxwallet')) {
+              const openWxWalletWhenReady = (retries) => {
+                const row = document.querySelector('.iphone-wx__svc-herocell[data-act="wallet"]');
+                if (row) row.click();
+                else if (retries > 0) setTimeout(() => openWxWalletWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openWxWalletWhenReady(30), 1700);
+            }
+          }
+          if (params.has('wxpreset')) {
+            // ?app=settings&wxpreset=1：设置页里点「微信私聊提示词」行，直达该子页。
+            const openWxPresetWhenReady = (retries) => {
+              const row = [...document.querySelectorAll('.iphone-st__row')]
+                .find((el) => el.textContent.includes('微信私聊提示词'));
+              if (row) row.click();
+              else if (retries > 0) setTimeout(() => openWxPresetWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openWxPresetWhenReady(20), 1300);
+          }
+        }
+      }, 300);
+    }
+  </script>
+</body>
+</html>

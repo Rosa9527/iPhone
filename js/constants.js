@@ -1,0 +1,618 @@
+// ===== iPhone（悬浮球手机）全局常量 =====
+const IPHONE_MODULE_NAME = 'iPhone';
+const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
+const IPHONE_MODULE_VERSION = '0.25.0';
+
+// ---------- DOM ID ----------
+// 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
+const IPHONE_BALL_ID = 'iphone-floating-ball';
+const IPHONE_OVERLAY_ID = 'iphone-overlay';
+const IPHONE_STAGE_ID = 'iphone-stage';
+const IPHONE_DEVICE_ID = 'iphone-device';
+const IPHONE_SCREEN_ID = 'iphone-screen';
+const IPHONE_WALLPAPER_ID = 'iphone-wallpaper';
+const IPHONE_STATUSBAR_ID = 'iphone-statusbar';
+const IPHONE_CLOCK_ID = 'iphone-statusbar-time';
+const IPHONE_BATTERY_FILL_ID = 'iphone-statusbar-battery-fill';
+const IPHONE_BATTERY_TEXT_ID = 'iphone-statusbar-battery-text';
+const IPHONE_ISLAND_ID = 'iphone-island';
+const IPHONE_HOME_ID = 'iphone-home';
+const IPHONE_GRID_ID = 'iphone-app-grid';
+const IPHONE_DOCK_ID = 'iphone-dock';
+const IPHONE_PAGE_DOTS_ID = 'iphone-page-dots';
+const IPHONE_HOME_INDICATOR_ID = 'iphone-home-indicator';
+const IPHONE_APP_LAYER_ID = 'iphone-app-layer';
+
+// ---------- 悬浮球 ----------
+const IPHONE_BALL_SIZE = 46;
+const IPHONE_BALL_DRAG_THRESHOLD = 8;
+const IPHONE_EDGE_GAP = 12;
+// 悬浮球位置只存 localStorage：纯 UI 插件无需进宿主 settings，与万华镜悬浮球同构。
+const IPHONE_BALL_POSITION_KEY = 'iPhone_floating_ball_position';
+
+// ---------- 层级 ----------
+// 宿主 UI 与其他扩展（万华镜）的浮层在 10000~20000 一档，本插件整体压在上面。
+const IPHONE_Z_OVERLAY = 21000;
+const IPHONE_Z_BALL = 21100;
+
+// ---------- 设计稿尺寸 ----------
+// 以 iPhone 15 Pro 的逻辑分辨率（393×852pt）为设计稿，JS 按窗口大小整体缩放，
+// 内部所有尺寸都写设计稿像素，保证任意窗口下比例与细节一致。
+const IPHONE_DESIGN_W = 393;
+const IPHONE_DESIGN_H = 852;
+const IPHONE_FRAME_PADDING = 12;
+// 缩放上限：窗口很大时允许适度放大（矢量内容缩放仍清晰），避免在大屏上显得太小。
+const IPHONE_SCALE_MAX = 1.35;
+
+// ---------- 状态栏 ----------
+// Battery Status API 不可用时的兜底电量（演示用）。
+const IPHONE_BATTERY_FALLBACK_LEVEL = 0.88;
+const IPHONE_CLOCK_TICK_MS = 15000;
+
+// ---------- 启动 ----------
+const IPHONE_BOOTSTRAP_RETRY_COUNT = 60;
+const IPHONE_BOOTSTRAP_RUNTIME_KEY = '__iphone_bootstrapped__';
+const IPHONE_ESC_KEY_HANDLER_KEY = '__iphone_esc_key_handler__';
+const IPHONE_CLOCK_TIMER_KEY = '__iphone_clock_timer__';
+
+// ---------- 应用注册表 ----------
+// 每个应用一条：id / 名称 / 图标样式类。图标一律走 CSS background-image 位图
+// （url 相对 style.css 解析到扩展目录内，DOM <img> 相对路径会被页面 URL 带偏）。
+// assets/qq-icon.jpg 取自 App Store 官方图标（iTunes Lookup API，640px 原图）；
+// assets/settings-icon.png 取 Wikimedia Commons「Settings (iOS).png」——苹果设置
+// 应用的经典真实图标（三齿轮银色凸版，1024px 原图缩至 256px）。
+
+const IPHONE_APPS = Object.freeze([
+  {
+    id: 'qq',
+    name: 'QQ',
+    iconClass: 'iphone-app-icon--qq',
+  },
+  {
+    id: 'wechat',
+    name: '微信',
+    iconClass: 'iphone-app-icon--wechat',
+  },
+  {
+    id: 'worldbook',
+    name: '世界书',
+    iconClass: 'iphone-app-icon--worldbook',
+    // 矢量图标直接内联 SVG（buildIphoneAppIcon 支持）：白描线翻开的书，
+    // 底色由 .iphone-app-icon--worldbook 的渐变给出（Apple Books 观感）。
+    iconSvg: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.8 5 9 4.4 6.6 4.4c-.9 0-1.7.1-2.4.3v13.6c.7-.2 1.5-.3 2.4-.3 2.4 0 4.2.6 5.4 1.8 1.2-1.2 3-1.8 5.4-1.8.9 0 1.7.1 2.4.3V4.7c-.7-.2-1.5-.3-2.4-.3-2.4 0-4.2.6-5.4 1.8z"/><path d="M12 6.2v13.6"/></g></svg>',
+  },
+  {
+    id: 'settings',
+    name: '设置',
+    iconClass: 'iphone-app-icon--settings',
+  },
+  {
+    id: 'logs',
+    name: '日志',
+    iconClass: 'iphone-app-icon--logs',
+    // 矢量图标直接内联 SVG（buildIphoneAppIcon 支持）：白描线终端窗口 + 「>_」
+    // 提示符，底色由 .iphone-app-icon--logs 的深色渐变给出（开发者控制台观感）。
+    iconSvg: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4.4" width="17.6" height="15.2" rx="3.4"/><path d="m7 9.4 3.2 2.9L7 15.2"/><path d="M12.6 15.4h4.4"/></g></svg>',
+  },
+]);
+
+// ---------- 设置应用（API 连接） ----------
+// 设置持久化：优先写入宿主（TauriTavern / SillyTavern）的 extensionSettings.IPhone，
+// 随宿主配置一起保存；宿主上下文不可用（本地 test.html 预览）或冻结不可扩展时，
+// 回退到 localStorage（键如下）。字段结构参考 Kaleidoscope 的 DEFAULT_SETTINGS。
+const IPHONE_SETTINGS_STORAGE_KEY = 'iPhone_settings';
+// 聊天文件绑定（v0.15.0）：手机上的剧情数据（联系人 / 群聊 / 聊天记录 / QQ空间
+// 动态 / 我的资料）存 chatMetadata[IPHONE_CHAT_META_KEY]，随聊天文件（jsonl 首行
+// chat_metadata）保存 / 加载——换聊天自动携带，新聊天自然是一台空手机。实现方式
+// 与 Kaleidoscope 的 kaleidoscope_values 相同。无宿主上下文（本地裸预览）时把
+// localStorage 当作「当前聊天」回退存储。
+const IPHONE_CHAT_META_KEY = 'iPhone';
+const IPHONE_CHAT_FALLBACK_STORAGE_KEY = 'iPhone_chat';
+// QQ 联系人聊天私聊提示词默认值（v0.10.0 的硬编码文案，v0.10.4 起可在
+// 「设置 · 私聊提示词」里编辑；v0.11.2 起各段由 iphoneBuildQqChatRequestMessages
+// 包进 XML 标签并附结构说明，聊天记录也按「发送者：「内容」」发送）。
+// persona = 角色扮演指令（包进 <roleplay_instructions>）；worldBook = 是否附带
+// 世界书设定（包进 <world_info>）；latestFloor = 是否附带酒馆里最新一楼的
+// iPhone_Message 聊天记录楼层（包进 <qq_chat_log>）；historyFloors = 附带酒馆
+// 主线最近对话的楼层数（0 = 不附带，包进 <tavern_context>）；format = 输出格式
+// 约定（包进 <output_format>，回复按每行 `联系人：「内容」` 解析成多条气泡）。
+// {{char}} 会替换成联系人名、{{user}} 替换成玩家名（见 iphoneBuildQqChatRequestMessages）。
+const IPHONE_QQ_CHAT_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在QQ聊天软件里扮演联系人「{{char}}」，正在和「{{user}}」互发消息。'
+    + '请始终以「{{char}}」的身份回复，贴合角色的性格、与对方的关系和当前剧情；'
+    + '语气口语化、简短，符合QQ聊天的习惯。',
+  worldBook: true,
+  latestFloor: true,
+  historyFloors: 5,
+  format: '每次回复输出一行或多行，每行格式为：{{char}}：「消息内容」'
+    + '（消息内容用「」包裹）。一行代表QQ里发出的一条消息，多行表示连续发送的多条短消息，'
+    + '不要把多条消息挤在同一行。'
+    + '只输出符合格式的消息本身，不要输出任何解释、旁白或格式以外的文字。',
+});
+// 附带最新 iPhone_Message 记录楼层时的正文上限（字符）：该楼层会随聊天不断追加
+// 增长，超长时截尾只保留最近的记录，开头补省略提示。
+const IPHONE_QQ_FLOOR_LOG_CAP = 8000;
+// QQ 联系人聊天的两条固定指导（v0.11.5 起，改写自写作向的 NPC_logic /
+// dialogue_guidance 框架，适配「扮演单一联系人、短消息往来」的聊天场景）：
+// 先是人后是设定 + 主体性/行为动机；对白生活化 + 禁播报腔 + 不代替玩家发言。
+// 默认随 system 附带（包进 <npc_logic> / <dialogue_guidance>），文案可在
+// 「设置 · 私聊提示词」里改写、清空即不附带；{{char}} / {{user}} 占位符照常解析。
+const IPHONE_QQ_NPC_LOGIC = `# 先是人，后是设定
+- 无论人物档案把性格写得多鲜明，{{char}}首先是一个普通人。她的行为、反应与决策，七成遵循普通人在同等情境下的常识与惯性，只留三成给档案赋予的个性。
+- 遇到具体情境时，先问自己："一个普通人在这处境下会怎么做、怎么反应？"再叠加人物设定做微调，而不是让设定直接决定行为。
+- 性格标签（理性、冷淡、毒舌、天真、要强……）体现在细节的倾向上——选什么词、回得多快、在哪里犹豫——而不是每次互动都把标签演一遍。
+- 设定越极端，越要克制：极端的一面只在少数关键时机集中显露。日常闲聊里，她照样会犹豫、会顺从惯性、会有和性格无关的琐碎反应。
+
+# 主体性
+- {{char}}按自己的立场、利益与动机说话做事，不会为了让{{user}}顺心而扭曲言行，也不刻意迎合讨好。
+
+# 行为动机（{{char}}如此；世界里的其他人物也各自如此）
+- 信息局限：只掌握自己视角内的情报，带着偏见与误判；拿到新信息时才会修正立场。
+- 欲望与亲密：有自己的生理需求与偏好，可能有固定、隐秘或复杂的亲密关系；会受吸引主动接近，也会因亲密关系形成利益捆绑与护短，甚至为争夺或隐瞒而妥协、撒谎、攻击。
+- 逐利：有想要的目标和想保住的利益，行动前权衡成本，风险过大时退让。
+- 情感：有自己的社交圈、情感需求与羁绊，会为在意的人冒险或让步；人物之间也会因恩怨站队、结盟或明争暗斗。
+- 生活：有独立的日常安排与作息节奏，特定时段做特定的事；节奏被打乱时，情绪与安排会跟着波动。
+- 嫉妒：对他人的优势（家世、才华、受宠、伴侣……）有攀比心与落差感，会暗中较劲、言语贬低、设局打压；利益冲突时优先阻碍自己嫉妒的对象，也可能表面逢迎、背后使绊。
+- 选择性外向：内向或社恐的角色在熟人面前会彻底放松，熟人就是她的情绪出口——对生人寡言冷淡，和玩熟了的人反而话多、爱闹、会翻旧账。{{user}}对{{char}}来说是生人还是熟人，以人设和聊天记录里的实际关系为准。`;
+
+const IPHONE_QQ_DIALOGUE_GUIDANCE = `# 先是人在说话，标签只占三成
+- 台词七成符合普通人的说话习惯，只留三成体现职业或性格特征——别让标签盖过"人"。
+- 句与句之间用语气词、连接词、口头禅自然衔接（"啊""呢""吧""诶""不过""其实"……），把情绪和态度带出来，而不是甩出一个个孤立的结论。
+- 传达信息也要带着说话人的立场和情绪，像"说给人听"，不是"读给系统听"。
+
+# 像真人发消息
+- 对白要有生活气息，说的是过日子的话，不是旁白或解说。
+- 要避免的写法（供对照）：
+  ✕ 无主语短句加句号连发，像在播报："发音合格。明日启用。范围，校内。"
+  ✕ 条目式、编号式表达："第一……第二……""其一……其二……"
+  ✕ 只有结论、没有语气与情绪，读起来像测试报告或系统日志。
+
+# 关系距离
+- 话量与直白程度随关系亲疏变化；同一人对不同对象要有反差——内向的人对挚友反而健谈，爱说话的人对特定对象会沉默。
+
+# 信息立场
+- 只基于自身立场发言：受限于所知，服务于所图，受制于情绪。
+- 会隐瞒、撒谎、答非所问、反问、岔开话题；会记错、夸大、曲解——不同人物对同一件事各有各的版本。
+- 不会为了方便对方理解，就把信息一口气全盘托出。
+
+# 不代替{{user}}
+- 只以{{char}}的身份回复；不替{{user}}发消息，不代写玩家的表态、承诺与决定——哪怕话头留了缺口，也留给玩家自己接。
+
+# 硬性禁止
+- 禁止"第一……第二……第三""顺带确认三个问题"式的编号对白。
+- 任何人的说话方式都不能透出机器人、系统、播报员的味道。`;
+// 微信转账 / 收款的写法约定（v0.24.0；v0.24.3 起强调标记必须单独成条；v0.25.0 起
+// 群聊要写收款人）：作为固定指导附在微信私聊 / 群聊提示词里（包进
+// <transfer_guidance>）。模型写 `[转账]金额` / 群聊写 `[转账@群友名]金额` 即渲染成
+// 转账气泡，写 `[收款]` 即确认收下对方转来的钱——两条都只按此格式，不要把金额写成
+// 正文里的数字。收下后楼层里自动补的 `[已收款]金额` 由插件书写、模型只读。
+const IPHONE_WECHAT_TRANSFER_GUIDANCE = `# 转账与收款
+- 转账必须**单独成一条消息、单独占一行**：内容以 \`[转账]\` 开头，紧接金额——阿拉伯数字、可带小数（如 \`[转账]500\`、\`[转账]88.88\`），金额之后可以接一句用途说明（如 \`[转账]500 这个月房租\`）。
+- 严禁把标记混进叙述中间或挂在句尾。像「大道寺知世：「还有，下次定投之前，先跟我说一声。[转账]50000 这个月先撑过去」」这样贴在长句末尾是**识别不出来**的：要说的话与转账分成两条消息发——先说「还有，下次定投之前，先跟我说一声……」，再单独发一条 \`[转账]50000 这个月先撑过去\`。
+- **群聊里转账必须写明收款人**：写成 \`[转账@群友名]金额\`——@ 与名字一起写在方括号里，名字必须是群成员列表里的名字（如 \`[转账@苏晚]60 上次的代付\`）。不写 @ 时默认转给「{{user}}」。私聊不用写 @：\`[转账]金额\` 的收款人就是对话双方。
+- **每一笔转账只有收款人本人能收下**：确认收钱要在**收款人自己那条消息**里写 \`[收款]金额\`（行首写收款人的名字），金额与对方转来的一致；别的成员写 [收款] 不算数。收款人是「{{user}}」时不用你代收——玩家会在界面上点收款（你也可以写收款人随后口头应下，让钱先挂着）。
+- 收到「{{user}}」转来的钱、决定收下时，单独发一条 \`[收款]金额\`；这条不会显示成新气泡，而是把「{{user}}」那笔待确认的转账标记成已被接收。拒收或推辞就不要发 [收款]，用普通消息说明即可。
+- 任何一方收下转账后，聊天记录里会自动多出一条 \`[已收款]金额\` 记账行：那是界面写的、不需要你写，读到时按「那笔钱已被收下」理解即可。
+- 转账金额要符合双方关系与当前剧情（日常往来多为几元到几百元，大额要有由头），不要凭空发巨款；一次回复里最多一笔转账。
+- 只有确实发生钱款往来时才用这两个标记，日常闲聊不要滥用。`;
+// QQ 群聊提示词默认值（v0.12.0）：群聊会话用的提示词组合，可在
+// 「设置 · 群聊提示词」里编辑，结构与私聊预设一致。persona = 角色扮演指令
+//（包进 <roleplay_instructions>）；worldBook / latestFloor / historyFloors 与
+// 私聊同义；format = 输出格式约定（回复按每行 `成员名：「内容」` 解析成群聊
+// 气泡，行首成员名区分发言人）。占位符：{{group}} = 群名（persona / format 里
+// 的 {{char}} 也替换成群名）、{{user}} = 玩家名；npcLogic / dialogueGuidance
+// 沿用上面两条固定指导（组装时 {{char}} 替换成「群成员」，指导面向全体成员）。
+// 群成员列表（<group_members>）由建群数据自动生成，不属于预设。
+const IPHONE_QQ_GROUP_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在QQ群聊「{{group}}」里，同时扮演除「{{user}}」以外的所有群成员——'
+    + '每个成员的性格、立场与说话方式以世界书、主线剧情和聊天记录为准。'
+    + '让他们像真实群聊一样你一言我一语，不需要每次全员发言，谁想说谁说。'
+    + '「{{user}}」由玩家亲自扮演：不要替「{{user}}」发消息，也不要代写「{{user}}」的表态。',
+  worldBook: true,
+  latestFloor: true,
+  historyFloors: 5,
+  format: '每次回复输出一行或多行，每行格式为：成员名：「消息内容」'
+    + '（消息内容用「」包裹）。成员名必须是群成员列表中的名字（不要用「{{user}}」）。'
+    + '一行代表群里发出的一条消息，多行表示一个或多个成员连续发送的多条短消息，'
+    + '不要把多条消息挤在同一行。通常一次回复 1 到 4 条，由当前正在说话的成员发出。'
+    + '只输出符合格式的消息本身，不要输出任何解释、旁白或格式以外的文字。',
+  npcLogic: IPHONE_QQ_NPC_LOGIC,
+  dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+});
+// QQ空间动态生成（v0.14.0 框架，v0.15.0 起带点赞与评论）：空间默认没有任何动态，
+// 用户下拉刷新时调用一次对话 API，由 AI 挑选合适的联系人代发动态。提示词来自
+// 「设置 · 动态提示词」预设（v0.16.0 起独立成组：settings.promptPresets.qzone），
+// 另外附带全部联系人名单；下面两条是动态专属的默认指导与输出格式（预设里可改，
+// 清空即不附带；{{user}} / {{char}} 占位符照常解析）。
+// 输出是「动态区块」：每条动态第一行是 `联系人名：「动态正文」`，后接点赞行与
+// 评论块（评论行支持「A 回复 B：」表达互评与贴主回复）；点赞人 / 评论人同样只能
+// 是名单里的联系人（由组装方校验，名单外的名字直接丢弃）。v0.15.1 起点赞与评论
+// 默认必备（格式附带完整示例供模型对照），只有剧情上确实无人互动才允许省略。
+const IPHONE_QZONE_DYNAMIC_GUIDANCE = `# 任务
+- 你要替 QQ 联系人们更新他们的 QQ 空间：从联系人名单里挑选 1~3 位「此刻最有可能发动态」的人，每人写一条。
+- 谁发动态、发什么，要贴合当前剧情与各自的人设：刚经历过值得感慨、分享或吐槽的事的人优先；也可以是与主线无直接关系的日常生活分享。
+- 动态是发在自己 QQ 空间里的个人内容（心情、见闻、吐槽、感慨……），不是发给「{{user}}」的私聊消息；不要 @ 「{{user}}」，也不要把聊天记录原样搬过来。
+- 动态发出后要有人气：每条动态都要写点赞名单与评论区，像真实 QQ 空间那样热闹但克制——点赞 1~4 人、评论 1~4 条；只有剧情上确实无人问津时才允许省略，这种例外要少用。
+- 点赞与评论同样只来自联系人名单里的人：谁会点赞、会留什么评论，都要贴合各自的性格、立场与彼此关系。不同人的评论要有不同味道：有人接话、有人吐槽、有人抖机灵、有人认真关心，不要写千篇一律的捧场话。
+- 评论要有来有回：贴主（发动态的人）回复评论是常事，其他联系人之间互相接话、抬杠也很自然；一条评论勾出两三句往复最有真实感。
+- 每位联系人每次最多发一条动态；本次没选到的联系人就不要出现。
+
+# 动态写法
+- 像真人发的动态：口语化、有情绪、有生活气息，长度一两句话到一小段皆可。
+- 先是人，后是设定：语气与关注点要符合该联系人的性格、立场与当下处境；评论同样是人在说话，不是模板。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_QZONE_DYNAMIC_FORMAT = '每条动态占一个区块，输出 1~3 个区块。每个区块由动态正文、点赞、评论三部分组成，完整示例（人名与内容仅示意，必须换成联系人名单里的名字和贴合剧情的内容）：\n\n'
+  + '小A：「今天加班到现在，地铁都停了，走路回家吹吹风倒也舒服。」\n'
+  + '点赞：小B、小C\n'
+  + '评论：\n'
+  + '小B：这么晚才下班？路上注意安全。\n'
+  + '小C：哈哈哈哈我也是，明天一起拼车不？\n'
+  + '小A 回复 小B：没事，就当散步了。\n\n'
+  + '格式说明：区块第一行为「联系人名：「动态正文」」——联系人名必须是联系人名单中的名字（不要用「{{user}}」），正文用「」包裹、里面不要换行；'
+  + '「点赞：」一行写点赞联系人名，用「、」分隔，1~4 人；「评论：」单独占一行，下面每行一条评论，1~4 条，格式为「评论人：内容」，'
+  + '回复则在评论人后面加「 回复 被回复人」（被回复人是本条动态里已出现过的评论人或贴主，贴主回复自己评论区的评论也很常见）。'
+  + '点赞与评论每条动态都要写，只有剧情上确实无人互动时才可省略。'
+  + '只输出符合格式的动态区块，不要输出任何解释、旁白或格式以外的文字。';
+// QQ空间「回复帖子」（v0.17.0）：玩家在某条动态下留言后，调用一次对话 API 由
+// AI 生成新的评论回复（贴主或其他联系人应声）。下面两条是回复专属的默认指导与
+// 输出格式（「设置 · 动态提示词」里可改，清空即不附带）。回复同样只认联系人
+// 名单（组装方丢弃名单外与玩家自己的名字）；被回复人可以是玩家、贴主或评论区里
+// 出现过的人，其余降级成普通评论。{{user}} = 玩家（酒馆人设名，v0.17.1 起也是
+// 玩家在评论区里的默认署名；编辑资料填过自定义QQ昵称时，组装方另有身份说明把
+// 两者对应起来）。
+const IPHONE_QZONE_REPLY_GUIDANCE = `# 任务
+- 你正在 QQ 空间的一条动态下面：玩家「{{user}}」留下了新评论，请从联系人名单里挑 1~3 位来回应（贴主和其他联系人都可以），生成新的评论回复。
+- 谁会来回、回谁、说什么，都要贴合各自的性格、立场与彼此关系：贴主看到评论大多会回；其他联系人凑热闹、接话、抬杠也很自然；确实没人想接话时可以只回一条。
+- 不要替玩家「{{user}}」发言：TA 的评论由玩家自己写；评论区里 TA 的署名见玩家身份说明。
+- 新评论要顺着评论区已有的对话往下接，不复读别人说过的话；玩家点名回复了谁，优先让那个人（或贴主）应声。
+
+# 写法
+- 评论是评论区里的短对话，不是私聊消息，也不是动态正文：口语化、一两句话，不要写成大段独白。
+- 先是人，后是设定：语气与关注点符合该联系人的性格、立场与当下处境。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_QZONE_REPLY_FORMAT = '每条新评论占一行，输出 1~3 行。每行格式为「评论人：内容」，回复某人时写成「评论人 回复 被回复人：内容」。完整示例（人名与内容仅示意，必须换成联系人名单里的名字和贴合剧情的内容）：\n\n'
+  + '小B：哈哈哈哈你也太惨了\n'
+  + '小A 回复 {{user}}：周末一起吃饭，我请客\n\n'
+  + '格式说明：评论人必须是联系人名单中的名字，不要替玩家说话；「被回复人」可以是玩家本人（写「{{user}}」或评论区里 TA 的署名）、这条动态的贴主，或评论区里出现过的联系人。'
+  + '内容一行写完、不要换行；不要输出点赞行、动态正文或任何解释、旁白。只输出符合格式的评论行。';
+// 「设置 · 动态提示词」（v0.16.0 起独立成组）：QQ空间动态生成（下拉刷新）用的
+// 提示词组合，存 settings.promptPresets.qzone。persona / npcLogic /
+// dialogueGuidance / worldBook / historyFloors 与私聊预设同义（生成时所有
+// {{char}} 统一替换成「联系人」——各段指导面向名单里的每个人）；guidance =
+// 动态写作指导（包进 <dynamics_guidance>），format = 动态区块输出格式（包进
+// <output_format>，默认文案见上面两条常量，清空则整段不附带）；
+// replyGuidance / replyFormat（v0.17.0 起）= 玩家评论后的回复指导与输出格式
+//（包进 <reply_guidance> / <output_format>），同一条动态可反复回复。
+const IPHONE_QZONE_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在QQ空间里扮演「{{user}}」的QQ联系人们。'
+    + '每位联系人的性格、立场与说话方式以世界书、主线剧情和聊天记录为准；'
+    + '他们发布的动态与评论区的往来互动都要贴合各自当下的处境与彼此关系。',
+  worldBook: true,
+  latestFloor: false, // 动态提示词默认不带 QQ 记录楼层（私聊/群聊默认带）
+  historyFloors: 5,
+  npcLogic: IPHONE_QQ_NPC_LOGIC,
+  dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+  guidance: IPHONE_QZONE_DYNAMIC_GUIDANCE,
+  format: IPHONE_QZONE_DYNAMIC_FORMAT,
+  replyGuidance: IPHONE_QZONE_REPLY_GUIDANCE,
+  replyFormat: IPHONE_QZONE_REPLY_FORMAT,
+});
+
+// ---------- 微信（v0.18.0） ----------
+// 与 QQ 平行的一套仿真：同一套宿主适配（host.js）、同一套提示词组装范式与
+// 楼层同步机制，数据与界面完全独立（微信联系人 / 群聊 / 朋友圈动态 / 我的资料
+// 存 chatMetadata.IPhone 的 wechatData / wechatProfile）。
+// 微信联系人聊天默认提示词：结构与 IPHONE_QQ_CHAT_PRESET_DEFAULT 一致，
+// 文案按微信的语气调整（更克制、更短、更像日常微信聊天）。
+const IPHONE_WECHAT_CHAT_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在微信里扮演联系人「{{char}}」，正在和「{{user}}」互发消息。'
+    + '请始终以「{{char}}」的身份回复，贴合角色的性格、与对方的关系和当前剧情；'
+    + '语气口语化、简短，符合微信聊天的习惯。',
+  worldBook: true,
+  latestFloor: true,
+  historyFloors: 5,
+  format: '每次回复输出一行或多行，每行格式为：{{char}}：「消息内容」'
+    + '（消息内容用「」包裹）。一行代表微信里发出的一条消息，多行表示连续发送的多条短消息，'
+    + '不要把多条消息挤在同一行。'
+    + '只输出符合格式的消息本身，不要输出任何解释、旁白或格式以外的文字。',
+});
+// 微信群聊提示词默认值：{{group}} = 群名（persona / format 里的 {{char}} 也替换成
+// 群名），{{user}} = 玩家名；npcLogic / dialogueGuidance 沿用 QQ 的两条固定指导
+// （组装时 {{char}} 替换成「群成员」，指导面向全体成员）。
+const IPHONE_WECHAT_GROUP_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在微信群聊「{{group}}」里，同时扮演除「{{user}}」以外的所有群成员——'
+    + '每个成员的性格、立场与说话方式以世界书、主线剧情和聊天记录为准。'
+    + '让他们像真实微信群一样你一言我一语，不需要每次全员发言，谁想说谁说。'
+    + '「{{user}}」由玩家亲自扮演：不要替「{{user}}」发消息，也不要代写「{{user}}」的表态。',
+  worldBook: true,
+  latestFloor: true,
+  historyFloors: 5,
+  format: '每次回复输出一行或多行，每行格式为：成员名：「消息内容」'
+    + '（消息内容用「」包裹）。成员名必须是群成员列表中的名字（不要用「{{user}}」）。'
+    + '一行代表群里发出的一条消息，多行表示一个或多个成员连续发送的多条短消息，'
+    + '不要把多条消息挤在同一行。通常一次回复 1 到 4 条，由当前正在说话的成员发出。'
+    + '只输出符合格式的消息本身，不要输出任何解释、旁白或格式以外的文字。',
+  npcLogic: IPHONE_QQ_NPC_LOGIC,
+  dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+});
+// 朋友圈动态生成（下拉刷新）：微信版「朋友圈」的动态写作指导与输出格式。朋友圈
+// 与 QQ空间最大的差别：点赞是「❤ 名单」一行、评论是「评论人：内容」短句，评论
+// 区里朋友之间互相回复同样写成「A 回复 B：」。其余约束（只挑名单内的人、每位
+// 每次最多一条、贴合人设与剧情）与 QQ空间一致。
+const IPHONE_WECHAT_MOMENTS_GUIDANCE = `# 任务
+- 你要替微信联系人们更新他们的朋友圈：从联系人名单里挑选 1~3 位「此刻最有可能发朋友圈」的人，每人写一条。
+- 谁发、发什么，要贴合当前剧情与各自的人设：刚经历过值得分享、感慨或吐槽的事的人优先；也可以是日常生活的随手分享。
+- 朋友圈是发给自己微信好友看的个人内容（照片配文、心情、见闻……），不是发给「{{user}}」的私聊消息；不要 @ 「{{user}}」，也不要把聊天记录原样搬过来。
+- 动态发出后要有互动：每条动态都要写点赞名单与评论区，像真实朋友圈那样有来有回——点赞 1~4 人、评论 1~4 条；只有剧情上确实无人问津时才允许省略，这种例外要少用。
+- 点赞与评论同样只来自联系人名单里的人：谁会点赞、会留什么评论，都要贴合各自的性格、立场与彼此关系。不同人的评论要有不同味道：有人捧场、有人吐槽、有人抖机灵、有人认真关心，不要写千篇一律的客套话。
+- 评论要有来有回：贴主回复评论是常事，其他联系人之间互相接话也很自然；共同好友之间在评论区聊起来最有真实感。
+- 每位联系人每次最多发一条动态；本次没选到的联系人就不要出现。
+
+# 朋友圈写法
+- 像真人发朋友圈：口语化、有情绪、有生活气息，长度一两句话到一小段皆可。
+- 先是人，后是设定：语气与关注点要符合该联系人的性格、立场与当下处境；评论同样是人在说话，不是模板。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_WECHAT_MOMENTS_FORMAT = '每条动态占一个区块，输出 1~3 个区块。每个区块由动态正文、点赞、评论三部分组成，完整示例（人名与内容仅示意，必须换成联系人名单里的名字和贴合剧情的内容）：\n\n'
+  + '小A：「今天加班到现在，地铁都停了，走路回家吹吹风倒也舒服。」\n'
+  + '点赞：小B、小C\n'
+  + '评论：\n'
+  + '小B：这么晚才下班？路上注意安全。\n'
+  + '小C：哈哈哈哈我也是，明天一起拼车不？\n'
+  + '小A 回复 小B：没事，就当散步了。\n\n'
+  + '格式说明：区块第一行为「联系人名：「动态正文」」——联系人名必须是联系人名单中的名字（不要用「{{user}}」），正文用「」包裹、里面不要换行；'
+  + '「点赞：」一行写点赞联系人名，用「、」分隔，1~4 人；「评论：」单独占一行，下面每行一条评论，1~4 条，格式为「评论人：内容」，'
+  + '回复则在评论人后面加「 回复 被回复人」（被回复人是本条动态里已出现过的评论人或贴主，贴主回复自己评论区的评论也很常见）。'
+  + '点赞与评论每条动态都要写，只有剧情上确实无人互动时才可省略。'
+  + '只输出符合格式的动态区块，不要输出任何解释、旁白或格式以外的文字。';
+const IPHONE_WECHAT_MOMENTS_REPLY_GUIDANCE = `# 任务
+- 你正在微信朋友圈的一条动态下面：玩家「{{user}}」留下了新评论，请从联系人名单里挑 1~3 位来回应（贴主和其他联系人都可以），生成新的评论回复。
+- 谁会来回、回谁、说什么，都要贴合各自的性格、立场与彼此关系：贴主看到评论大多会回；共同好友凑热闹、接话也很自然；确实没人想接话时可以只回一条。
+- 不要替玩家「{{user}}」发言：TA 的评论由玩家自己写；评论区里 TA 的署名见玩家身份说明。
+- 新评论要顺着评论区已有的对话往下接，不复读别人说过的话；玩家点名回复了谁，优先让那个人（或贴主）应声。
+
+# 写法
+- 评论是评论区里的短对话，不是私聊消息，也不是动态正文：口语化、一两句话，不要写成大段独白。
+- 先是人，后是设定：语气与关注点符合该联系人的性格、立场与当下处境。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_WECHAT_MOMENTS_REPLY_FORMAT = '每条新评论占一行，输出 1~3 行。每行格式为「评论人：内容」，回复某人时写成「评论人 回复 被回复人：内容」。完整示例（人名与内容仅示意，必须换成联系人名单里的名字和贴合剧情的内容）：\n\n'
+  + '小B：哈哈哈哈你也太惨了\n'
+  + '小A 回复 {{user}}：周末一起吃饭，我请客\n\n'
+  + '格式说明：评论人必须是联系人名单中的名字，不要替玩家说话；「被回复人」可以是玩家本人（写「{{user}}」或评论区里 TA 的署名）、这条动态的贴主，或评论区里出现过的联系人。'
+  + '内容一行写完、不要换行；不要输出点赞行、动态正文或任何解释、旁白。只输出符合格式的评论行。';
+// 「设置 · 朋友圈提示词」：朋友圈动态生成与回复用的提示词组合，存
+// settings.promptPresets.wechatMoments。字段与 IPHONE_QZONE_PRESET_DEFAULT 同义。
+const IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在微信朋友圈里扮演「{{user}}」的微信联系人们。'
+    + '每位联系人的性格、立场与说话方式以世界书、主线剧情和聊天记录为准；'
+    + '他们发布的动态与评论区的往来互动都要贴合各自当下的处境与彼此关系。',
+  worldBook: true,
+  latestFloor: false, // 与 QQ空间一致：动态提示词默认不带记录楼层
+  historyFloors: 5,
+  npcLogic: IPHONE_QQ_NPC_LOGIC,
+  dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+  guidance: IPHONE_WECHAT_MOMENTS_GUIDANCE,
+  format: IPHONE_WECHAT_MOMENTS_FORMAT,
+  replyGuidance: IPHONE_WECHAT_MOMENTS_REPLY_GUIDANCE,
+  replyFormat: IPHONE_WECHAT_MOMENTS_REPLY_FORMAT,
+});
+// 「我」的微信资料占位演示值：微信号留空时回退这个；昵称默认跟随酒馆 {{user}}。
+const IPHONE_WECHAT_ME = Object.freeze({
+  wxId: 'wxid_8f2k1m9v0q',
+  region: '地区',
+});
+// 无宿主上下文（本地 test.html 预览）时的兜底昵称，与 QQ 同款（IPHONE_QQ_ME_FALLBACK_NAME
+// 定义在 apps.js，拼接后声明晚于本文件，不能在这里引用——重复一次字面量保持两份同步）。
+const IPHONE_WECHAT_ME_FALLBACK_NAME = '小橘子';
+// 上传头像的裁剪编辑器参数（QQ / 微信共用）：输出 256px 见方的 JPEG data URL；
+// 缩放档位 1~4 倍（1 = 短边铺满裁剪框），拖动范围由图片与缩放实时夹取。
+const IPHONE_AVATAR_CROP_SIZE = 256;
+const IPHONE_AVATAR_CROP_MIN_SCALE = 1;
+const IPHONE_AVATAR_CROP_MAX_SCALE = 4;
+const IPHONE_AVATAR_CROP_STEP = 0.01;
+// 「我的头像」内置可选款式（微信）：Fluent Emoji 3D 表情脸（MIT），经 CSS 背景类
+// 加载（assets/wechat-avatar-*.png，见 style.css 对应类）；me = 默认头像
+//（灰底人形占位，无覆盖类），与 QQ 的 presets 结构一致。
+const IPHONE_WECHAT_ME_AVATAR_PRESETS = Object.freeze([
+  { id: 'me', label: '默认' },
+  { id: 'grin', label: '呲牙' },
+  { id: 'joy', label: '破涕为笑' },
+  { id: 'cool', label: '墨镜' },
+  { id: 'wink', label: '眨眼' },
+  { id: 'kiss', label: '飞吻' },
+  { id: 'think', label: '思考' },
+  { id: 'plead', label: '委屈' },
+  { id: 'nerd', label: '学霸' },
+  { id: 'monocle', label: '单片镜' },
+  { id: 'hug', label: '拥抱' },
+]);
+// 微信「服务 / 钱包」的占位演示数据（v0.22.1，纯前端）：存 chatMetadata.IPhone
+// 的 wechatWallet 字段，随聊天文件走；读取时按这套默认值归一化补齐（金额均为元）。
+// 后续接真实数据时只需替换 getter 的数据来源，页面不用动。
+const IPHONE_WECHAT_WALLET_DEFAULTS = Object.freeze({
+  balance: 5478.65,  // 零钱余额：服务页绿卡「钱包」下方与钱包页「零钱」行都显示它
+  lctRate: 1.1,      // 零钱通收益率（%，钱包页「零钱通」后的橙色小字）
+  cards: Object.freeze([
+    { id: 'wc1', bank: '招商银行', tail: '6688' },
+    { id: 'wc2', bank: '中国工商银行', tail: '3021' },
+    { id: 'wc3', bank: '中国建设银行', tail: '5512' },
+  ]),
+});
+// QQ 聊天的记录楼层段头（iPhone_Message 楼层；与微信的段头并列、互不干扰）：
+// 私聊 `与「联系人」的QQ聊天记录：`、群聊 `群「群名」的QQ群聊记录：`、
+// 空间动态 `QQ空间动态：`。六个段头（含微信侧三个）由 IPHONE_FLOOR_SECTION_RE 统一识别。
+const IPHONE_QQ_FLOOR_HEADS = Object.freeze({
+  chat: '与「{name}」的QQ聊天记录：',
+  group: '群「{name}」的QQ群聊记录：',
+  dynamics: 'QQ空间动态：',
+});
+// 微信聊天的记录楼层段头（iPhone_Message 楼层；与 QQ 的段头并列、互不干扰）：
+// 私聊 `与「联系人」的微信聊天记录：`、群聊 `群「群名」的微信群聊记录：`、
+// 朋友圈 `朋友圈动态：`。六个段头（含 QQ 侧三个）由 IPHONE_FLOOR_SECTION_RE 统一识别。
+const IPHONE_WECHAT_FLOOR_HEADS = Object.freeze({
+  chat: '与「{name}」的微信聊天记录：',
+  group: '群「{name}」的微信群聊记录：',
+  moments: '朋友圈动态：',
+});
+// ---------- 日志系统（「日志」应用） ----------
+// 架构参考 SoulLink 的 views-log.js：后台常驻捕获（console / window 错误 /
+// Promise 拒绝 / 全局 fetch 旁路 / 宿主事件桥接），统一进内存环形缓冲；
+// 「日志」应用只是这块缓冲的查看器，关闭应用捕获不中断。
+const IPHONE_LOG_LEVELS = Object.freeze(['debug', 'info', 'warn', 'error']);
+const IPHONE_LOG_MAX_ENTRIES_DEFAULT = 2000; // 内存环形缓冲默认容量（设置里可调 100–20000）
+const IPHONE_LOG_RENDER_CAP = 300;           // 手机屏幕 DOM 上限：只渲染最近 N 行，超出显示提示
+const IPHONE_LOG_SEARCH_DEBOUNCE_MS = 120;   // 搜索输入防抖
+const IPHONE_LOG_DETAIL_CAP = 30000;         // 单条日志展开详情（请求头/体 + 响应头/体）截断
+const IPHONE_LOG_REQUEST_BODY_CAP = 12000;   // 网络捕获请求体截断（QQ 提示词通常几 KB）
+const IPHONE_LOG_RESPONSE_BODY_CAP = 20000;  // 网络捕获响应体截断
+const IPHONE_LOG_FULL_BODY_MAX = 10;         // 完整请求/响应体（仅对话接口）最多保留份数
+const IPHONE_LOG_FULL_BODY_EXPORT_COUNT = 3; // 「请求体」按钮一次导出的最近份数
+
+// 噪音过滤：Tavern 内部刷屏（世界书扫描 / 宏变量 dump / 正则跳过 / 事件总线 /
+// 元数据保存 / 非模型 IPC）。注意真实环境里 [WI] / [Prompt Template] 常以 info
+// 级别输出，只过滤 debug 会漏网，故 console 的 debug+info 都过滤；warn/error 永不误伤。
+const IPHONE_LOG_NOISE_PREFIXES = Object.freeze([
+  '[WI]',
+  '[Prompt Template]',
+  'getRegexedString: Skipping script',
+  'Event emitted: ',
+  'WI entry ',
+  'Chat Completions: saving token cache',
+  'Saving metadata',
+  'Saved metadata',
+  'Debounced metadata save cancelled',
+  '---calling setPromptString',
+  'calling runGenerate',
+  'generating prompt',
+  'Auto-continue is disabled by user.',
+  'Skipping extension interceptors for dry run',
+  'Core/all messages:',
+  'skipWIAN not active',
+]);
+// 网络 debug 噪音：TauriTavern 内部 IPC 与聊天存档轮询，与模型对话无关。
+const IPHONE_LOG_NETWORK_NOISE_PATTERNS = Object.freeze([
+  /ipc\.localhost/,
+  /\/api\/chats\//,
+]);
+// error 级噪音：宿主扩展更新检查的已知报错，按内容精确匹配，不误伤其他 error。
+const IPHONE_LOG_ERROR_NOISE_PATTERNS = Object.freeze([
+  /Authenticated Git remote URLs are not supported/,
+  /Failed to get extension version/,
+  /\/api\/extensions\/version/,
+]);
+// 桥接到日志的宿主事件（debug 级、source=host）。事件名 → ctx.event_types 键：
+// TauriTavern 需要 event_types 的值（如 GENERATION_ENDED），裸名不触发；标准
+// SillyTavern 的 event_types 值是 snake_case。统一经 ctx.event_types 解析，取不到回退原字符串。
+const IPHONE_LOG_HOST_EVENT_TYPE_KEYS = Object.freeze({
+  appReady: 'APP_READY',
+  extensionsLoaded: 'EXTENSIONS_LOADED',
+  settingsLoaded: 'SETTINGS_LOADED',
+  chatChanged: 'CHAT_CHANGED',
+  groupSelected: 'GROUP_SELECTED',
+  messageSent: 'MESSAGE_SENT',
+  messageReceived: 'MESSAGE_RECEIVED',
+  streamStarted: 'STREAM_STARTED',
+  streamEnded: 'STREAM_ENDED',
+  generationStarted: 'GENERATION_STARTED',
+  generationEnded: 'GENERATION_ENDED',
+  messageDeleted: 'MESSAGE_DELETED',
+  onlineStatusChanged: 'ONLINE_STATUS_CHANGED',
+});
+const IPHONE_LOG_HOST_EVENTS = Object.freeze(Object.keys(IPHONE_LOG_HOST_EVENT_TYPE_KEYS));
+
+// 热重载共享状态键：脚本重新执行时新旧实例共用同一份缓冲 / 暂停状态 / 捕获包装，
+// 只把「捕获目标」换成当前实例的函数，日志不中断、不重复包装。
+const IPHONE_LOG_STATE_KEY = '__iphoneLogState__';          // 缓冲 + 序列 + 暂停状态
+const IPHONE_LOG_CAPTURE_KEY = '__iphoneLogCapture__';      // console/window/promise 捕获
+const IPHONE_LOG_EVENT_KEY = '__iphoneLogEventHandlers__';  // 宿主事件包装表
+const IPHONE_LOG_NETWORK_KEY = '__iphoneNetworkCapture__';  // fetch 包装
+
+const IPHONE_DEFAULT_SETTINGS = Object.freeze({
+  apiUrl: '',       // OpenAI 兼容 Base URL（如 https://api.example.com/v1）
+  apiKey: '',       // Bearer 密钥
+  model: '',        // 当前使用的模型（下拉选择或手动输入）
+  modelOptions: [], // 最近一次「连接」拉取到的模型列表
+  apiConcurrencyEnabled: true, // 并发限制：false = 不限制（与 Kaleidoscope 同名同默认）
+  apiConcurrencyLimit: 3,      // 并发上限 1–99，实际发送时按名额排队
+  apiReasoningEffort: '',      // 思考强度（reasoning_effort），空 = 不发送
+  // 日志系统（与 SoulLink 同名同默认）：logMaxEntries = 内存环形缓冲容量
+  // （100–20000），logConsoleNoise = 过滤已知噪音（世界书扫描 / 内部保存等刷屏）。
+  logMaxEntries: 2000,
+  logConsoleNoise: true,
+  // QQ「我的资料」（qqProfile）与好友 / 群聊 / QQ空间动态（qqData）v0.15.0 起
+  // 不再存这里：它们是剧情数据，随当前聊天文件走（chatMetadata.IPhone，见
+  // host.js 的 iphoneGetQqStorage）——开启新对话手机就是一台全新空机。本表只剩
+  // 纯配置（API 连接 / 日志 / 世界书排除 / 提示词预设），这些跨聊天共享。
+  // 世界书（条目排除）：excluded = { 世界书名: [uid, …] }。勾选排除的条目
+  // 拼聊天提示词时跳过，不发给 AI（shape 与 SoulLink 的 worldInfo.excluded 一致）。
+  worldInfo: { excluded: {} },
+  // 提示词预设：各聊天场景的提示词组合（「设置 · 私聊提示词」/「群聊提示词」/
+  // 「动态提示词」/「朋友圈提示词」里编辑）。qqChat = QQ 联系人聊天；groupChat =
+  // QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；wechatChat /
+  // wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）。
+  promptPresets: {
+    qqChat: { ...IPHONE_QQ_CHAT_PRESET_DEFAULT },
+    groupChat: { ...IPHONE_QQ_GROUP_PRESET_DEFAULT },
+    qzone: { ...IPHONE_QZONE_PRESET_DEFAULT },
+    wechatChat: { ...IPHONE_WECHAT_CHAT_PRESET_DEFAULT },
+    wechatGroup: { ...IPHONE_WECHAT_GROUP_PRESET_DEFAULT },
+    wechatMoments: { ...IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT },
+  },
+});
+// 思考强度选项：reasoning_effort 是 OpenAI 兼容标准参数（Ollama /v1/chat/completions
+// 与 OpenAI 官方均支持）；none=关闭思考，low/medium/high/max=思考级别，空=不发送。
+// 选项与默认值同 Kaleidoscope 的 REASONING_EFFORT_OPTIONS。
+const IPHONE_REASONING_EFFORT_OPTIONS = Object.freeze([
+  { value: '', label: '默认（不发送）' },
+  { value: 'none', label: '关闭思考' },
+  { value: 'low', label: '低' },
+  { value: 'medium', label: '中' },
+  { value: 'high', label: '高' },
+  { value: 'max', label: '最大' },
+]);
+// 「并发限制」子页的预设档位（另有「不限制」一项与 1–99 自定义输入）。
+const IPHONE_CONCURRENCY_PRESETS = Object.freeze([1, 2, 3, 5, 8, 10]);
+// 模型列表请求超时：跨域时先走宿主代理再回退直连，两跳共享这个预算。
+const IPHONE_MODEL_LIST_TIMEOUT_MS = 20000;
+// 对话请求超时（QQ 好友聊天页发消息）：模型生成可能较慢，给足 2 分钟。
+const IPHONE_CHAT_TIMEOUT_MS = 120000;
+
+// ---------- iPhone_Message 楼层 ----------
+// QQ 聊天记录同步进酒馆聊天时用的专用楼层：整个楼层的文本必须是
+// <iPhone_Message>...</iPhone_Message> 的最外层完整包裹。只认这个固定标签名。
+const IPHONE_FLOOR_TAG_NAME = 'iPhone_Message';
+const IPHONE_FLOOR_TAG_OPEN = `<${IPHONE_FLOOR_TAG_NAME}>`;
+const IPHONE_FLOOR_TAG_CLOSE = `</${IPHONE_FLOOR_TAG_NAME}>`;
+// 记录楼层的段头识别（v0.18.0 起 QQ 与微信共用同一楼层，按段头切分）：
+// QQ 私聊/群聊/空间动态 + 微信私聊/群聊/朋友圈动态，六种段头并列，互不干扰。
+// 用整行做段键（match[0]），分组只用于兼容旧写法，取用时不看分组。
+const IPHONE_FLOOR_SECTION_RE = /^(?:与?「(.+)」的QQ聊天记录|群「(.+)」的QQ群聊记录|QQ空间动态|与?「(.+)」的微信聊天记录|群「(.+)」的微信群聊记录|朋友圈动态)：$/;
+// 记录段的标签（v0.21.0 起）：外层仍是 <iPhone_Message>，标签内每个记录段
+// 各自再套一层自己的标签；段标签自 v0.23.0 起改用方括号包（只有最外层
+// iPhone_Message 保留尖括号），形如
+//   <iPhone_Message>
+//   [微信_私聊_杨知世]
+//   与「杨知世」的微信聊天记录：
+//   {{user}}：「…」
+//   [/微信_私聊_杨知世]
+//   </iPhone_Message>
+// 标签名按「应用_类型_对象名」拼（私聊 / 群聊用联系人 / 群名，动态两类无名字）；
+// 名字里的空白与标签非法字符统一换成下划线（见 iphoneFloorSectionTagName）。
+// 解析时整行只有一对开 / 闭标签、且标签名命中下面名字正则的才算段标签行；
+// v0.21.0–v0.22.x 的尖括号段标签照常读取，下一次同步重建时自动换成方括号
+// （原地迁移，见 host.js 的 iphoneFloorParseTagLine）。段头（IPHONE_FLOOR_SECTION_RE）
+// 与段标签都可以独立识别，旧格式（裸段头）照常读，下一次同步时按段头反推标签
+// 自动迁移（见 iphoneFloorBuildInner）。
+const IPHONE_FLOOR_SECTION_TAG_HEADS = Object.freeze({
+  qqChat: 'QQ_私聊_{name}',
+  qqGroup: 'QQ_群聊_{name}',
+  qqDynamics: 'QQ空间动态',
+  wechatChat: '微信_私聊_{name}',
+  wechatGroup: '微信_群聊_{name}',
+  wechatMoments: '朋友圈动态',
+});
+// 段标签名本体：不含外侧定界符与开标签前的 /（两种定界符由解析函数剥离）。
+const IPHONE_FLOOR_SECTION_TAG_NAME_RE = /^(?:(?:QQ|微信)_(?:私聊|群聊)_[^\s[\]<>/]+|QQ空间动态|朋友圈动态)$/;
+
+// ---------- 悬浮球 ----------
+// 造型为 Apple LOGO（simple-icons「Apple」，MIT 图标集，白色填充 + 投影）。
+const IPHONE_APPLE_LOGO_PATH = 'M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701';

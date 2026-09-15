@@ -1,0 +1,6992 @@
+/* ===== iPhone（悬浮球手机）样式 ===== */
+/* 全部选择器以 .iphone- 前缀隔离，避免污染宿主样式。 */
+
+/* ---------- 悬浮球：Apple LOGO ---------- */
+/* 透明底 + 白色苹果图形：本体靠 drop-shadow 双层投影与任何壁纸拉开层次。 */
+.iphone-ball {
+  position: fixed;
+  z-index: 21100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  filter: drop-shadow(0 3px 7px rgba(0, 0, 0, 0.55)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.iphone-ball svg {
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+}
+
+.iphone-ball:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 14px rgba(255, 255, 255, 0.28));
+}
+
+.iphone-ball:active,
+.iphone-ball.is-dragging {
+  cursor: grabbing;
+  transform: scale(1.12);
+}
+
+/* ---------- 全屏遮罩 ---------- */
+.iphone-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 21000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 18, 0.45);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  font-family: -apple-system, 'SF Pro Text', 'SF Pro Display', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iphone-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* stage：由 JS 写入精确宽高（设计稿 × 缩放），flex 居中 */
+.iphone-stage {
+  position: relative;
+  flex: none;
+}
+
+/* ---------- 机身：钛金属边框 + 黑色屏幕衬底 ---------- */
+.iphone-device {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 417px;
+  height: 876px;
+  padding: 12px;
+  border-radius: 68px;
+  transform-origin: top left;
+  background: linear-gradient(160deg, #6e6e74 0%, #2c2c30 16%, #101013 50%, #2c2c30 84%, #5c5c62 100%);
+  box-shadow:
+    0 40px 90px rgba(0, 0, 0, 0.6),
+    0 10px 28px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.85);
+}
+
+/* 侧键：左（静音/音量）右（电源），贴在边框外侧 */
+.iphone-device::before,
+.iphone-device::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #4a4a50, #1c1c1f);
+}
+
+.iphone-device::before {
+  left: -3px;
+  top: 168px;
+  height: 190px;
+  background:
+    linear-gradient(90deg, #4a4a50, #1c1c1f) top / 100% 34px no-repeat,
+    linear-gradient(90deg, #4a4a50, #1c1c1f) 0 52px / 100% 62px no-repeat,
+    linear-gradient(90deg, #4a4a50, #1c1c1f) 0 128px / 100% 62px no-repeat;
+}
+
+.iphone-device::after {
+  right: -3px;
+  left: auto;
+  top: 218px;
+  height: 98px;
+  background: linear-gradient(270deg, #4a4a50, #1c1c1f);
+}
+
+.iphone-screen {
+  position: relative;
+  width: 393px;
+  height: 852px;
+  border-radius: 56px;
+  background: #000;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px #000, inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- 壁纸：iOS 风格极光渐变 ---------- */
+.iphone-wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(90% 60% at 18% 12%, rgba(255, 92, 148, 0.5), transparent 60%),
+    radial-gradient(80% 55% at 85% 20%, rgba(64, 128, 255, 0.42), transparent 62%),
+    radial-gradient(75% 55% at 70% 78%, rgba(150, 84, 255, 0.45), transparent 60%),
+    radial-gradient(70% 50% at 22% 88%, rgba(0, 190, 255, 0.32), transparent 58%),
+    linear-gradient(165deg, #171a33 0%, #10122b 45%, #0b0c1e 100%);
+}
+
+/* ---------- 灵动岛 ---------- */
+.iphone-island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 3;
+  width: 126px;
+  height: 37px;
+  transform: translateX(-50%);
+  border-radius: 20px;
+  background: #000;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.iphone-island__camera {
+  position: absolute;
+  top: 50%;
+  right: 13px;
+  width: 11px;
+  height: 11px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 34%, #23324a 0%, #0a0f1a 55%, #04060a 100%);
+}
+
+.iphone-island__camera::after {
+  content: '';
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+  background: rgba(90, 140, 255, 0.55);
+}
+
+/* ---------- 状态栏 ---------- */
+.iphone-statusbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 54px;
+  padding: 14px 30px 0 36px;
+  color: var(--sb-color, #fff);
+  pointer-events: none;
+}
+
+.iphone-statusbar__time {
+  min-width: 44px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.iphone-statusbar__right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.iphone-statusbar__signal {
+  width: 18px;
+  height: 12px;
+}
+
+.iphone-statusbar__wifi {
+  width: 16px;
+  height: 12px;
+}
+
+.iphone-statusbar__battery {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 1px;
+}
+
+.iphone-statusbar__battery i {
+  order: -1;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.iphone-statusbar__battery svg {
+  width: 28px;
+  height: 13px;
+}
+
+/* 主屏（壁纸）上状态栏是浅色内容；应用内（白底）切换为深色内容 */
+.iphone-screen[data-context='home'] {
+  --sb-color: #fff;
+  --indicator-color: #fff;
+}
+
+.iphone-screen[data-context='app'] {
+  --sb-color: #0a0a0a;
+  --indicator-color: #111;
+}
+
+/* ---------- 主屏 ---------- */
+.iphone-home {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.35, 1), filter 0.32s ease;
+  transform-origin: 50% 42%;
+}
+
+/* 应用打开时主屏后压变暗（iOS 层级纵深） */
+.iphone-home.is-under-app {
+  transform: scale(0.92);
+  filter: brightness(0.62);
+}
+
+.iphone-app-grid {
+  position: absolute;
+  top: 98px;
+  left: 20px;
+  right: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 18px;
+  justify-items: center;
+  align-items: start;
+}
+
+.iphone-app-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 88px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-app-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 15px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35), inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+  transition: transform 0.16s ease;
+}
+
+.iphone-app-cell:active .iphone-app-icon {
+  transform: scale(0.86);
+}
+
+/* QQ：App Store 官方图标位图（assets/qq-icon.jpg，640px 原图）。
+   图片经 CSS url() 加载 —— 相对 style.css 解析到扩展目录内；
+   DOM <img> 的相对路径会被宿主页面 URL 带偏，所以图标一律走背景图。 */
+.iphone-app-icon--qq {
+  background: url('assets/qq-icon.jpg') center / cover no-repeat #fff;
+}
+
+.iphone-app-label {
+  max-width: 84px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- 页面圆点 ---------- */
+.iphone-page-dots {
+  position: absolute;
+  bottom: 136px;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.iphone-page-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.iphone-page-dot.is-current {
+  background: #fff;
+}
+
+/* ---------- Dock ---------- */
+.iphone-dock {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 26px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  height: 96px;
+  padding: 0 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 38px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(26px) saturate(1.5);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+}
+
+/* ---------- Home 指示条 ---------- */
+.iphone-home-indicator {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  z-index: 6;
+  width: 140px;
+  height: 5px;
+  transform: translateX(-50%);
+  border-radius: 3px;
+  background: var(--indicator-color, #fff);
+  opacity: 0.9;
+  cursor: grab;
+  touch-action: none;
+}
+
+/* ---------- 应用层 ---------- */
+.iphone-app-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: 56px;
+  background: #fff;
+  visibility: hidden;
+}
+
+.iphone-app-layer[aria-hidden='false'] {
+  visibility: visible;
+}
+
+/* ---------- 应用内页骨架 ---------- */
+.iphone-app {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f6f7f9;
+}
+
+.iphone-app__header {
+  display: flex;
+  align-items: flex-end;
+  height: 100px;
+  padding-bottom: 10px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.96);
+  justify-content: center;
+}
+
+.iphone-app__title {
+  color: #111;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.iphone-app__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 60px;
+}
+
+.iphone-app__name {
+  margin: 16px 0 0;
+  color: #333;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.iphone-app__hint {
+  margin: 8px 0 0;
+  color: #9aa0a8;
+  font-size: 13px;
+}
+
+/* ---------- QQ 消息页（复刻 QQ NT 手机端静态界面） ---------- */
+/* 布局：头部（淡蓝紫渐变区）→ 白色圆角面板（搜索 + 会话列表）→ 灰底 → 底部标签栏。
+   颜色 / 尺寸均按参考截图取样折算到 393pt 设计稿。 */
+
+.iphone-qq {
+  background: #f0f0f2;
+}
+
+.iphone-qq__page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 头部：渐变从屏幕顶（状态栏后方）铺到白色面板上沿 */
+.iphone-qq__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 62px 16px 12px;
+  background: linear-gradient(180deg, #e9effd 0%, #f3f7fe 100%);
+}
+
+.iphone-qq__me-avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: url('assets/qq-avatar-me.png') center / cover no-repeat #dfe8ff;
+  box-shadow: 0 2px 6px rgba(46, 62, 96, 0.14);
+}
+
+.iphone-qq__me-info {
+  min-width: 0;
+}
+
+.iphone-qq__me-name {
+  margin: 0;
+  color: #17181a;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.iphone-qq__me-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 3px 0 0;
+  color: #979ca4;
+  font-size: 12.5px;
+  line-height: 1;
+}
+
+.iphone-qq__status-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #17c137;
+}
+
+.iphone-qq__add {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+}
+
+.iphone-qq__add svg {
+  width: 23px;
+  height: 23px;
+}
+
+/* 右上角「+」弹出菜单：白色圆角卡 + 右上小箭头，缩放淡入（对照真实 QQ 加号面板） */
+.iphone-qq__addmenu {
+  position: absolute;
+  top: 104px;
+  right: 10px;
+  z-index: 3;
+  display: none;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(30, 40, 70, 0.18);
+  transform-origin: top right;
+}
+
+.iphone-qq__addmenu::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 20px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.iphone-qq__addmenu.is-open {
+  display: block;
+  animation: iphone-qq-addmenu-in 130ms ease-out;
+}
+
+@keyframes iphone-qq-addmenu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.iphone-qq__addmenu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 10px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15.5px;
+  text-align: left;
+}
+
+.iphone-qq__addmenu-item:active {
+  background: #f2f3f5;
+}
+
+.iphone-qq__addmenu-item svg {
+  flex: none;
+  width: 21px;
+  height: 21px;
+}
+
+/* 白色面板：搜索条 + 各 Tab 页内容；内部自滚动，不挤占头部与标签栏 */
+.iphone-qq__sheet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 12px 0 6px;
+}
+
+/* 三个 Tab 页（消息 / 联系人 / 动态）共用容器，非当前页隐藏 */
+.iphone-qq__tabpage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+
+.iphone-qq__tabpage::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-qq__tabpage.is-hidden {
+  display: none;
+}
+
+.iphone-qq__search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 37px;
+  margin: 0 18px;
+  border-radius: 19px;
+  background: #f5f8ff;
+  color: #8e8e96;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.iphone-qq__search svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-qq__chats {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.iphone-qq__chat {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.iphone-qq__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  /* 自定义 / 上传图是内联 background-image：不写尺寸的话 256px 的图会按原始
+     像素铺（repeat），小头像里只露出左上角一小块。 */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* 我方消息头像：默认占位与消息页头部同图（编辑资料里可换）。
+   必须放在下方 --f1/--f2/--f3 款式类之前，选中款式才能盖过默认底图。 */
+.iphone-qq__out-avatar {
+  background: url('assets/qq-avatar-me.png') center / cover no-repeat #dfe8ff;
+}
+
+.iphone-qq__chat-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 11px;
+}
+
+.iphone-qq__chat-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.iphone-qq__chat-title {
+  overflow: hidden;
+  color: #17181a;
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-qq__chat-time {
+  flex: none;
+  margin-left: auto;
+  color: #b9bdc5;
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+
+.iphone-qq__chat-preview {
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: #9aa0a8;
+  font-size: 14px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 空会话占位：没有任何好友/群聊时的提示行 */
+.iphone-qq__chats-empty {
+  margin: 0;
+  padding: 46px 24px;
+  color: #b6bac1;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 底部标签栏：与页面同底色，仅选中项为 QQ 蓝 */
+.iphone-qq__tabbar {
+  display: flex;
+  flex: none;
+  padding: 6px 8px 27px;
+}
+
+.iphone-qq__tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-qq__tab svg {
+  width: 24px;
+  height: 24px;
+}
+
+.iphone-qq__tab i {
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.25;
+}
+
+.iphone-qq__tab.is-active {
+  color: #0099ff;
+}
+
+/* ---------- QQ 聊天页（纯文字版）：列表 ↔ 会话两层视图切换 ---------- */
+/* 列表视图包住原有 page + tabbar；聊天视图为全屏覆盖层。 */
+.iphone-qq__listview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.iphone-qq__chatview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  background: #f0f0f2;
+}
+
+.iphone-qq__chatview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+@keyframes iphone-qqc-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.iphone-qqc {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 头部：返回 + 标题（群聊带成员数）+ 状态行 + 菜单（整页平灰、无渐变） */
+.iphone-qqc__header {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 58px 14px 4px 10px;
+}
+
+.iphone-qqc__back,
+.iphone-qqc__menu {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-qqc__back {
+  width: 36px;
+  height: 36px;
+  margin-top: 2px;
+}
+
+.iphone-qqc__back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-qqc__menu {
+  width: 34px;
+  height: 34px;
+  margin-top: 4px;
+}
+
+.iphone-qqc__menu svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* 标题 + 状态行：群聊标题为「群名(成员数)」，过长省略 */
+.iphone-qqc__identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-qqc__title {
+  margin: 0;
+  overflow: hidden;
+  color: #17181a;
+  font-size: 17.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-qqc__status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 7px 0 0;
+  overflow: hidden;
+  color: #17181a;
+  font-size: 13.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* 消息流：时间分割线 + 左右气泡（超出滚动，隐藏滚动条） */
+.iphone-qqc__stream {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 12px 14px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.iphone-qqc__stream::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-qqc__time {
+  margin: 20px 0 12px;
+  color: #8c8b90;
+  font-size: 12.5px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+/* 系统提示行：好友/群聊暂无消息记录时的灰色居中占位 */
+.iphone-qqc__sys {
+  display: inline-block;
+  margin: 26px auto 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.055);
+  color: #9b9ba1;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.iphone-qqc__stream > .iphone-qqc__sys {
+  display: block;
+  width: fit-content;
+}
+
+.iphone-qqc__msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.iphone-qqc__msg .iphone-qq__avatar {
+  width: 44px;
+  height: 44px;
+}
+
+.iphone-qqc__msg--out {
+  justify-content: flex-end;
+}
+
+/* 群聊成员气泡：头像右侧一列（发言人名字标签 + 气泡），私聊无名字列 */
+.iphone-qqc__msgcol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.iphone-qqc__mname {
+  margin: 0 0 0 7px;
+  color: #8c8b90;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.iphone-qqc__bubble {
+  overflow-wrap: break-word;
+  max-width: 248px;
+  padding: 10px 13px;
+  border-radius: 20px;
+  background: #fffcf7;
+  color: #1f2125;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+.iphone-qqc__msg--out .iphone-qqc__bubble {
+  background: #b9e0f7;
+  color: #17181a;
+}
+
+/* 长消息分段：段间留空（对齐参考截图的段落排版），不做首行缩进 */
+.iphone-qqc__bubble p {
+  margin: 0;
+}
+
+.iphone-qqc__bubble p + p {
+  margin-top: 14px;
+}
+
+/* 「对方正在输入…」占位气泡：灰字弱化 */
+.iphone-qqc__bubble--typing {
+  color: #8f939c;
+}
+
+/* 发送失败的错误系统行：红字提示 */
+.iphone-qqc__sys--error {
+  color: #e64340;
+}
+
+/* 输入栏：白色胶囊输入框 + 浅蓝发送按钮 + 六个工具图标 */
+.iphone-qqc__composer {
+  flex: none;
+  padding: 8px 16px 27px;
+}
+
+.iphone-qqc__inputrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iphone-qqc__input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 16px;
+  border: none;
+  outline: none;
+  border-radius: 21px;
+  background: #fff;
+  color: #17181a;
+  font-family: inherit;
+  font-size: 14.5px;
+}
+
+.iphone-qqc__input::placeholder {
+  color: #c0c4cc;
+}
+
+.iphone-qqc__send {
+  flex: none;
+  width: 70px;
+  height: 42px;
+  border: none;
+  border-radius: 21px;
+  /* 输入框为空时浅蓝（QQ 同款的「不可用」观感），有字后由 js 加 is-active 转深 */
+  background: #7ac8f9;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15.5px;
+  transition: background-color 0.15s ease;
+}
+
+/* 输入框有字：发送键变深成 QQ 蓝 */
+.iphone-qqc__send.is-active {
+  background: #0099ff;
+}
+
+.iphone-qqc__tools {
+  display: flex;
+  justify-content: space-evenly;
+  padding: 14px 4px 0;
+  color: #1a1a1a;
+}
+
+.iphone-qqc__tool {
+  display: inline-flex;
+}
+
+.iphone-qqc__tool svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ---------- 好友头像占位（DiceBear 生成的演示素材，CSS 背景图加载） ---------- */
+.iphone-qq__avatar--f1 {
+  background: url('assets/qq-avatar-f1.png') center / cover no-repeat #ffd5dc;
+}
+
+.iphone-qq__avatar--f2 {
+  background: url('assets/qq-avatar-f2.png') center / cover no-repeat #c0aede;
+}
+
+.iphone-qq__avatar--f3 {
+  background: url('assets/qq-avatar-f3.png') center / cover no-repeat #ffd5dc;
+}
+
+/* 「我的头像」可选拓展款：Fluent Emoji 3D 可爱小动物（编辑资料 · 选择头像用）。
+   素材为透明底，垫各色柔和底色；规则须排在默认背景规则之后才能覆盖。 */
+.iphone-qq__avatar--cat {
+  background: url('assets/qq-avatar-cat.png') center / cover no-repeat #e8eef5;
+}
+
+.iphone-qq__avatar--dog {
+  background: url('assets/qq-avatar-dog.png') center / cover no-repeat #fdeedd;
+}
+
+.iphone-qq__avatar--fox {
+  background: url('assets/qq-avatar-fox.png') center / cover no-repeat #ffe8d9;
+}
+
+.iphone-qq__avatar--rabbit {
+  background: url('assets/qq-avatar-rabbit.png') center / cover no-repeat #ffe4ec;
+}
+
+.iphone-qq__avatar--panda {
+  background: url('assets/qq-avatar-panda.png') center / cover no-repeat #e8e8ee;
+}
+
+.iphone-qq__avatar--frog {
+  background: url('assets/qq-avatar-frog.png') center / cover no-repeat #e0f3dd;
+}
+
+.iphone-qq__avatar--penguin {
+  background: url('assets/qq-avatar-penguin.png') center / cover no-repeat #dbe9f5;
+}
+
+.iphone-qq__avatar--pig {
+  background: url('assets/qq-avatar-pig.png') center / cover no-repeat #ffe1e8;
+}
+
+.iphone-qq__avatar--hamster {
+  background: url('assets/qq-avatar-hamster.png') center / cover no-repeat #f7ecd9;
+}
+
+.iphone-qq__avatar--chick {
+  background: url('assets/qq-avatar-chick.png') center / cover no-repeat #fff3c9;
+}
+
+/* ---------- QQ 联系人页（按真实界面：搜索 + 新朋友/群通知 + 分组/好友/群聊子页签） ---------- */
+.iphone-qq__ctc {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: #f0f0f2;
+}
+
+.iphone-qq__ctc-block {
+  background: #fff;
+}
+
+.iphone-qq__ctc-gap {
+  flex: none;
+  height: 8px;
+}
+
+.iphone-qq__ctc-tail {
+  flex: 1;
+}
+
+/* 联系人页搜索：独立白块内，左右留 16px、上下留白 */
+.iphone-qq__ctc-block .iphone-qq__search {
+  margin: 10px 16px 4px;
+}
+
+/* 新朋友 / 群通知大字行 */
+.iphone-qq__ctc-notices {
+  padding: 2px 0 4px;
+}
+
+.iphone-qq__ctc-notice {
+  display: flex;
+  align-items: center;
+  height: 55px;
+  padding: 0 16px;
+}
+
+.iphone-qq__ctc-notice + .iphone-qq__ctc-notice {
+  border-top: 1px solid #f0f0f1;
+}
+
+.iphone-qq__ctc-notice-name {
+  flex: 1;
+  color: #191919;
+  font-size: 19px;
+}
+
+.iphone-qq__ctc-chev {
+  display: inline-flex;
+  color: #c3c7ce;
+}
+
+.iphone-qq__ctc-chev svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 子页签：分组 / 好友 / 群聊，选中项黑色加粗 + 蓝色圆角下划线 */
+.iphone-qq__ctc-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 28px;
+  height: 54px;
+  padding: 0 20px;
+  border-bottom: 1px solid #f0f0f1;
+}
+
+.iphone-qq__ctc-tab {
+  position: relative;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: #191919;
+  font-size: 16.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.iphone-qq__ctc-tab.is-active {
+  font-weight: 600;
+}
+
+.iphone-qq__ctc-tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 7px;
+  width: 28px;
+  height: 3.5px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  background: #0099ff;
+}
+
+.iphone-qq__ctc-panel.is-hidden {
+  display: none;
+}
+
+/* 分组头：▶/▼ 小三角 + 名称 + 灰色计数，点击折叠/展开 */
+.iphone-qq__ctc-ghead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 54px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.iphone-qq__ctc-ghead:active {
+  background: #f6f7f9;
+}
+
+.iphone-qq__ctc-gtri {
+  display: inline-flex;
+  color: #44474d;
+  transition: transform 0.15s;
+}
+
+.iphone-qq__ctc-gtri svg {
+  width: 11px;
+  height: 11px;
+}
+
+.iphone-qq__ctc-group.is-open .iphone-qq__ctc-gtri {
+  transform: rotate(90deg);
+}
+
+.iphone-qq__ctc-gname {
+  color: #191919;
+  font-size: 16.5px;
+  font-weight: 600;
+}
+
+.iphone-qq__ctc-gcount {
+  margin-left: auto;
+  color: #9aa0a8;
+  font-size: 13.5px;
+}
+
+/* 好友行：头像 + 名字 + 状态行（绿点 + 绿色在线字 + 灰色「｜签名」） */
+.iphone-qq__ctc-friend {
+  display: flex;
+  align-items: center;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+
+.iphone-qq__ctc-friend:active {
+  background: #f6f7f9;
+}
+
+.iphone-qq__ctc-friend .iphone-qq__avatar {
+  width: 44px;
+  height: 44px;
+}
+
+.iphone-qq__ctc-fmain {
+  flex: 1;
+  min-width: 0;
+  margin-left: 11px;
+}
+
+.iphone-qq__ctc-fname {
+  margin: 0;
+  overflow: hidden;
+  color: #191919;
+  font-size: 17.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-qq__ctc-fstatus {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 3px 0 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.iphone-qq__ctc-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2fd98f;
+}
+
+.iphone-qq__ctc-online {
+  color: #2fd98f;
+}
+
+.iphone-qq__ctc-offline,
+.iphone-qq__ctc-fsign {
+  color: #919193;
+}
+
+/* 联系人面板空态提示行 */
+.iphone-qq__ctc-empty {
+  margin: 0;
+  padding: 18px 14px 20px;
+  color: #b6bac1;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* 群聊行的首字渐变占位头像 */
+.iphone-qq__avatar--g1,
+.iphone-qq__avatar--g2 {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.iphone-qq__avatar--g1 {
+  background: linear-gradient(135deg, #6cb9ff, #3f8cff);
+}
+
+.iphone-qq__avatar--g2 {
+  background: linear-gradient(135deg, #ffd36c, #ff9a3d);
+}
+
+/* ---------- QQ 动态页（入口列表；仅空间动态可点。
+   缩略图为 GitHub fluent-emoji 位图，必须经 CSS 背景类加载） ---------- */
+.iphone-qq__dyn2 {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: #f0f0f2;
+}
+
+.iphone-qq__dyn2-block {
+  background: #fff;
+}
+
+.iphone-qq__dyn2-gap {
+  flex: none;
+  height: 8px;
+  background: #f0f0f2;
+}
+
+.iphone-qq__dyn2-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  height: 55px;
+  padding: 0 16px;
+}
+
+.iphone-qq__dyn2-row.is-click {
+  cursor: pointer;
+}
+
+.iphone-qq__dyn2-row.is-click:active {
+  background: #f6f7f9;
+}
+
+.iphone-qq__dyn2-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+
+.iphone-qq__dyn2-ico svg {
+  width: 26px;
+  height: 26px;
+}
+
+.iphone-qq__dyn2-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: #17181a;
+  font-size: 16.5px;
+  font-weight: 500;
+}
+
+.iphone-qq__dyn2-side {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 10px;
+}
+
+.iphone-qq__dyn2-sub {
+  color: #9aa0a8;
+  font-size: 14px;
+}
+
+.iphone-qq__dyn2-thumb {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: center / cover no-repeat #eef0f4;
+}
+
+.iphone-qq__dyn2-thumb--game {
+  background-image: url('assets/qq-dyn-game.png');
+}
+
+.iphone-qq__dyn2-thumb--scroll {
+  background-image: url('assets/qq-dyn-scroll.png');
+}
+
+.iphone-qq__dyn2-thumb--book {
+  background-image: url('assets/qq-dyn-book.png');
+}
+
+.iphone-qq__dyn2-thumb i {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fa5151;
+  border: 1.5px solid #fff;
+}
+
+.iphone-qq__dyn2-chev {
+  display: inline-flex;
+  flex: none;
+  color: #c3c7ce;
+}
+
+.iphone-qq__dyn2-chev svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-qq__dyn2-tail {
+  flex: 1;
+}
+
+/* 动态页头部变体：头像 + 标题 + 宫格按钮 */
+.iphone-qq__dyn2-heading {
+  margin: 0;
+  color: #17181a;
+  font-size: 18.5px;
+  font-weight: 500;
+}
+
+.iphone-qq__dyn2-gridbtn {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  color: #17181a;
+}
+
+.iphone-qq__dyn2-gridbtn svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* 联系人页头部变体：头像 + 居中「联系人」标题（蓝色圆角下划线）+ 加好友按钮 */
+.iphone-qq__ctc-heading {
+  position: absolute;
+  left: 50%;
+  top: 62px;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin: 0;
+  transform: translateX(-50%);
+  color: #191919;
+  font-size: 17.5px;
+  font-weight: 600;
+}
+
+.iphone-qq__ctc-heading i {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 3px;
+  height: 3.5px;
+  border-radius: 2px;
+  background: #0099ff;
+}
+
+.iphone-qq__ctc-addbtn {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-qq__ctc-addbtn svg {
+  width: 23px;
+  height: 23px;
+}
+
+/* ---------- QQ空间 · 好友动态页（覆盖层，图片为渐变占位） ---------- */
+.iphone-qq__qzoneview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  background: #fff;
+}
+
+.iphone-qq__qzoneview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+/* —— 空间动态：个人空间头（横幅/资料）+ 好友动态流同页滚动 —— */
+.iphone-qqz {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 悬浮导航双形态：未滚动时透明控件盖在横幅上；
+   滚过横幅（.is-scrolled）后切为白色「空间动态」标题栏。 */
+.iphone-qqz__nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: grid;
+  pointer-events: none;
+}
+
+/* 两种形态叠放在同一格：透明态盖横幅 / 白色态盖内容（.is-scrolled 切换） */
+.iphone-qqz__nav-cover,
+.iphone-qqz__nav-solid {
+  grid-area: 1 / 1;
+  align-items: center;
+}
+
+.iphone-qqz__nav-cover {
+  display: flex;
+  gap: 10px;
+  padding: 58px 15px 0;
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+
+.iphone-qqz__nav-cover > * {
+  pointer-events: auto;
+}
+
+.iphone-qqz__nav-solid {
+  display: flex;
+  padding: 58px 14px 9px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.iphone-qqz.is-scrolled .iphone-qqz__nav-cover,
+.iphone-qqz.is-scrolled .iphone-qqz__nav-cover > * {
+  opacity: 0;
+  pointer-events: none !important;
+}
+
+.iphone-qqz.is-scrolled .iphone-qqz__nav-solid {
+  opacity: 1;
+  /* 导航容器为 pointer-events:none，白色态显示时须显式恢复可点 */
+  pointer-events: auto;
+}
+
+/* 透明态控件：半透明深色圆钮 / 空友爱看胶囊 */
+.iphone-qqz__navcircle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(30, 30, 30, 0.32);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-qqz__navcircle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.iphone-qqz__navpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: rgba(30, 30, 30, 0.32);
+  color: #fff;
+  font-size: 13px;
+}
+
+.iphone-qqz__navpill svg {
+  width: 17px;
+  height: 17px;
+}
+
+.iphone-qqz__navpill i {
+  font-style: normal;
+  line-height: 1;
+}
+
+/* 白色标题栏：返回 + 居中标题 + 空友爱看 / 发动态笔 */
+.iphone-qqz__back,
+.iphone-qqz__compose {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #262626;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-qqz__back svg,
+.iphone-qqz__compose svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-qqz__nav-right {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: #262626;
+}
+
+.iphone-qqz__nav-ico {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+}
+
+.iphone-qqz__nav-ico svg,
+.iphone-qqz__compose svg {
+  width: 100%;
+  height: 100%;
+}
+
+.iphone-qqz__title {
+  flex: 1;
+  margin: 0;
+  color: #17181a;
+  font-size: 16.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.iphone-qqz__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: #fff;
+  /* 下拉到顶继续拖时把滚动咬住，交给刷新手势 */
+  overscroll-behavior: contain;
+}
+
+.iphone-qqz__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 下拉进行中禁用文本选择，避免拖拽变成选字 */
+.iphone-qqz.is-pulling {
+  user-select: none;
+}
+
+/* 下拉刷新指示器：滚动区首个子元素，高度由手势驱动（0 = 收起）。
+   内容贴着条带底边（子元素自身留 8px 下边距）：条带越长，小圈与文案越往
+   下露，刷新态（92px）时完整落在手机状态栏图标的下面，不会和灵动岛/电量
+   叠在一起；收起时高度为 0，不留任何空隙。 */
+.iphone-qqz__refresh {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+  height: 0;
+  overflow: hidden;
+  color: #8b939e;
+  font-size: 12.5px;
+  user-select: none;
+}
+
+.iphone-qqz__refresh-spin,
+.iphone-qqz__refresh-text {
+  margin-bottom: 8px;
+}
+
+.iphone-qqz__refresh.is-anim {
+  transition: height 0.25s ease;
+}
+
+.iphone-qqz__refresh-spin {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border: 2px solid #c9d4dd;
+  border-top-color: #0099ff;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.iphone-qqz__refresh.is-refreshing .iphone-qqz__refresh-spin {
+  opacity: 1;
+  animation: iphone-qqz-spin 0.7s linear infinite;
+}
+
+/* 下拉过程中也把小圈露出来转（真机同款：拖动阶段有即时反馈，
+   松手后 is-refreshing 接力，视觉上不中断） */
+.iphone-qqz.is-pulling .iphone-qqz__refresh-spin {
+  opacity: 1;
+  animation: iphone-qqz-spin 0.7s linear infinite;
+}
+
+@keyframes iphone-qqz-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 动态流空态 */
+.iphone-qqz__empty {
+  padding: 46px 15px 60px;
+  text-align: center;
+  color: #9aa3ad;
+  font-size: 13px;
+}
+
+/* 帖子：左右 15px 内边距，帖子之间通栏细线 */
+.iphone-qqz__post {
+  padding: 13px 15px 0;
+}
+
+.iphone-qqz__post + .iphone-qqz__post {
+  margin-top: 12px;
+  border-top: 1px solid #e5e5e5;
+}
+
+/* 头部：34px 小头像 + 蓝色昵称 + 展开 */
+.iphone-qqz__head {
+  display: flex;
+  align-items: center;
+}
+
+.iphone-qq__avatar--xs {
+  width: 34px;
+  height: 34px;
+}
+
+.iphone-qqz__name {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 0 10px;
+  overflow: hidden;
+  color: #3d4d71;
+  font-size: 15.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-qqz__more {
+  flex: none;
+  color: #262626;
+}
+
+.iphone-qqz__more svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+}
+
+.iphone-qqz__text {
+  margin: 9px 0 0;
+  color: #191919;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* 图片格：2 图并排横幅条 / 1 图大块；位图素材走 CSS 背景图 */
+.iphone-qqz__imgs {
+  display: grid;
+  gap: 3px;
+  margin: 10px 0 2px;
+}
+
+.iphone-qqz__imgs[data-count='2'] {
+  grid-template-columns: 1fr 1fr;
+}
+
+.iphone-qqz__imgs[data-count='2'] .iphone-qqz__img {
+  height: 70px;
+}
+
+.iphone-qqz__imgs[data-count='1'] .iphone-qqz__img {
+  height: 210px;
+  max-width: 240px;
+}
+
+.iphone-qqz__img {
+  display: block;
+  border-radius: 5px;
+  background-color: #f2f3f5;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.iphone-qqz__img--p1 {
+  background-image: url('assets/qq-zone-p1.jpg');
+}
+
+.iphone-qqz__img--p2 {
+  background-image: url('assets/qq-zone-p2.jpg');
+}
+
+.iphone-qqz__img--p3 {
+  background-image: url('assets/qq-zone-p3.jpg');
+}
+
+.iphone-qqz__img--p4 {
+  background-image: url('assets/qq-zone-p4.jpg');
+}
+
+/* 时间 + 点赞/评论/分享 操作行 */
+.iphone-qqz__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 9px;
+}
+
+.iphone-qqz__time {
+  color: #a8a8a8;
+  font-size: 12.5px;
+}
+
+.iphone-qqz__ops {
+  display: flex;
+  align-items: center;
+  gap: 27px;
+  color: #262626;
+}
+
+.iphone-qqz__op {
+  display: inline-flex;
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-qqz__op svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 点赞名单：蓝色小手 + 蓝色昵称 + 深色人数 */
+.iphone-qqz__likes {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 9px 0 0;
+  color: #3d4d71;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.iphone-qqz__likes-ico {
+  flex: none;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  color: #3d4d71;
+}
+
+.iphone-qqz__likes-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 评论区：昵称蓝色，内容深灰；支持加粗斜体与「更多」 */
+.iphone-qqz__comments {
+  margin-top: 7px;
+}
+
+.iphone-qqz__c-row {
+  margin: 0;
+  color: #454545;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.iphone-qqz__c-name {
+  color: #3d4d71;
+}
+
+.iphone-qqz__c-row em {
+  font-weight: 700;
+}
+
+.iphone-qqz__c-more {
+  margin-left: 3px;
+  color: #3d4d71;
+}
+
+/* 每条动态尾部：23px 我头像 + 说点什么吧… 胶囊（v0.17.0 起点开变成回复输入行） */
+.iphone-qqz__replybar {
+  margin: 11px 0 14px;
+}
+
+.iphone-qqz__replybar.is-open .iphone-qqz__pill {
+  display: none;
+}
+
+.iphone-qqz__replybar:not(.is-open) .iphone-qqz__replyrow {
+  display: none;
+}
+
+.iphone-qqz__pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 7px;
+  border: none;
+  border-radius: 18px;
+  background: #f6f6f6;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+/* 回复输入行：白色胶囊输入框 + 浅蓝发送键（QQ 聊天输入栏同款观感） */
+.iphone-qqz__replyrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.iphone-qqz__replyinput {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  outline: none;
+  border-radius: 18px;
+  background: #f6f6f6;
+  color: #17181a;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.iphone-qqz__replyinput::placeholder {
+  color: #c0c4cc;
+}
+
+.iphone-qqz__replysend {
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 18px;
+  background: #7ac8f9;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+}
+
+.iphone-qqz__replysend.is-active {
+  background: #0099ff;
+}
+
+.iphone-qqz__replysend:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.iphone-qqz__replyerr {
+  margin: 7px 0 0;
+  color: #e64340;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 我发的评论：昵称旁加一枚浅蓝「我」标，和别人的评论区分开 */
+.iphone-qqz__c-row.is-me .iphone-qqz__c-name::after {
+  content: '我';
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #e8f3ff;
+  color: #0099ff;
+  font-size: 11px;
+  line-height: 15px;
+  vertical-align: 1px;
+}
+
+.iphone-qq__me-avatar--mini {
+  width: 23px;
+  height: 23px;
+  border: none;
+  box-shadow: none;
+}
+
+.iphone-qqz__pill-hint {
+  color: #b3b3b3;
+  font-size: 14px;
+}
+
+/* 长文动态：灰底圆角块 + 6 行截断 + 独占一行「查看全文」 */
+.iphone-qqz__graytext {
+  margin-top: 10px;
+  padding: 11px 13px 12px;
+  border-radius: 12px;
+  background: #f6f6f6;
+  color: #262626;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.iphone-qqz__grayclamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.iphone-qqz__graymore {
+  display: block;
+  margin-top: 6px;
+  color: #3d6ea8;
+}
+
+/* —— 个人空间头：横幅（滚动内容顶部，未滚动时被悬浮导航盖住） —— */
+.iphone-qqp__banner {
+  height: 255px;
+  background: url('assets/qq-zone-banner.jpg') center / cover no-repeat #f6dfe7;
+}
+
+/* 资料区：大头像压住横幅下缘，昵称 + 徽章 + 总量 */
+.iphone-qqp__idrow {
+  padding: 0 15px;
+}
+
+.iphone-qq__me-avatar--big {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin-top: -36px;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(60, 40, 50, 0.18);
+}
+
+/* 她的QQ空间：资料头像复用实体头像节点，放大到空间头尺寸 */
+.iphone-qqp__idrow .iphone-qq__avatar {
+  width: 72px;
+  height: 72px;
+  margin-top: -36px;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(60, 40, 50, 0.18);
+  font-size: 28px;
+}
+
+.iphone-qqp__nameline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.iphone-qqp__name {
+  margin: 0;
+  color: #262626;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.iphone-qqp__lv {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #c8c9ce;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.iphone-qqp__vip {
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: #ffd94d;
+  color: #8a5b00;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.iphone-qqp__total {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: #262626;
+  font-size: 14.5px;
+}
+
+.iphone-qqp__total svg {
+  width: 17px;
+  height: 17px;
+}
+
+.iphone-qqp__total b {
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+/* 五宫格：说说 / 日志 / 相册 / 留言 / 更多 */
+.iphone-qqp__funcs {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 17px;
+  padding: 0 6px;
+}
+
+.iphone-qqp__func {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  color: #262626;
+  font-size: 14px;
+}
+
+.iphone-qqp__func-ico {
+  display: inline-flex;
+  width: 23px;
+  height: 23px;
+}
+
+.iphone-qqp__func-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 分享新鲜事输入条：白底描边胶囊 + 图片/AI 图标 */
+.iphone-qqp__composer {
+  display: flex;
+  align-items: center;
+  height: 47px;
+  margin: 15px 15px 0;
+  padding: 0 15px;
+  border: 1.5px solid #ececec;
+  border-radius: 24px;
+  background: #fff;
+}
+
+.iphone-qqp__composer-hint {
+  flex: 1;
+  color: #b9b9b9;
+  font-size: 15px;
+}
+
+.iphone-qqp__composer-ico {
+  display: inline-flex;
+  width: 19px;
+  height: 19px;
+  color: #262626;
+}
+
+.iphone-qqp__composer-ico svg {
+  width: 100%;
+  height: 100%;
+}
+
+.iphone-qqp__composer-sep {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 11px;
+  background: #e0e0e0;
+}
+
+/* ---------- 主屏图标：设置（真实 Apple 设置图标位图，Wikimedia「Settings (iOS).png」，
+   已裁去原图透明边距与烤入的描边、垫上自身底色做成全出血） ---------- */
+.iphone-app-icon--settings {
+  background: url('assets/settings-icon.png') center / cover no-repeat #d3e4ea;
+}
+
+/* ---------- QQ 编辑资料（我的头像 / 昵称 / QQ号）+ 选择头像浮层 ---------- */
+/* 入口：消息页头部「我的头像」与空间大头像。页面为 QQ 式浅灰底 + 白色圆角卡；
+   层级：聊天页/空间页(2) = 编辑资料页(2，同层互斥) < 选择头像(3，嵌在编辑资料页内)。 */
+
+.iphone-qq__profview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  background: #f0f0f2;
+}
+
+.iphone-qq__profview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-qq__prof {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 顶部导航：返回 + 居中标题（与聊天页同款 58px 状态栏让位） */
+.iphone-qq__prof-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 58px 14px 10px;
+  background: #fff;
+  border-bottom: 0.5px solid #e8e8ec;
+}
+
+.iphone-qq__prof-back {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+}
+
+.iphone-qq__prof-back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-qq__prof-title {
+  flex: 1;
+  margin: 0;
+  color: #17181a;
+  font-size: 16.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.iphone-qq__prof-navspace {
+  flex: none;
+  width: 36px;
+}
+
+.iphone-qq__prof-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 14px 20px;
+  scrollbar-width: none;
+}
+
+.iphone-qq__prof-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* 头像卡：大头像 + 「点击更换头像」 */
+.iphone-qq__prof-avcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 20px 0 15px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-qq__me-avatar--prof {
+  width: 84px;
+  height: 84px;
+  border-width: 3px;
+}
+
+.iphone-qq__prof-avhint {
+  color: #979ca4;
+  font-size: 12.5px;
+}
+
+/* 资料卡：昵称 / QQ号，行式布局（标签居左、无边框输入居右） */
+.iphone-qq__prof-card {
+  overflow: hidden;
+  margin-top: 12px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.iphone-qq__prof-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 16px;
+}
+
+.iphone-qq__prof-row + .iphone-qq__prof-row {
+  border-top: 0.5px solid #ececef;
+}
+
+.iphone-qq__prof-label {
+  flex: none;
+  color: #17181a;
+  font-size: 15.5px;
+  font-weight: 500;
+}
+
+.iphone-qq__prof-input {
+  flex: 1;
+  min-width: 0;
+  padding: 15px 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  font-family: inherit;
+  font-size: 15.5px;
+  text-align: right;
+  outline: none;
+}
+
+.iphone-qq__prof-input::placeholder {
+  color: #c0c4cc;
+}
+
+/* 好友资料页 · 「她的QQ空间」入口行：星形图标 + 文案 + 右箭头 */
+.iphone-qq__prof-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  color: #17181a;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.iphone-qq__prof-link:active {
+  background: #f4f5f7;
+}
+
+.iphone-qq__prof-link-ico {
+  flex: none;
+  display: inline-flex;
+  color: #17181a;
+}
+
+.iphone-qq__prof-link-ico svg {
+  width: 20px;
+  height: 20px;
+}
+
+.iphone-qq__prof-chev {
+  flex: none;
+  display: inline-flex;
+  margin-left: auto;
+  color: #c2c6cd;
+}
+
+.iphone-qq__prof-chev svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-qq__prof-foot {
+  margin: 12px 6px 0;
+  color: #979ca4;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* 表单页右上角动作（添加 / 创建）：QQ 蓝文字按钮，替代标题栏右侧占位 */
+.iphone-qq__prof-action {
+  flex: none;
+  min-width: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #0099ff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.iphone-qq__prof-action:active {
+  opacity: 0.6;
+}
+
+/* 表单页头像卡内的预览头像：复用通用头像节点，放大到 84px */
+.iphone-qq__prof-avcard .iphone-qq__avatar {
+  width: 84px;
+  height: 84px;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(46, 62, 96, 0.12);
+}
+
+.iphone-qq__prof-avcard .iphone-qq__avatar--g1,
+.iphone-qq__prof-avcard .iphone-qq__avatar--g2 {
+  font-size: 26px;
+}
+
+/* 创建群聊 · 选择群成员卡：好友行 + 右侧圆形勾选 */
+.iphone-qq__mem-hint {
+  margin: 0;
+  padding: 10px 14px 2px;
+  color: #979ca4;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.iphone-qq__memlist {
+  padding: 4px 0 6px;
+}
+
+.iphone-qq__memrow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 7px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-qq__memrow:active {
+  background: #f5f6f8;
+}
+
+.iphone-qq__memrow .iphone-qq__avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.iphone-qq__memrow .iphone-qq__avatar--g1,
+.iphone-qq__memrow .iphone-qq__avatar--g2 {
+  font-size: 14px;
+}
+
+.iphone-qq__memmain {
+  overflow: hidden;
+  flex: 1;
+  color: #17181a;
+  font-size: 15px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-qq__memsub {
+  flex: none;
+  color: #b9bdc5;
+  font-size: 12.5px;
+}
+
+/* 群聊资料 · 「添加成员」入口行的加号位 */
+.iphone-qq__memplus {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e8f3fd;
+  color: #0099ff;
+  font-size: 22px;
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1;
+}
+
+.iphone-qq__memcheck {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  border: 1.5px solid #c6cad2;
+  border-radius: 50%;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.iphone-qq__memrow.is-on .iphone-qq__memcheck {
+  position: relative;
+  border-color: #0099ff;
+  background: #0099ff;
+}
+
+.iphone-qq__memrow.is-on .iphone-qq__memcheck::after {
+  content: '';
+  position: absolute;
+  left: 5.5px;
+  top: 2px;
+  width: 4.5px;
+  height: 8.5px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(42deg);
+}
+
+/* 可点的「我的头像」入口：消息页头部 + 空间大头像 */
+.iphone-qq__header .iphone-qq__me-avatar,
+.iphone-qqp .iphone-qq__me-avatar--big {
+  cursor: pointer;
+}
+
+/* 选择头像浮层：编辑资料页之上的第二层 */
+.iphone-qq__avpick {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  background: #f0f0f2;
+}
+
+.iphone-qq__avpick.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+/* 内置款式九宫格：注意 face 不写 background——各款式的背景由
+   --pic/--f1/--f2/--f3/--pk 与 me-avatar 默认类提供，这里只管尺寸形状 */
+.iphone-qq__avpick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px 8px;
+  padding: 18px 6px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.iphone-qq__avpick-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-qq__avpick-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  /* 自定义 / 上传图是内联 background-image：不写尺寸的话 256px 的图会按原始
+     像素铺（repeat），56px 的圆里只露出左上角一小块。 */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.iphone-qq__avpick-face svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-qq__avpick-face--upload {
+  border: 1.5px dashed #c3c8d4;
+  color: #8e96a3;
+  background: #f6f7fa;
+}
+
+.iphone-qq__avpick-name {
+  color: #5a5e66;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.iphone-qq__avpick-badge {
+  position: absolute;
+  top: -4px;
+  left: calc(50% + 15px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0099ff;
+}
+
+.iphone-qq__avpick-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.iphone-qq__avpick-tile.is-selected .iphone-qq__avpick-badge {
+  display: flex;
+}
+
+/* 图片链接行：输入 + 「使用」按钮 */
+.iphone-qq__avpick-urlrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 16px;
+}
+
+.iphone-qq__avpick-urlrow .iphone-qq__prof-input {
+  text-align: left;
+}
+
+.iphone-qq__avpick-use {
+  flex: none;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 15px;
+  background: #0099ff;
+  color: #fff;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.iphone-qq__avpick-status {
+  margin: 10px 6px 0;
+  color: #979ca4;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.iphone-qq__avpick-status[data-state='ok'] {
+  color: #17c137;
+}
+
+.iphone-qq__avpick-status[data-state='error'] {
+  color: #fa5151;
+}
+
+/* 上传头像的裁剪编辑器（QQ / 微信共用）：盖在「选择头像」浮层之上。
+   裁剪框是中间的正方形（白色描边 + 向外的暗色遮罩），图片层在其下拖动 / 缩放。 */
+.iphone-qq__avcrop {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: none;
+  flex-direction: column;
+  background: #f0f0f2;
+}
+
+.iphone-qq__avcrop.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-qq__avcrop-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  min-height: 0;
+  padding: 0 26px 40px;
+}
+
+.iphone-qq__avcrop-stagewrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+/* 舞台：与裁剪框同尺寸的方形，overflow 裁掉框外内容；四周压暗靠 frame 的
+   巨大外阴影（spread 铺满可视区）实现，不额外加元素。 */
+.iphone-qq__avcrop-stage {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #000;
+  cursor: grab;
+  touch-action: none;
+}
+
+.iphone-qq__avcrop-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.iphone-qq__avcrop-img.is-dragging {
+  cursor: grabbing;
+}
+
+/* 裁剪框：舞台本身就等于裁剪区域（overflow 裁掉框外内容），所以这里只画
+   白色描边与三分参考线，不需要额外遮罩——框外没有任何可见内容。 */
+.iphone-qq__avcrop-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.95);
+  pointer-events: none;
+}
+
+/* 三分构图参考线（各一条，位置随百分比自适应） */
+.iphone-qq__avcrop-frame::before,
+.iphone-qq__avcrop-frame::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.iphone-qq__avcrop-frame::before {
+  left: 33.33%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+}
+
+.iphone-qq__avcrop-frame::after {
+  top: 33.33%;
+  left: 0;
+  height: 1px;
+  width: 100%;
+}
+
+.iphone-qq__avcrop-zoomrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.iphone-qq__avcrop-zoomico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: #7a7f88;
+}
+
+.iphone-qq__avcrop-zoomico svg {
+  width: 100%;
+  height: 100%;
+}
+
+.iphone-qq__avcrop-zoom {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  margin: 0;
+  border-radius: 2px;
+  background: #d6d9de;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+}
+
+.iphone-qq__avcrop-zoom::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.iphone-qq__avcrop-zoom::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.iphone-qq__avcrop-hint {
+  margin: 0;
+  color: #8a8f98;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ---------- 设置应用（iOS 设置高保真仿真） ----------
+   度量与色彩对齐系统「设置」：#f2f2f7 底、白色内嵌分组（10px 连续圆角）、
+   44px 行高、17px 正文、次级文字 rgba(60,60,67,.6)、#007aff 交互蓝、
+   分隔线 #e5e5ea 自文字左缘内缩。 */
+.iphone-st {
+  overflow: hidden;
+  color: #000;
+  background: #f2f2f7;
+  font-size: 17px;
+}
+
+/* 页面叠放：主 → API 连接 → 模型 / 思考强度 / 并发限制，逐层推入（iOS push 视差）。
+   注意左投影只在页面打开时挂上：关闭态的页面停在 translateX(100%)，
+   投影会透过屏幕右缘压暗下层页面。 */
+.iphone-st__page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f2f2f7;
+  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0.35, 1);
+}
+.iphone-st.is-api-open .iphone-st__page--api,
+.iphone-st.is-models-open .iphone-st__page--models,
+.iphone-st.is-reasoning-open .iphone-st__page--reasoning,
+.iphone-st.is-limit-open .iphone-st__page--limit,
+.iphone-st.is-preset-open .iphone-st__page--preset,
+.iphone-st.is-grouppreset-open .iphone-st__page--grouppreset,
+.iphone-st.is-qzonepreset-open .iphone-st__page--qzonepreset {
+  box-shadow: -14px 0 34px rgba(0, 0, 0, 0.18);
+}
+.iphone-st__page--api { transform: translateX(100%); }
+.iphone-st__page--models,
+.iphone-st__page--reasoning,
+.iphone-st__page--limit,
+.iphone-st__page--preset,
+.iphone-st__page--grouppreset,
+.iphone-st__page--qzonepreset { transform: translateX(100%); }
+.iphone-st__page--main::after,
+.iphone-st__page--api::after,
+.iphone-st__page--preset::after,
+.iphone-st__page--grouppreset::after,
+.iphone-st__page--qzonepreset::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.34s ease;
+  pointer-events: none;
+}
+.iphone-st.is-api-open .iphone-st__page--main { transform: translateX(-26%); }
+.iphone-st.is-api-open .iphone-st__page--main::after { opacity: 0.14; }
+.iphone-st.is-api-open .iphone-st__page--api { transform: translateX(0); }
+.iphone-st.is-models-open .iphone-st__page--api,
+.iphone-st.is-reasoning-open .iphone-st__page--api,
+.iphone-st.is-limit-open .iphone-st__page--api { transform: translateX(-26%); }
+.iphone-st.is-models-open .iphone-st__page--api::after,
+.iphone-st.is-reasoning-open .iphone-st__page--api::after,
+.iphone-st.is-limit-open .iphone-st__page--api::after { opacity: 0.14; }
+.iphone-st.is-models-open .iphone-st__page--models { transform: translateX(0); }
+.iphone-st.is-reasoning-open .iphone-st__page--reasoning { transform: translateX(0); }
+.iphone-st.is-limit-open .iphone-st__page--limit { transform: translateX(0); }
+/* 私聊/群聊/动态提示词：从主页面推入（与 API 连接子页同一套推入视差） */
+.iphone-st.is-preset-open .iphone-st__page--main,
+.iphone-st.is-grouppreset-open .iphone-st__page--main,
+.iphone-st.is-qzonepreset-open .iphone-st__page--main { transform: translateX(-26%); }
+.iphone-st.is-preset-open .iphone-st__page--main::after,
+.iphone-st.is-grouppreset-open .iphone-st__page--main::after,
+.iphone-st.is-qzonepreset-open .iphone-st__page--main::after { opacity: 0.14; }
+.iphone-st.is-preset-open .iphone-st__page--preset,
+.iphone-st.is-grouppreset-open .iphone-st__page--grouppreset,
+.iphone-st.is-qzonepreset-open .iphone-st__page--qzonepreset { transform: translateX(0); }
+
+/* 滚动容器（隐藏滚动条，iOS 无可见滚动条） */
+.iphone-st__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.iphone-st__scroll::-webkit-scrollbar { display: none; }
+
+/* 大标题：34px 粗体，随内容滚动；滚过后由导航淡入接管 */
+.iphone-st__large-title {
+  margin: 0;
+  padding: 60px 16px 4px;
+  font-size: 33px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #000;
+}
+
+/* 搜索框：iOS 设置首页同款（灰底圆角 + 放大镜），位于大标题与账户卡之间做布局缓冲 */
+.iphone-st__search {
+  position: relative;
+  margin: 8px 16px 16px;
+}
+.iphone-st__search-ico {
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  width: 15px;
+  height: 15px;
+  transform: translateY(-50%);
+  color: rgba(60, 60, 67, 0.6);
+  pointer-events: none;
+}
+.iphone-st__search-ico svg { width: 100%; height: 100%; }
+.iphone-st__search-input {
+  width: 100%;
+  height: 36px;
+  /* 本样式表无全局 border-box：100% 宽 + 内边距必须显式声明 */
+  box-sizing: border-box;
+  border: none;
+  border-radius: 10px;
+  background: rgba(118, 118, 128, 0.12);
+  padding: 0 12px 0 31px;
+  font-family: inherit;
+  font-size: 16px;
+  color: #000;
+  outline: none;
+}
+.iphone-st__search-input::placeholder { color: rgba(60, 60, 67, 0.6); }
+
+/* 主页顶部导航：透明悬浮，滚过大标题后淡入毛玻璃与居中标题 */
+.iphone-st__mainnav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  /* 本样式表无全局 border-box：98px 须含 54px 状态栏让位内边距，
+     否则导航实际高度 152px，标题掉到状态栏下方一大截空白里 */
+  box-sizing: border-box;
+  height: 98px;
+  padding: 54px 8px 0;
+  pointer-events: none;
+  background: transparent;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.iphone-st__page--main.is-scrolled .iphone-st__mainnav {
+  background: rgba(242, 242, 247, 0.88);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  box-shadow: 0 0.5px 0 rgba(60, 60, 67, 0.29);
+}
+.iphone-st__page--main.is-scrolled .iphone-st__mainnav-title { opacity: 1; }
+
+/* 子页导航：常驻毛玻璃 + 发丝分隔线；返回 / 居中标题 / 右上动作 */
+.iphone-st__nav {
+  position: relative;
+  z-index: 5;
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  /* 同上：98px 须含 54px 状态栏让位（content-box 否则导航高达 152px，
+     标题与状态栏之间多出一条空白带） */
+  box-sizing: border-box;
+  height: 98px;
+  padding: 54px 8px 0;
+  background: rgba(242, 242, 247, 0.9);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  box-shadow: 0 0.5px 0 rgba(60, 60, 67, 0.29);
+}
+.iphone-st__nav-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  margin: 0;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: #000;
+  pointer-events: none;
+}
+.iphone-st__mainnav-title {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.iphone-st__back {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px 5px;
+  padding: 4px 8px 4px 0;
+  border: none;
+  background: none;
+  color: #007aff;
+  font-family: inherit;
+  font-size: 17px;
+  cursor: pointer;
+}
+.iphone-st__back:active { opacity: 0.4; }
+.iphone-st__back-chev {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  margin-right: 1px;
+}
+.iphone-st__back-chev svg { width: 100%; height: 100%; }
+.iphone-st__nav-action {
+  flex: none;
+  margin: 0 4px 9px;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  color: #007aff;
+  font-family: inherit;
+  font-size: 17px;
+  cursor: pointer;
+}
+.iphone-st__nav-action:active { opacity: 0.4; }
+.iphone-st__nav-action:disabled { opacity: 0.35; cursor: default; }
+.iphone-st__nav-spacer { flex: none; width: 44px; }
+
+/* 内嵌分组列表：白色圆角卡片 + 44px 行 + 自文字左缘内缩的分隔线 */
+.iphone-st__group {
+  margin: 0 16px 21px;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+.iphone-st__row,
+.iphone-st__option,
+.iphone-st__fieldrow {
+  /* 本样式表无全局 border-box：width:100% + 内边距的组合必须显式声明，
+     否则行会比分组卡片宽出一个内边距，右缘内容被组卡裁掉 */
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 5px 14px 5px 16px;
+}
+.iphone-st__row,
+.iphone-st__option {
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+}
+.iphone-st__row.is-link { cursor: pointer; }
+.iphone-st__row.is-link:active,
+.iphone-st__option:active { background: rgba(0, 0, 0, 0.055); }
+.iphone-st__row + .iphone-st__row::before,
+.iphone-st__fieldrow + .iphone-st__fieldrow::before,
+.iphone-st__option + .iphone-st__option::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 16px;
+  height: 1px;
+  background: #e5e5ea;
+  pointer-events: none;
+}
+/* 彩色小方块图标（29×29，iOS 图标列），分隔线随之缩进到文字左缘 */
+.iphone-st__row.has-ico + .iphone-st__row.has-ico::before { left: 57px; }
+.iphone-st__row.no-sep::before,
+.iphone-st__option.no-sep::before { display: none; }
+.iphone-st__row-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 29px;
+  height: 29px;
+  border-radius: 6.5px;
+  color: #fff;
+}
+.iphone-st__row-ico svg { width: 18px; height: 18px; }
+.iphone-st__row-label {
+  flex: none;
+  font-size: 17px;
+  line-height: 1.35;
+  color: #000;
+}
+.iphone-st__row-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 17px;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(60, 60, 67, 0.6);
+}
+.iphone-st__chev {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-right: 2px;
+  color: #c7c7cc;
+}
+.iphone-st__chev svg { width: 100%; height: 100%; }
+
+/* Apple 账户行：头像 + 名字 + 灰色说明 */
+.iphone-st__row--account { min-height: 60px; }
+.iphone-st__account-avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: 7px 0;
+  border-radius: 50%;
+  background: url('assets/settings-avatar-pikachu.png') center / cover no-repeat #fff7d6;
+}
+.iphone-st__account-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.iphone-st__account-name {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #000;
+}
+.iphone-st__account-sub {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(60, 60, 67, 0.6);
+}
+
+/* 子页表单：13px 灰分组标题（iOS 中文界面不大写）+ 左标签右输入的表单行 */
+.iphone-st__form { padding: 16px 0 44px; }
+.iphone-st__section-title {
+  margin: 0 32px 7px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(60, 60, 67, 0.6);
+}
+.iphone-st__section-title:not(:first-child) { margin-top: 10px; }
+.iphone-st__fieldrow { padding: 6px 14px 6px 16px; }
+.iphone-st__fieldrow-label {
+  flex: none;
+  width: 96px;
+  font-size: 17px;
+  color: #000;
+}
+.iphone-st__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #000;
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.35;
+  outline: none;
+}
+.iphone-st__input::placeholder { color: rgba(60, 60, 67, 0.45); }
+.iphone-st__eye {
+  display: flex;
+  flex: none;
+  padding: 6px;
+  margin-right: -4px;
+  border: none;
+  background: none;
+  color: #8e8e93;
+  cursor: pointer;
+}
+.iphone-st__eye svg { width: 19px; height: 19px; }
+
+/* 分组脚注：状态行与说明（左对齐小字；ok 绿 / error 红） */
+.iphone-st__foot {
+  margin: 7px 32px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-all;
+  color: rgba(60, 60, 67, 0.6);
+}
+.iphone-st__foot[data-state='ok'] { color: #34c759; }
+.iphone-st__foot[data-state='error'] { color: #ff3b30; }
+
+/* 私聊提示词子页：分组内满宽多行文本域（无独立边框，与表单行同观感） */
+.iphone-st__textarea {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 92px;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  color: #000;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+  resize: none;
+  outline: none;
+}
+.iphone-st__textarea::placeholder { color: rgba(60, 60, 67, 0.45); }
+
+/* 「恢复默认预设」行：分组内居中红字按钮（iOS 重置行观感） */
+.iphone-st__reset {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  color: #ff3b30;
+  font-family: inherit;
+  font-size: 17px;
+  text-align: center;
+  cursor: pointer;
+}
+.iphone-st__reset:active { background: rgba(0, 0, 0, 0.055); }
+
+/* 模型选择子页：勾选列表（选中项右侧蓝色对勾） */
+.iphone-st__option {
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.iphone-st__option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 17px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #000;
+}
+.iphone-st__option-check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: #007aff;
+  opacity: 0;
+}
+.iphone-st__option-check svg { width: 100%; height: 100%; }
+.iphone-st__option.is-selected .iphone-st__option-check { opacity: 1; }
+.iphone-st__empty {
+  margin: 0;
+  padding: 13px 16px;
+  font-size: 17px;
+  color: rgba(60, 60, 67, 0.6);
+}
+
+/* ---------- 世界书应用（设计参照 SoulLink：按书分组 + 勾选排除） ---------- */
+/* 桌面图标：Apple Books 式暖橙渐变底 + 白描线翻开的书（SVG 由 constants.js 内联） */
+.iphone-app-icon--worldbook {
+  background: linear-gradient(160deg, #ffb142 0%, #ff7a3d 55%, #ef5b2b 100%);
+}
+
+.iphone-app-icon--worldbook svg {
+  width: 64%;
+  height: 64%;
+}
+
+.iphone-wb {
+  background: #f2f3f7;
+}
+
+.iphone-wb__header {
+  flex: none;
+  /* 顶距 62px 避让手机状态栏（时间/电量，高 54px，与 QQ 头部一致） */
+  padding: 62px 16px 8px;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.iphone-wb__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.iphone-wb__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #17181c;
+}
+
+.iphone-wb__refresh {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: #eceef2;
+  color: #3c6df0;
+  font-size: 19px;
+  line-height: 1;
+}
+
+.iphone-wb__refresh:active {
+  transform: scale(0.92);
+}
+
+/* 状态行：data-state 红绿灯语义（ok 绿 / warn 黄 / error 红 / busy 灰） */
+.iphone-wb__status {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8a8f99;
+}
+
+.iphone-wb__status[data-state='ok'] {
+  color: #34a853;
+}
+
+.iphone-wb__status[data-state='warn'] {
+  color: #c77c11;
+}
+
+.iphone-wb__status[data-state='error'] {
+  color: #e64340;
+}
+
+.iphone-wb__banner {
+  flex: none;
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fff7e0;
+  color: #9a6b00;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.iphone-wb__note {
+  flex: none;
+  margin: 8px 16px 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(60, 60, 67, 0.6);
+}
+
+.iphone-wb__toolbar {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px 0;
+}
+
+.iphone-wb__clear {
+  border: none;
+  border-radius: 14px;
+  padding: 5px 12px;
+  background: #ffe8e6;
+  color: #e64340;
+  font-size: 12px;
+}
+
+.iphone-wb__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 每本书一个可折叠区块 */
+.iphone-wb__book {
+  margin-bottom: 10px;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.iphone-wb__book-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  padding: 12px 14px;
+  background: none;
+}
+
+.iphone-wb__book-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #17181c;
+}
+
+.iphone-wb__book-count {
+  font-size: 12px;
+  color: #8a8f99;
+}
+
+/* 折叠箭头：伪元素画三角，折叠时转向 */
+.iphone-wb__book-head::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-left: 8px;
+  border-right: 1.8px solid #b9bdc6;
+  border-bottom: 1.8px solid #b9bdc6;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.iphone-wb__book.is-collapsed .iphone-wb__book-head::after {
+  transform: rotate(-45deg);
+}
+
+.iphone-wb__book.is-collapsed .iphone-wb__book-body {
+  display: none;
+}
+
+.iphone-wb__book-body {
+  padding: 0 10px 10px;
+}
+
+.iphone-wb__search {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  background: #f0f1f5;
+  font-size: 13px;
+  color: #17181c;
+}
+
+.iphone-wb__search::placeholder {
+  color: #a2a7b0;
+}
+
+/* 条目行：整行 label，点哪都切换；自绘方块勾选框（勾选 = 排除） */
+.iphone-wb__entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.iphone-wb__entry:active {
+  background: #f5f6f8;
+}
+
+.iphone-wb__entry input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+  border: 1.6px solid #c4c8d0;
+  border-radius: 5px;
+  background: #fff;
+  position: relative;
+}
+
+.iphone-wb__entry input[type='checkbox']:checked {
+  border-color: #e64340;
+  background: #e64340;
+}
+
+.iphone-wb__entry input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 4.5px;
+  top: 1.2px;
+  width: 4.5px;
+  height: 9px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(42deg);
+}
+
+.iphone-wb__entry-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-wb__entry-name {
+  display: block;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #17181c;
+  overflow-wrap: break-word;
+}
+
+.iphone-wb__entry.is-excluded .iphone-wb__entry-name {
+  color: #a2a7b0;
+  text-decoration: line-through;
+}
+
+.iphone-wb__entry.is-disabled .iphone-wb__entry-name {
+  color: #b9bdc6;
+}
+
+.iphone-wb__entry-badges {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #8a8f99;
+}
+
+.iphone-wb__entry.is-triggered .iphone-wb__entry-badges {
+  color: #34a853;
+}
+
+.iphone-wb__entry.is-excluded .iphone-wb__entry-badges {
+  color: #e64340;
+}
+
+.iphone-wb__empty {
+  margin: 0;
+  padding: 40px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #a2a7b0;
+}
+
+/* ===== QQ v0.10.1：气泡删除菜单 + 好友资料「清空聊天消息」 ===== */
+
+/* 气泡行作为定位容器：长按 / 右键弹出的删除菜单挂在行上 */
+.iphone-qqc__msg {
+  position: relative;
+}
+
+/* 深色操作菜单：默认朝上弹、对齐左侧气泡；我方气泡改右对齐 */
+.iphone-qqc__msgmenu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 52px;
+  z-index: 5;
+  min-width: 96px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(28, 30, 34, 0.96);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.iphone-qqc__msgmenu--below {
+  bottom: auto;
+  top: calc(100% + 4px);
+}
+
+.iphone-qqc__msg--out .iphone-qqc__msgmenu {
+  left: auto;
+  right: 0;
+}
+
+.iphone-qqc__msgmenu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.iphone-qqc__msgmenu-item:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 好友资料：清空聊天消息（红色警示行，未接通 chatApi 时整体隐藏） */
+.iphone-qq__prof-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  color: #e64340;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 500;
+}
+
+.iphone-qq__prof-clear:active {
+  background: #fdeceb;
+}
+
+/* 确认小卡：盖住整页的半透明浮层（hidden 属性要顶掉 flex 布局） */
+.iphone-qq__prof-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.iphone-qq__prof-confirm[hidden] {
+  display: none;
+}
+
+.iphone-qq__prof-confirm-card {
+  width: 100%;
+  max-width: 280px;
+  padding: 20px 18px 16px;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+}
+
+.iphone-qq__prof-confirm-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #17181a;
+}
+
+.iphone-qq__prof-confirm-text {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #8a8f99;
+}
+
+.iphone-qq__prof-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.iphone-qq__prof-confirm-cancel,
+.iphone-qq__prof-confirm-ok {
+  flex: 1;
+  min-height: 40px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.iphone-qq__prof-confirm-cancel {
+  background: #f2f3f5;
+  color: #4a4e57;
+}
+
+.iphone-qq__prof-confirm-cancel:active {
+  background: #e7e9ec;
+}
+
+.iphone-qq__prof-confirm-ok {
+  background: #e64340;
+  color: #fff;
+}
+
+.iphone-qq__prof-confirm-ok:active {
+  background: #cf3a37;
+}
+
+/* ---------- 日志应用（深色控制台，架构参考 SoulLink views-log.js） ---------- */
+/* 桌面图标：终端深色渐变底 + 白描线终端窗口（SVG 由 constants.js 内联） */
+.iphone-app-icon--logs {
+  background: linear-gradient(160deg, #48484c 0%, #2c2c2e 55%, #1c1c1e 100%);
+}
+
+.iphone-app-icon--logs svg {
+  width: 62%;
+  height: 62%;
+}
+
+/* 日志应用是深色界面：打开时状态栏 / Home 指示条恢复浅色内容 */
+.iphone-screen[data-context='app']:has(.iphone-log) {
+  --sb-color: #fff;
+  --indicator-color: #fff;
+}
+
+.iphone-log {
+  background: #1c1c1e;
+  color: #e5e5ea;
+}
+
+.iphone-log__header {
+  flex: none;
+  padding: 62px 0 0;
+  background: #1c1c1e;
+}
+
+.iphone-log__titlebar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 16px 8px;
+}
+
+.iphone-log__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.iphone-log__status {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.iphone-log__status.is-paused {
+  color: #ff9f0a;
+}
+
+.iphone-log__chips {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.iphone-log__chips::-webkit-scrollbar { display: none; }
+
+.iphone-log__chip {
+  flex: none;
+  height: 26px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 13px;
+  background: #2c2c2e;
+  color: #d1d1d6;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.iphone-log__chip.is-active {
+  background: #0a84ff;
+  color: #fff;
+}
+
+.iphone-log__chip-count {
+  margin-left: 4px;
+  font-weight: 600;
+  opacity: 0.72;
+}
+
+.iphone-log__filters {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 8px;
+}
+
+.iphone-log__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 10px;
+  background: #2c2c2e;
+  color: #8e8e93;
+}
+
+.iphone-log__search svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.iphone-log__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.iphone-log__search input::placeholder { color: #8e8e93; }
+
+.iphone-log__source {
+  flex: none;
+  max-width: 96px;
+  height: 32px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 10px;
+  background: #2c2c2e;
+  color: #d1d1d6;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.iphone-log__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 10px;
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.12);
+}
+
+.iphone-log__tool {
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 14px;
+  background: #2c2c2e;
+  color: #d1d1d6;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.iphone-log__tool.is-active {
+  background: #0a84ff;
+  color: #fff;
+}
+
+.iphone-log__tool--danger { color: #ff453a; }
+
+.iphone-log__toast {
+  position: absolute;
+  bottom: 74px;
+  left: 50%;
+  transform: translate(-50%, 8px);
+  max-width: 78%;
+  padding: 7px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #000;
+  font-size: 12px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 3;
+}
+
+.iphone-log__toast.is-show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.iphone-log__toast.is-error {
+  background: #ff453a;
+  color: #fff;
+}
+
+.iphone-log__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0 10px;
+  font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+.iphone-log__note {
+  position: sticky;
+  top: 0;
+  padding: 5px 14px;
+  background: rgba(28, 28, 30, 0.94);
+  color: #8e8e93;
+  font-size: 10px;
+  text-align: center;
+  z-index: 1;
+}
+
+.iphone-log__row {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr auto;
+  gap: 2px 6px;
+  align-items: baseline;
+  padding: 5px 12px 5px 14px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.07);
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.iphone-log__row.is-expanded { background: rgba(255, 255, 255, 0.05); }
+
+.iphone-log__time {
+  color: rgba(142, 142, 147, 0.9);
+  font-size: 10px;
+}
+
+.iphone-log__level {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.iphone-log__row--debug .iphone-log__level { color: #8e8e93; }
+.iphone-log__row--info .iphone-log__level { color: #30d158; }
+.iphone-log__row--warn .iphone-log__level { color: #ff9f0a; }
+.iphone-log__row--error .iphone-log__level { color: #ff453a; }
+
+.iphone-log__source {
+  color: rgba(90, 200, 245, 0.8);
+  font-size: 10px;
+}
+
+.iphone-log__text {
+  color: #e5e5ea;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.iphone-log__row.is-expanded .iphone-log__text {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.iphone-log__repeat {
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(255, 159, 10, 0.16);
+  color: #ff9f0a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.iphone-log__detail {
+  grid-column: 1 / -1;
+  display: none;
+  margin: 4px 0 2px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #000;
+  color: #c7c7cc;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.iphone-log__row.is-expanded .iphone-log__detail { display: block; }
+
+.iphone-log__empty {
+  padding: 44px 24px;
+  color: #8e8e93;
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.iphone-log__back {
+  position: absolute;
+  right: 14px;
+  bottom: 58px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(58, 58, 60, 0.96);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.iphone-log__footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 12px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+  background: #1c1c1e;
+}
+
+.iphone-log__footer-label {
+  color: #8e8e93;
+  font-size: 11px;
+}
+
+.iphone-log__max {
+  height: 28px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 8px;
+  background: #2c2c2e;
+  color: #d1d1d6;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.iphone-log__footer-hint {
+  margin-left: auto;
+  color: rgba(142, 142, 147, 0.7);
+  font-size: 10px;
+}
+
+/* ===== 微信应用（v0.18.0：四 Tab 仿真 —— 微信 / 通讯录 / 发现 / 我） ===== */
+/* 与 QQ 平行的第二套应用皮肤：主色绿 #07c160、页面灰 #ededed、我方气泡绿 #95ec69、
+   圆角方头像（QQ 为圆形）、名称蓝 #576b95、警示红 #fa5151。
+   结构与 js/wechat.js 一一对应；类前缀 iphone-wx__（主界面）/ iphone-wxc__（聊天页）/
+   iphone-wxm__（朋友圈）。位图素材一律经 CSS url() 背景图加载。 */
+
+/* 桌面图标：微信官方图标位图（assets/wechat-icon.jpg） */
+.iphone-app-icon--wechat {
+  background: url('assets/wechat-icon.jpg') center / cover no-repeat #07c160;
+}
+
+/* ---------- 微信主屏骨架（灰底 + 居中标题头 + 四 Tab） ---------- */
+.iphone-wx {
+  background: #ededed;
+}
+
+/* 列表层：包住「头部 + 内容面板 + 标签栏」，聊天页等覆盖层压在它上面 */
+.iphone-wx__listview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 头部：与内容同为灰底、无分隔线；标题一律居中，右上角「+」绝对定位（微信同款） */
+.iphone-wx__header {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 58px 16px 10px;
+  background: #ededed;
+}
+
+.iphone-wx__heading {
+  margin: 0;
+  color: #191919;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.iphone-wx__add {
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+}
+
+.iphone-wx__add svg {
+  width: 23px;
+  height: 23px;
+}
+
+/* 右上角「+」弹出菜单：微信同款的深灰圆角卡（白字 + 图标） */
+.iphone-wx__addmenu {
+  position: absolute;
+  top: 98px;
+  right: 12px;
+  z-index: 3;
+  display: none;
+  min-width: 158px;
+  padding: 2px 0;
+  border-radius: 8px;
+  background: rgba(76, 76, 76, 0.97);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.iphone-wx__addmenu::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: rgba(76, 76, 76, 0.97);
+  transform: rotate(45deg);
+}
+
+.iphone-wx__addmenu.is-open {
+  display: block;
+  animation: iphone-wx-menu-in 130ms ease-out;
+}
+
+@keyframes iphone-wx-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.iphone-wx__addmenu-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  padding: 13px 18px;
+  border: none;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  text-align: left;
+}
+
+.iphone-wx__addmenu-item + .iphone-wx__addmenu-item {
+  border-top: 0.5px solid rgba(255, 255, 255, 0.14);
+}
+
+.iphone-wx__addmenu-item:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.iphone-wx__addmenu-item svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+/* 内容面板：微信没有 QQ 那样的大圆角白面板，内容直接铺在灰底上，
+   各列表块自己白底满宽 */
+.iphone-wx__sheet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: #ededed;
+}
+
+/* 四个 Tab 页共用容器：独立滚动，非当前页隐藏 */
+.iphone-wx__tabpage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+
+.iphone-wx__tabpage::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-wx__tabpage.is-hidden {
+  display: none;
+}
+
+/* ---------- 微信消息页会话列表 ---------- */
+.iphone-wx__chats {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  list-style: none;
+}
+
+.iphone-wx__chat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+/* 分隔线自文字左缘（头像之后）起画，微信同款内缩 */
+.iphone-wx__chat + .iphone-wx__chat {
+  position: relative;
+}
+
+.iphone-wx__chat + .iphone-wx__chat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 76px;
+  height: 0.5px;
+  background: #ececec;
+}
+
+.iphone-wx__chat:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__chat .iphone-wx__avatar {
+  width: 48px;
+  height: 48px;
+}
+
+.iphone-wx__chat-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-wx__chat-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.iphone-wx__chat-title {
+  overflow: hidden;
+  color: #191919;
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wx__chat-time {
+  flex: none;
+  margin-left: auto;
+  color: #b2b2b2;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.iphone-wx__chat-preview {
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: #9a9a9a;
+  font-size: 14px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wx__chats-empty {
+  margin: 0;
+  padding: 46px 24px;
+  background: #ededed;
+  color: #b2b2b2;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 底部标签栏：浅灰底 + 顶部细线；选中项微信绿 */
+.iphone-wx__tabbar {
+  display: flex;
+  flex: none;
+  padding: 6px 8px 27px;
+  border-top: 0.5px solid #d9d9d9;
+  background: #f7f7f7;
+}
+
+.iphone-wx__tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0 0;
+  border: none;
+  background: none;
+  color: #7f7f7f;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-wx__tab svg {
+  width: 26px;
+  height: 26px;
+}
+
+.iphone-wx__tab i {
+  font-size: 10.5px;
+  font-style: normal;
+  line-height: 1.3;
+}
+
+.iphone-wx__tab.is-active {
+  color: #07c160;
+}
+
+/* ---------- 微信头像（圆角方形，与 QQ 的圆形区分） ---------- */
+/* 内置款式：「我的头像」可选表情脸（Fluent Emoji 3D，MIT），透明底垫柔和底色；
+   规则排在默认背景规则之后才能覆盖。--g1/--g2 是群聊/联系人的首字渐变占位。 */
+.iphone-wx__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  /* 自定义 / 上传图是内联 background-image：不写尺寸的话 256px 的图会按原始
+     像素铺（repeat），小头像里只露出左上角一小块。 */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.iphone-wx__avatar--g1 {
+  background: linear-gradient(135deg, #4ecb73, #07c160);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.iphone-wx__avatar--g2 {
+  background: linear-gradient(135deg, #7db4f5, #4a7fe0);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* 朋友圈动态卡里的小头像尺寸 */
+.iphone-wx__avatar--xs {
+  width: 42px;
+  height: 42px;
+  font-size: 15px;
+}
+
+/* 「我」的默认头像背景（灰底白色人形占位，纯 CSS 画的头 + 肩）必须排在款式类
+   之前：两者特异性相同，靠后的一条才生效，排在后面会把款式图整个盖掉。 */
+.iphone-wx__me-avatar {
+  background:
+    radial-gradient(circle at 50% 32%, #fff 0 17%, rgba(255, 255, 255, 0) 17.5%),
+    radial-gradient(ellipse 40% 26% at 50% 86%, #fff 0 86%, rgba(255, 255, 255, 0) 92%),
+    #d8d8d8;
+}
+
+.iphone-wx__avatar--grin {
+  background: url('assets/wechat-avatar-grin.png') center / cover no-repeat #fdf3d8;
+}
+
+.iphone-wx__avatar--joy {
+  background: url('assets/wechat-avatar-joy.png') center / cover no-repeat #fde8d8;
+}
+
+.iphone-wx__avatar--cool {
+  background: url('assets/wechat-avatar-cool.png') center / cover no-repeat #e3ecf7;
+}
+
+.iphone-wx__avatar--wink {
+  background: url('assets/wechat-avatar-wink.png') center / cover no-repeat #fde4ea;
+}
+
+.iphone-wx__avatar--kiss {
+  background: url('assets/wechat-avatar-kiss.png') center / cover no-repeat #fde0e6;
+}
+
+.iphone-wx__avatar--think {
+  background: url('assets/wechat-avatar-think.png') center / cover no-repeat #ece7f7;
+}
+
+.iphone-wx__avatar--plead {
+  background: url('assets/wechat-avatar-plead.png') center / cover no-repeat #e2edf8;
+}
+
+.iphone-wx__avatar--nerd {
+  background: url('assets/wechat-avatar-nerd.png') center / cover no-repeat #eef1dd;
+}
+
+.iphone-wx__avatar--monocle {
+  background: url('assets/wechat-avatar-monocle.png') center / cover no-repeat #f2ead9;
+}
+
+.iphone-wx__avatar--hug {
+  background: url('assets/wechat-avatar-hug.png') center / cover no-repeat #fce6e6;
+}
+
+/* 「我」的头像：默认灰底白色人形占位（背景见上方 .iphone-wx__me-avatar，
+   排在款式类之前）；款式类各尺寸共用这一套 */
+.iphone-wx__me-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 6px;
+  /* 自定义 / 上传的「我」头像是内联 background-image，尺寸与平铺要显式收住，
+     否则 256px 的图会按原始像素铺、只露出左上角一块。 */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.iphone-wx__me-avatar--me {
+  width: 60px;
+  height: 60px;
+}
+
+.iphone-wx__me-avatar--mini {
+  width: 23px;
+  height: 23px;
+  border-radius: 4px;
+}
+
+.iphone-wx__me-avatar--prof {
+  width: 84px;
+  height: 84px;
+  border-radius: 9px;
+}
+
+.iphone-wx__me-avatar--cover {
+  width: 64px;
+  height: 64px;
+  border: 2.5px solid rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+}
+
+/* 「TA的朋友圈」封面右下角：TA 的头像（与「我」的封面头像同尺寸、同白边；
+   不可点，所以没有 pointer 光标） */
+.iphone-wx__avatar--cover {
+  width: 64px;
+  height: 64px;
+  border: 2.5px solid rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* 聊天页我方气泡旁的头像：与消息页头部/资料页同源 */
+.iphone-wx__out-avatar {
+  width: 44px;
+  height: 44px;
+}
+
+/* ---------- 微信通讯录页（功能行 + 首字母分组列表） ---------- */
+.iphone-wx__ctc-block {
+  background: #fff;
+}
+
+.iphone-wx__ctc-func {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 56px;
+  padding: 0 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+/* 分隔线自图标/头像右缘起画（功能行 55px = 16 内边距 + 25 图标 + 14 间距；
+   行 70px = 16 + 42 头像 + 12 间距） */
+.iphone-wx__ctc-func + .iphone-wx__ctc-func,
+.iphone-wx__ctc-row + .iphone-wx__ctc-row,
+.iphone-wx__ctc-sechead + .iphone-wx__ctc-row {
+  position: relative;
+}
+
+.iphone-wx__ctc-func + .iphone-wx__ctc-func::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 55px;
+  height: 0.5px;
+  background: #ececec;
+}
+
+.iphone-wx__ctc-row + .iphone-wx__ctc-row::before,
+.iphone-wx__ctc-sechead + .iphone-wx__ctc-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 70px;
+  height: 0.5px;
+  background: #ececec;
+}
+
+.iphone-wx__ctc-func:active,
+.iphone-wx__ctc-row:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__ctc-funcico {
+  display: inline-flex;
+  flex: none;
+}
+
+.iphone-wx__ctc-funcico svg {
+  width: 25px;
+  height: 25px;
+}
+
+.iphone-wx__ctc-funname {
+  flex: 1;
+  min-width: 0;
+  color: #191919;
+  font-size: 16.5px;
+}
+
+.iphone-wx__ctc-chev {
+  display: inline-flex;
+  flex: none;
+  color: #c3c7ce;
+}
+
+.iphone-wx__ctc-chev svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 群聊功能行展开的群列表（内嵌在功能块里，行头像略小） */
+.iphone-wx__ctc-groups {
+  padding: 0 0 4px;
+}
+
+.iphone-wx__ctc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+
+.iphone-wx__ctc-row .iphone-wx__avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 15px;
+}
+
+.iphone-wx__ctc-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-wx__ctc-name {
+  margin: 0;
+  overflow: hidden;
+  color: #191919;
+  font-size: 16.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wx__ctc-sub {
+  margin: 3px 0 0;
+  color: #9a9a9a;
+  font-size: 12.5px;
+}
+
+/* 首字母分组头：灰底细条 + 13px 灰字（微信通讯录的分组标题） */
+.iphone-wx__ctc-sechead {
+  margin: 0;
+  padding: 5px 16px;
+  background: #ededed;
+  color: #808080;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 通讯录：页面本体不滚动，内层滚动区装功能块与索引列表（含底部留白） */
+.iphone-wx__ctc-scroll {
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 12px;
+  scrollbar-width: none;
+}
+
+.iphone-wx__ctc-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-wx__ctc-list {
+  position: relative;
+}
+
+.iphone-wx__ctc-empty {
+  margin: 0;
+  padding: 18px 16px 20px;
+  color: #b2b2b2;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* ---------- 微信发现页（八个入口行，白色块 + 灰间隔） ---------- */
+.iphone-wx__dsc-gap {
+  flex: none;
+  height: 8px;
+}
+
+.iphone-wx__dsc-block {
+  background: #fff;
+}
+
+.iphone-wx__dsc-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 56px;
+  padding: 0 16px;
+  border: none;
+  background: #fff;
+  cursor: default;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-wx__dsc-row.is-click {
+  cursor: pointer;
+}
+
+.iphone-wx__dsc-row.is-click:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__dsc-ico {
+  display: inline-flex;
+  flex: none;
+}
+
+.iphone-wx__dsc-ico svg {
+  width: 25px;
+  height: 25px;
+}
+
+.iphone-wx__dsc-label {
+  flex: 1;
+  min-width: 0;
+  color: #191919;
+  font-size: 16.5px;
+}
+
+.iphone-wx__dsc-chev {
+  display: inline-flex;
+  flex: none;
+  color: #c3c7ce;
+}
+
+.iphone-wx__dsc-chev svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 朋友圈行尾的缩略图（新动态红点角标） */
+.iphone-wx__dsc-thumb {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: center / cover no-repeat #eef0f4;
+}
+
+.iphone-wx__dsc-thumb--p1 {
+  background-image: url('assets/wechat-moment-p1.jpg');
+}
+
+.iphone-wx__dsc-thumb--p2 {
+  background-image: url('assets/wechat-moment-p2.jpg');
+}
+
+.iphone-wx__dsc-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: #fa5151;
+}
+
+/* ---------- 微信「我」页（资料卡 + 功能行） ---------- */
+.iphone-wx__me-page {
+  background: #ededed;
+}
+
+.iphone-wx__me-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 26px 16px 24px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-wx__me-card:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__me-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iphone-wx__me-name {
+  overflow: hidden;
+  color: #191919;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wx__me-wxid {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #9a9a9a;
+  font-size: 14px;
+}
+
+.iphone-wx__me-wxid b {
+  font-weight: 400;
+}
+
+.iphone-wx__me-qr {
+  display: inline-flex;
+  flex: none;
+  color: #b2b2b2;
+}
+
+.iphone-wx__me-qr svg {
+  width: 15px;
+  height: 15px;
+}
+
+.iphone-wx__me-block {
+  margin-top: 8px;
+  background: #fff;
+}
+
+.iphone-wx__me-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 56px;
+  padding: 0 16px;
+  border: none;
+  background: #fff;
+  cursor: default;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-wx__me-row + .iphone-wx__me-row {
+  position: relative;
+}
+
+.iphone-wx__me-row + .iphone-wx__me-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 55px;
+  height: 0.5px;
+  background: #ececec;
+}
+
+/* 可点的功能行（「服务」v0.22.1 起） */
+.iphone-wx__me-row.is-click {
+  cursor: pointer;
+}
+
+.iphone-wx__me-row.is-click:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__me-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fa5151;
+}
+
+/* ---------- 微信聊天页（列表 ↔ 会话两层视图切换，覆盖层） ---------- */
+.iphone-wx__chatview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  background: #ededed;
+}
+
+.iphone-wx__chatview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-wxc {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 头部：返回 + 标题 + 设置钮；灰底、无分隔线，顶部 58px 让开状态栏 */
+.iphone-wxc__header {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 58px 10px 8px;
+  background: #ededed;
+}
+
+.iphone-wxc__back,
+.iphone-wxc__menu {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-wxc__back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-wxc__menu svg {
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-wxc__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #191919;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 消息流：灰底 + 左右气泡，超出滚动、隐藏滚动条 */
+.iphone-wxc__stream {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 14px 14px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.iphone-wxc__stream::-webkit-scrollbar {
+  display: none;
+}
+
+/* 系统提示行：灰底上的浅灰小字居中（微信的「你们已经是好友了」提示） */
+.iphone-wxc__sys {
+  margin: 22px 0 0;
+  color: #9a9a9a;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.iphone-wxc__sys--error {
+  color: #fa5151;
+}
+
+.iphone-wxc__msg {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 0 16px;
+}
+
+.iphone-wxc__msg .iphone-wx__avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+
+.iphone-wxc__msg--out {
+  justify-content: flex-end;
+}
+
+/* 群聊成员气泡列：发言人名字标签 + 气泡（私聊无名字列） */
+.iphone-wxc__msgcol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.iphone-wxc__mname {
+  margin: 0 0 0 4px;
+  color: #9a9a9a;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+/* 气泡：白底（对方）/ 微信绿（自己），无尾巴、圆角 6px、尖角靠头像一侧 */
+.iphone-wxc__bubble {
+  overflow-wrap: break-word;
+  max-width: 236px;
+  padding: 10px 13px;
+  border-radius: 6px;
+  background: #fff;
+  color: #191919;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.iphone-wxc__msg--out .iphone-wxc__bubble {
+  background: #95ec69;
+  color: #191919;
+}
+
+.iphone-wxc__bubble p {
+  margin: 0;
+}
+
+.iphone-wxc__bubble p + p {
+  margin-top: 8px;
+}
+
+.iphone-wxc__bubble--typing {
+  color: #9a9a9a;
+}
+
+/* ---------- 微信转账 / 收款（v0.24.0） ---------- */
+/* 转账气泡：整块橙色（待确认亮橙 / 已收款浅橙），左侧白描圆图标，右侧金额 +
+   说明（无说明时显示状态文案），左下角淡字「转账」。气泡内边距清零，卡片自己
+   撑满（我方发出的也一样，别再叠聊天气泡的绿底）。 */
+.iphone-wxc__bubble--pay,
+.iphone-wxc__msg--out .iphone-wxc__bubble--pay {
+  max-width: none;
+  padding: 0;
+  background: none;
+}
+
+.iphone-wxc__paywrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 252px;
+}
+
+.iphone-wxc__msg--out .iphone-wxc__paywrap {
+  align-items: flex-end;
+}
+
+.iphone-wxc__pay {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 241px;
+  padding: 10px 11px 32px;
+  border-radius: 6px;
+  background: #f89d3b;
+  color: #fff;
+}
+
+.iphone-wxc__pay--done {
+  background: #fbcd9d;
+}
+
+.iphone-wxc__pay.is-click {
+  cursor: pointer;
+}
+
+.iphone-wxc__pay-ico {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 43px;
+  height: 43px;
+  color: #fff;
+}
+
+.iphone-wxc__pay-ico svg {
+  width: 43px;
+  height: 43px;
+}
+
+.iphone-wxc__pay-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+/* 首行「向X转账」（v0.25.0，群聊里区分收款人；真实微信的转账气泡同款） */
+.iphone-wxc__pay-who {
+  overflow: hidden;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wxc__pay-amount {
+  overflow: hidden;
+  color: #fff;
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wxc__pay-sub {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wxc__pay-tag {
+  position: absolute;
+  left: 11px;
+  bottom: 10px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11.5px;
+  line-height: 1.2;
+}
+
+/* 「+」面板与面板项：白底宫格，图标实心黑、下方小字（对照真实微信 + 面板） */
+.iphone-wxc__plus {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #191919;
+}
+
+.iphone-wxc__pluspanel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px 0;
+  margin-top: 14px;
+  padding: 18px 4px 4px;
+  border-top: 0.5px solid #e0e0e0;
+}
+
+.iphone-wxc__pluspanel[hidden] {
+  display: none;
+}
+
+.iphone-wxc__plusitem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #191919;
+}
+
+.iphone-wxc__plusitem svg {
+  width: 28px;
+  height: 28px;
+}
+
+.iphone-wxc__plusitem span {
+  color: #5b5b5b;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.iphone-wxc__plusitem:active svg {
+  opacity: 0.6;
+}
+
+/* ---------- 转账输入页（v0.24.0） ---------- */
+/* 覆盖在聊天页之上：顶部返回 + 对方头像/昵称，白色大卡写金额与说明，底部自绘
+   数字键盘（绿键转账）。hidden 时为 display:none，与微信的整页推入观感一致。 */
+.iphone-wxc__payform {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  background: #ededed;
+}
+
+.iphone-wxc__payform[hidden] {
+  display: none;
+}
+
+.iphone-wxc__paynav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 58px 10px 8px;
+}
+
+.iphone-wxc__payback {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+}
+
+.iphone-wxc__payback svg {
+  width: 24px;
+  height: 24px;
+}
+
+.iphone-wxc__paynavgap {
+  width: 34px;
+}
+
+.iphone-wxc__payhead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px 18px;
+}
+
+.iphone-wxc__payhead-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.iphone-wxc__payhead-name {
+  color: #191919;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.iphone-wxc__payhead-sub {
+  color: #9a9a9a;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.iphone-wxc__payhead-avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 17px;
+}
+
+.iphone-wxc__paycard {
+  flex: 1;
+  margin: 0 14px;
+  padding: 26px 20px 20px;
+  border-radius: 10px;
+  background: #fff;
+  min-height: 0;
+}
+
+.iphone-wxc__paycard-label {
+  margin: 0 0 18px;
+  color: #191919;
+  font-size: 15px;
+}
+
+.iphone-wxc__paycard-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0 0 6px;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid #e4e4e4;
+}
+
+.iphone-wxc__paycard-yen {
+  color: #191919;
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.iphone-wxc__paycard-num {
+  color: #191919;
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1.1;
+  min-height: 40px;
+}
+
+.iphone-wxc__paycard-note {
+  width: 100%;
+  margin-top: 14px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: #191919;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.iphone-wxc__paycard-note::placeholder {
+  color: #576b95;
+}
+
+.iphone-wxc__paycard-hint {
+  margin: 10px 0 0;
+  color: #9a9a9a;
+  font-size: 12.5px;
+}
+
+.iphone-wxc__paycard-hint.is-error {
+  color: #fa5151;
+}
+
+/* 数字键盘（4 列 4 行）：1-9 三列、⌫ 右上、`.` `0` 在末行左两格，「转账」占最右列
+   靠下两行——格位由 JS 逐键指定（grid-area），这里只定列数与间距 */
+.iphone-wxc__paykeys {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 48px;
+  gap: 8px;
+  padding: 12px 8px 30px;
+  background: #d1d5db;
+}
+
+.iphone-wxc__paykey {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: #fff;
+  color: #191919;
+  font-family: inherit;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.iphone-wxc__paykey:active {
+  background: #e6e8ec;
+}
+
+.iphone-wxc__paykey svg {
+  width: 26px;
+  height: 26px;
+}
+
+.iphone-wxc__paysubmit {
+  grid-column: 4;
+  grid-row: 3 / span 2;
+  border: none;
+  border-radius: 5px;
+  background: #cccccc;
+  color: #fff;
+  font-family: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.iphone-wxc__paysubmit.is-active {
+  background: #07c160;
+}
+
+/* ---------- 选择收款方（v0.25.0 群聊转账） ---------- */
+/* 与转账输入页同一层：盖住聊天页的整页列表。顶部返回 + 居中标题，圆角搜索框，
+   按首字母分组的成员行，右缘一列索引（放大镜 + 字母，点字母跳分组）。 */
+.iphone-wxc__payeeview {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  background: #ededed;
+}
+
+.iphone-wxc__payeeview.is-open {
+  display: flex;
+}
+
+.iphone-wxc__payee {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iphone-wxc__payee-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 58px 10px 10px;
+}
+
+.iphone-wxc__payee-back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+}
+
+.iphone-wxc__payee-back svg {
+  width: 24px;
+  height: 24px;
+}
+
+.iphone-wxc__payee-title {
+  flex: 1;
+  margin: 0;
+  padding-right: 34px;
+  color: #191919;
+  font-size: 17px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* 搜索框：白底圆角、左侧放大镜、无边框输入 */
+.iphone-wxc__payee-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 10px;
+  padding: 0 12px;
+  height: 40px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.iphone-wxc__payee-searchico {
+  display: inline-flex;
+  flex: none;
+  color: #b2b2b2;
+}
+
+.iphone-wxc__payee-searchico svg {
+  width: 19px;
+  height: 19px;
+}
+
+.iphone-wxc__payee-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: #191919;
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.iphone-wxc__payee-input::placeholder {
+  color: #b2b2b2;
+}
+
+/* 列表区：滚动列表 + 右缘索引条并排 */
+.iphone-wxc__payee-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.iphone-wxc__payee-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding-bottom: 24px;
+  scrollbar-width: none;
+}
+
+.iphone-wxc__payee-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-wxc__payee-sec {
+  background: #fff;
+}
+
+/* 分组头：灰底细条 + 13px 灰字（与通讯录同款） */
+.iphone-wxc__payee-sechead {
+  margin: 0;
+  padding: 5px 16px;
+  background: #ededed;
+  color: #808080;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.iphone-wxc__payee-row {
+  display: flex;
+  position: relative;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.iphone-wxc__payee-row + .iphone-wxc__payee-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 70px;
+  height: 0.5px;
+  background: #ececec;
+}
+
+.iphone-wxc__payee-row:active {
+  background: #f2f2f2;
+}
+
+.iphone-wxc__payee-row .iphone-wx__avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 15px;
+}
+
+.iphone-wxc__payee-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #191919;
+  font-size: 16.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wxc__payee-empty {
+  margin: 0;
+  padding: 28px 16px;
+  color: #9a9a9a;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 索引条：竖排一列——放大镜在顶，字母在下；点字母跳到对应分组 */
+.iphone-wxc__payee-index {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  width: 30px;
+  padding: 10px 0 24px;
+}
+
+.iphone-wxc__payee-indexico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #9a9a9a;
+  cursor: pointer;
+}
+
+.iphone-wxc__payee-indexico svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-wxc__payee-indexitem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 17px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #9a9a9a;
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.iphone-wxc__payee-indexitem:active {
+  color: #07c160;
+}
+
+
+/* 输入栏：语音 / 输入框 / 发送 / 表情 / 加号；浅灰底、无上边框（微信同款） */
+.iphone-wxc__composer {
+  flex: none;
+  padding: 7px 10px 27px;
+  background: #f7f7f7;
+  border-top: 0.5px solid #e0e0e0;
+}
+
+.iphone-wxc__inputrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.iphone-wxc__tool {
+  display: inline-flex;
+  flex: none;
+  color: #191919;
+}
+
+.iphone-wxc__tool svg {
+  width: 28px;
+  height: 28px;
+}
+
+.iphone-wxc__input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  border: none;
+  outline: none;
+  border-radius: 5px;
+  background: #fff;
+  color: #191919;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.iphone-wxc__input::placeholder {
+  color: #c6c6c6;
+}
+
+/* 发送键：无字时灰底灰字（不可用观感），有字由 js 加 is-active 转微信绿 */
+.iphone-wxc__send {
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 5px;
+  background: #e4e4e4;
+  color: #a6a6a6;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.iphone-wxc__send.is-active {
+  background: #07c160;
+  color: #fff;
+}
+
+/* 气泡删除菜单：深色卡（长按 550ms / 右键触发），挂在气泡行上 */
+.iphone-wxc__msgmenu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 53px;
+  z-index: 5;
+  min-width: 96px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(28, 30, 34, 0.96);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.iphone-wxc__msgmenu--below {
+  bottom: auto;
+  top: calc(100% + 4px);
+}
+
+.iphone-wxc__msg--out .iphone-wxc__msgmenu {
+  left: auto;
+  right: 0;
+}
+
+.iphone-wxc__msgmenu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.iphone-wxc__msgmenu-item:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- 微信朋友圈（覆盖层：封面 + 动态流 + 下拉刷新 + 点赞评论） ---------- */
+.iphone-wx__momentsview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  background: #fff;
+}
+
+.iphone-wx__momentsview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-wxm {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 悬浮导航双形态：未滚动时透明控件盖在封面上；滚过封面（.is-scrolled）后切白底标题栏 */
+.iphone-wxm__nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: grid;
+  pointer-events: none;
+}
+
+.iphone-wxm__nav-cover,
+.iphone-wxm__nav-solid {
+  grid-area: 1 / 1;
+  align-items: center;
+}
+
+.iphone-wxm__nav-cover {
+  display: flex;
+  gap: 10px;
+  padding: 58px 15px 0;
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+
+.iphone-wxm__nav-cover > * {
+  pointer-events: auto;
+}
+
+.iphone-wxm__nav-solid {
+  display: flex;
+  padding: 58px 14px 9px;
+  background: #fff;
+  border-bottom: 0.5px solid #ececec;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.iphone-wxm.is-scrolled .iphone-wxm__nav-cover,
+.iphone-wxm.is-scrolled .iphone-wxm__nav-cover > * {
+  opacity: 0;
+  pointer-events: none !important;
+}
+
+.iphone-wxm.is-scrolled .iphone-wxm__nav-solid {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 透明态控件：返回在左、相机在右，均为无底图标（盖在封面图上） */
+.iphone-wxm__cover-back,
+.iphone-wxm__cover-cam,
+.iphone-wxm__back,
+.iphone-wxm__cam {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-wxm__cover-back,
+.iphone-wxm__cover-cam {
+  color: #fff;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.45));
+}
+
+.iphone-wxm__back,
+.iphone-wxm__cam {
+  color: #191919;
+}
+
+.iphone-wxm__cover-back svg,
+.iphone-wxm__back svg {
+  width: 24px;
+  height: 24px;
+}
+
+.iphone-wxm__cover-cam svg,
+.iphone-wxm__cam svg {
+  width: 23px;
+  height: 23px;
+}
+
+.iphone-wxm__cover-cam,
+.iphone-wxm__cam {
+  margin-left: auto;
+}
+
+.iphone-wxm__title {
+  flex: 1;
+  margin: 0;
+  color: #191919;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.iphone-wxm__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: #fff;
+  overscroll-behavior: contain;
+}
+
+.iphone-wxm__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-wxm.is-pulling {
+  user-select: none;
+}
+
+/* 下拉刷新指示器：滚动区首个子元素，高度由手势驱动（0 = 收起）。
+   与 QQ空间同款：内容贴条带底边（子元素自带 8px 下边距），刷新态 72px 时
+   小圈与文案完整落在手机状态栏图标下方，不和灵动岛/电量叠在一起。 */
+.iphone-wxm__refresh {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+  height: 0;
+  overflow: hidden;
+  color: #8b939e;
+  font-size: 12.5px;
+  user-select: none;
+}
+
+.iphone-wxm__refresh-spin,
+.iphone-wxm__refresh-text {
+  margin-bottom: 8px;
+}
+
+.iphone-wxm__refresh.is-anim {
+  transition: height 0.25s ease;
+}
+
+.iphone-wxm__refresh-spin {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border: 2px solid #c9d4dd;
+  border-top-color: #07c160;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.iphone-wxm__refresh.is-refreshing .iphone-wxm__refresh-spin {
+  opacity: 1;
+  animation: iphone-qqz-spin 0.7s linear infinite;
+}
+
+/* 下拉过程中也把小圈露出来转（与 QQ空间同款即时反馈） */
+.iphone-wxm.is-pulling .iphone-wxm__refresh-spin {
+  opacity: 1;
+  animation: iphone-qqz-spin 0.7s linear infinite;
+}
+
+/* 封面：位图背景 + 右下角「我」的昵称与头像 */
+.iphone-wxm__cover {
+  position: relative;
+  height: 300px;
+  background: url('assets/wechat-moment-cover.jpg') center / cover no-repeat #3c4a58;
+}
+
+.iphone-wxm__cover-id {
+  position: absolute;
+  right: 16px;
+  bottom: -22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iphone-wxm__cover-name {
+  margin: 0;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* 动态流：封面下缘起 34px（让出压边的头像），到底留白 */
+.iphone-wxm__feed {
+  padding: 44px 0 26px;
+}
+
+.iphone-wxm__empty {
+  padding: 46px 15px 60px;
+  color: #9aa3ad;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* 动态卡：头像 + 名字一行，正文与互动区整体右缩 53px（头像列宽 + 间距），
+   卡间细线分隔（微信朋友圈的经典排版） */
+.iphone-wxm__post {
+  padding: 18px 14px 6px;
+}
+
+.iphone-wxm__post + .iphone-wxm__post {
+  border-top: 0.5px solid #ececec;
+}
+
+.iphone-wxm__head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.iphone-wxm__name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #576b95;
+  font-size: 15.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wxm__text {
+  margin: 7px 0 0 53px;
+  color: #191919;
+  font-size: 15.5px;
+  line-height: 1.5;
+}
+
+.iphone-wxm__meta {
+  display: flex;
+  align-items: center;
+  margin: 9px 0 0 53px;
+}
+
+.iphone-wxm__time {
+  color: #b2b2b2;
+  font-size: 12.5px;
+}
+
+/* 点赞钮：未点赞灰描边心，已点赞红实心（右对齐） */
+.iphone-wxm__likebtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #8a8f99;
+  cursor: pointer;
+}
+
+.iphone-wxm__likebtn.is-liked {
+  color: #fa5151;
+}
+
+.iphone-wxm__likebtn svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* 互动区：浅灰圆角块；❤ 点赞名单 + 分隔线 + 评论区 */
+.iphone-wxm__interact {
+  margin: 8px 0 0 53px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  background: #f7f7f7;
+}
+
+.iphone-wxm__likes {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  color: #576b95;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.iphone-wxm__likes-ico {
+  display: inline-flex;
+  flex: none;
+  margin-top: 3px;
+  color: #576b95;
+}
+
+.iphone-wxm__likes-ico svg {
+  width: 14px;
+  height: 14px;
+}
+
+.iphone-wxm__sep {
+  height: 0.5px;
+  margin: 6px 0;
+  background: #e3e3e3;
+}
+
+.iphone-wxm__comments {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.iphone-wxm__c-row {
+  margin: 0;
+  color: #191919;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.iphone-wxm__c-name {
+  color: #576b95;
+}
+
+/* 我发的评论：名字后跟一枚浅绿「我」标 */
+.iphone-wxm__c-row.is-me .iphone-wxm__c-name::after {
+  content: '我';
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #e6f7ec;
+  color: #07c160;
+  font-size: 11px;
+  line-height: 15px;
+  vertical-align: 1px;
+}
+
+/* 回复条：收起态是「说点什么吧…」胶囊（带我的小头像），点开变输入行 */
+.iphone-wxm__replybar {
+  margin: 10px 0 12px 53px;
+}
+
+.iphone-wxm__replybar.is-open .iphone-wxm__pill {
+  display: none;
+}
+
+.iphone-wxm__replybar:not(.is-open) .iphone-wxm__replyrow {
+  display: none;
+}
+
+.iphone-wxm__pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 6px;
+  border: none;
+  border-radius: 5px;
+  background: #f2f2f2;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-wxm__pill-hint {
+  color: #b2b2b2;
+  font-size: 14px;
+}
+
+.iphone-wxm__replyrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.iphone-wxm__replyinput {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  outline: none;
+  border-radius: 5px;
+  background: #f2f2f2;
+  color: #191919;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.iphone-wxm__replyinput::placeholder {
+  color: #c6c6c6;
+}
+
+/* 发送键：与聊天页同款（灰 → is-active 绿） */
+.iphone-wxm__replysend {
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 5px;
+  background: #e4e4e4;
+  color: #a6a6a6;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.iphone-wxm__replysend.is-active {
+  background: #07c160;
+  color: #fff;
+}
+
+.iphone-wxm__replysend:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.iphone-wxm__replyerr {
+  margin: 7px 0 0;
+  color: #fa5151;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ---------- 微信资料 / 表单页（编辑资料 · 添加朋友 · 群聊资料 · 添加成员） ---------- */
+/* 覆盖层容器：与聊天页同层（z-index 2，靠打开顺序互斥），灰底 */
+.iphone-wx__profview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  background: #ededed;
+}
+
+.iphone-wx__profview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-wx__prof {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 顶部导航：返回 + 居中标题 + 右侧动作；微信为灰底白字栏（无分隔线） */
+.iphone-wx__prof-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 58px 14px 10px;
+  background: #ededed;
+}
+
+.iphone-wx__prof-back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+}
+
+.iphone-wx__prof-back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-wx__prof-title {
+  flex: 1;
+  margin: 0;
+  color: #191919;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.iphone-wx__prof-navspace {
+  flex: none;
+  width: 36px;
+}
+
+.iphone-wx__prof-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 0 20px;
+  scrollbar-width: none;
+}
+
+.iphone-wx__prof-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* 头像卡：满宽白底 + 大头像 + 灰色提示 */
+.iphone-wx__prof-avcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 22px 0 16px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-wx__prof-avcard:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__prof-avhint {
+  color: #9a9a9a;
+  font-size: 12.5px;
+}
+
+/* 表单页头像卡内的预览头像（复用通用头像节点，放大到 84px） */
+.iphone-wx__prof-avcard-avatar .iphone-wx__avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 9px;
+  font-size: 26px;
+}
+
+/* 资料卡：满宽白底，行式布局（标签居左、无边框输入居右） */
+.iphone-wx__prof-card {
+  margin-top: 12px;
+  background: #fff;
+}
+
+.iphone-wx__prof-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 0 16px;
+}
+
+.iphone-wx__prof-row + .iphone-wx__prof-row {
+  position: relative;
+}
+
+.iphone-wx__prof-row + .iphone-wx__prof-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 16px;
+  height: 0.5px;
+  background: #ececec;
+}
+
+.iphone-wx__prof-label {
+  flex: none;
+  color: #191919;
+  font-size: 16px;
+}
+
+.iphone-wx__prof-input {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 0;
+  border: none;
+  background: none;
+  color: #191919;
+  font-family: inherit;
+  font-size: 16px;
+  text-align: right;
+  outline: none;
+}
+
+.iphone-wx__prof-input::placeholder {
+  color: #c6c6c6;
+}
+
+/* 联系人资料页 · 「她的朋友圈」入口行 */
+.iphone-wx__prof-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 54px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: none;
+  background: #fff;
+  color: #191919;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  text-align: left;
+}
+
+.iphone-wx__prof-link:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__prof-link-ico {
+  display: inline-flex;
+  flex: none;
+  color: #576b95;
+}
+
+.iphone-wx__prof-link-ico svg {
+  width: 20px;
+  height: 20px;
+}
+
+.iphone-wx__prof-chev {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  color: #c3c7ce;
+}
+
+.iphone-wx__prof-chev svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-wx__prof-foot {
+  margin: 14px 16px 0;
+  color: #9a9a9a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* 表单页右上角动作（添加 / 创建 / 保存）：微信绿文字按钮 */
+.iphone-wx__prof-action {
+  flex: none;
+  min-width: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #07c160;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.iphone-wx__prof-action:active {
+  opacity: 0.6;
+}
+
+/* 清空聊天记录 / 删除联系人（红色警示行，未接通回调时 hidden 隐藏） */
+.iphone-wx__prof-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 54px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: none;
+  background: #fff;
+  color: #fa5151;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.iphone-wx__prof-clear:active {
+  background: #fdeceb;
+}
+
+/* 确认小卡：盖住整页的半透明浮层（hidden 属性要顶掉 flex 布局） */
+.iphone-wx__prof-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.iphone-wx__prof-confirm[hidden] {
+  display: none;
+}
+
+.iphone-wx__prof-confirm-card {
+  width: 100%;
+  max-width: 280px;
+  padding: 20px 18px 16px;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+}
+
+.iphone-wx__prof-confirm-title {
+  margin: 0 0 8px;
+  color: #191919;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.iphone-wx__prof-confirm-text {
+  margin: 0 0 18px;
+  color: #8a8f99;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.iphone-wx__prof-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.iphone-wx__prof-confirm-cancel,
+.iphone-wx__prof-confirm-ok {
+  flex: 1;
+  min-height: 40px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.iphone-wx__prof-confirm-cancel {
+  background: #f2f2f2;
+  color: #4a4e57;
+}
+
+.iphone-wx__prof-confirm-cancel:active {
+  background: #e6e6e6;
+}
+
+.iphone-wx__prof-confirm-ok {
+  background: #fa5151;
+  color: #fff;
+}
+
+.iphone-wx__prof-confirm-ok:active {
+  background: #e04343;
+}
+
+/* ---------- 微信「服务 / 钱包」页（v0.22.1，前端占位） ---------- */
+/* 按微信 8.x 截图复刻：服务页顶部整块绿卡（收付款 | 钱包 + 余额）+ 圆角白卡
+   分组入口；钱包页无卡片，直接白底列表 + 组间灰缝 + 底部「身份信息 | 支付设置」。
+   入口图标是彩色线稿 SVG（路径见 wechat.js 的 IPHONE_WECHAT_SVC_ICON_PATHS，
+   取自 GitHub tabler/tabler-icons，MIT），颜色由调用处的 style="color:…" 决定。 */
+
+/* 覆盖层容器：服务 / 钱包两层叠加（钱包盖在服务上，返回只关自己） */
+.iphone-wx__svcview--wallet {
+  z-index: 3;
+}
+
+.iphone-wx__svc {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 导航栏：与大列表页同款底色，仅返回 + 居中标题 + 右侧动作 */
+.iphone-wx__svc-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 58px 14px 10px;
+  background: #ededed;
+}
+
+.iphone-wx__svc-back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+}
+
+.iphone-wx__svc-back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-wx__svc-navtitle {
+  flex: 1;
+  margin: 0;
+  color: #191919;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.iphone-wx__svc-more {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+}
+
+.iphone-wx__svc-more svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-wx__svc-navaction {
+  flex: none;
+  min-width: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #191919;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  text-align: right;
+}
+
+.iphone-wx__svc-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #ededed;
+  scrollbar-width: none;
+}
+
+.iphone-wx__svc-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* 顶部绿卡：整块绿色，左「收付款」右「钱包」，钱包下方是余额小字 */
+.iphone-wx__svc-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 4px 12px 12px;
+  padding: 26px 0 22px;
+  border-radius: 8px;
+  background: #2aa85e;
+}
+
+.iphone-wx__svc-herocell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-wx__svc-herocell:active {
+  opacity: 0.7;
+}
+
+.iphone-wx__svc-heroico {
+  display: inline-flex;
+  color: #f2fff6;
+}
+
+.iphone-wx__svc-heroico svg {
+  width: 40px;
+  height: 40px;
+}
+
+.iphone-wx__svc-herolabel {
+  color: #fff;
+  font-size: 16px;
+}
+
+.iphone-wx__svc-herobalance {
+  margin-top: -4px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13.5px;
+  letter-spacing: 0.2px;
+}
+
+/* 分组白卡：圆角，标题小灰字，卡内四列图标 */
+.iphone-wx__svc-sec {
+  margin: 0 12px 12px;
+  padding: 14px 4px 18px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.iphone-wx__svc-title {
+  margin: 0 12px 16px;
+  color: #7a7e83;
+  font-size: 14px;
+}
+
+.iphone-wx__svc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 22px;
+}
+
+.iphone-wx__svc-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-wx__svc-cell:active {
+  opacity: 0.6;
+}
+
+.iphone-wx__svc-ico {
+  display: inline-flex;
+}
+
+.iphone-wx__svc-ico svg {
+  width: 29px;
+  height: 29px;
+}
+
+.iphone-wx__svc-clabel {
+  max-width: 100%;
+  overflow: hidden;
+  color: #191919;
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 钱包页：无卡片，纯白底色上的分行列表 */
+/* 列布局：内容短时把「身份信息 | 支付设置」推到页面底部（与微信一致），
+   内容长时脚注随列表一起滚动 */
+.iphone-wx__svc-body--wallet {
+  display: flex;
+  flex-direction: column;
+  background: #ededed;
+}
+
+.iphone-wx__wal-list {
+  flex: none;
+  padding: 4px 0 0;
+}
+
+.iphone-wx__wal-block {
+  background: #fff;
+}
+
+.iphone-wx__wal-gap {
+  height: 8px;
+}
+
+.iphone-wx__wal-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 60px;
+  padding: 0 16px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-wx__wal-row:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__wal-row + .iphone-wx__wal-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 58px;
+  height: 0.5px;
+  background: #ececec;
+}
+
+.iphone-wx__wal-ico {
+  display: inline-flex;
+  flex: none;
+}
+
+.iphone-wx__wal-ico svg {
+  width: 26px;
+  height: 26px;
+}
+
+.iphone-wx__wal-label {
+  flex: none;
+  color: #191919;
+  font-size: 17px;
+}
+
+/* 行内橙色小字（收益率 / 分付说明），紧跟名称之后 */
+.iphone-wx__wal-note {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #ff8f1f;
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wx__wal-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #191919;
+  font-size: 17px;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 行尾箭头前的自动留白（只有 note / value 时也要把箭头推到最右） */
+.iphone-wx__wal-row .iphone-wx__dsc-chev {
+  margin-left: auto;
+}
+
+/* 底部「身份信息 | 支付设置」小字：贴底居中（上方自动留白） */
+.iphone-wx__wal-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: auto 0 34px;
+  padding-top: 26px;
+  color: #576b95;
+  font-size: 14px;
+}
+
+.iphone-wx__wal-foot i {
+  width: 0.5px;
+  height: 13px;
+  background: #c8c9cc;
+}
+
+/* 创建群聊 / 添加成员 · 选择联系人卡 */
+.iphone-wx__memcard {
+  padding-bottom: 6px;
+}
+
+.iphone-wx__mem-hint {
+  margin: 0;
+  padding: 12px 16px 4px;
+  color: #9a9a9a;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.iphone-wx__memlist {
+  padding: 4px 0;
+}
+
+.iphone-wx__memrow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  /* 没有全局 border-box 重置，缺这行会让 width:100% + 左右内边距把行撑出容器，
+     成员行末尾的微信号被裁掉 */
+  box-sizing: border-box;
+  padding: 7px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-wx__memrow:active {
+  background: #f2f2f2;
+}
+
+.iphone-wx__memrow .iphone-wx__avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 14px;
+}
+
+.iphone-wx__memmain {
+  flex: 1;
+  overflow: hidden;
+  color: #191919;
+  font-size: 15.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-wx__memsub {
+  flex: none;
+  color: #b2b2b2;
+  font-size: 12.5px;
+}
+
+/* 群聊资料 · 「添加成员」入口行的绿色加号位 */
+.iphone-wx__memplus {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+  background: #e6f7ec;
+  color: #07c160;
+  font-size: 22px;
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1;
+}
+
+/* 勾选圈：选中转微信绿 + 白勾 */
+.iphone-wx__memcheck {
+  flex: none;
+  box-sizing: border-box;
+  width: 21px;
+  height: 21px;
+  border: 1.5px solid #c6cad2;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.iphone-wx__memrow.is-on .iphone-wx__memcheck {
+  position: relative;
+  border-color: #07c160;
+  background: #07c160;
+}
+
+.iphone-wx__memrow.is-on .iphone-wx__memcheck::after {
+  content: '';
+  position: absolute;
+  left: 5.5px;
+  top: 2px;
+  width: 4.5px;
+  height: 8.5px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(42deg);
+}
+
+/* 选择头像浮层：复用 QQ 组件的结构类，配色随微信（绿勾、绿按钮） */
+.iphone-wx__avpick-status {
+  margin: 10px 16px 0;
+  color: #9a9a9a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.iphone-wx__avpick-status[data-state='ok'] {
+  color: #07c160;
+}
+
+.iphone-wx__avpick-status[data-state='error'] {
+  color: #fa5151;
+}
+
+/* 微信里的选择头像浮层：QQ 组件的类名不变，这里只覆盖徽章与主按钮配色 */
+.iphone-wx__prof .iphone-qq__avpick-badge {
+  background: #07c160;
+}
+
+.iphone-wx__prof .iphone-qq__avpick-use {
+  background: #07c160;
+}
+
+/* 微信里的上传裁剪编辑器：QQ 组件的类名不变，配色随微信（绿滑块、灰底） */
+.iphone-wx__prof .iphone-qq__avcrop {
+  background: #ededed;
+}
+
+.iphone-wx__prof .iphone-qq__avcrop-zoom {
+  background: #d9d9d9;
+}
+
+.iphone-wx__prof .iphone-qq__avcrop-zoom::-webkit-slider-thumb {
+  background: #07c160;
+}
+
+.iphone-wx__prof .iphone-qq__avcrop-zoom::-moz-range-thumb {
+  background: #07c160;
+}
+
+.iphone-wx__prof .iphone-qq__avcrop-zoomico {
+  color: #7a7a7a;
+}
+
+.iphone-wx__prof .iphone-qq__avpick-grid {
+  border-radius: 0;
+}
+
+.iphone-wx__prof .iphone-qq__prof-nav {
+  background: #ededed;
+}
+
+/* ---------- 设置 · 微信三组提示词子页（与 QQ 三页同一套推入视差） ---------- */
+.iphone-st.is-wechatpreset-open .iphone-st__page--wechatpreset,
+.iphone-st.is-wechatgrouppreset-open .iphone-st__page--wechatgrouppreset,
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--wechatmomentspreset {
+  box-shadow: -14px 0 34px rgba(0, 0, 0, 0.18);
+}
+
+.iphone-st__page--wechatpreset,
+.iphone-st__page--wechatgrouppreset,
+.iphone-st__page--wechatmomentspreset {
+  transform: translateX(100%);
+}
+
+.iphone-st__page--wechatpreset::after,
+.iphone-st__page--wechatgrouppreset::after,
+.iphone-st__page--wechatmomentspreset::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.34s ease;
+  pointer-events: none;
+}
+
+.iphone-st.is-wechatpreset-open .iphone-st__page--main,
+.iphone-st.is-wechatgrouppreset-open .iphone-st__page--main,
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--main {
+  transform: translateX(-26%);
+}
+
+.iphone-st.is-wechatpreset-open .iphone-st__page--main::after,
+.iphone-st.is-wechatgrouppreset-open .iphone-st__page--main::after,
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--main::after {
+  opacity: 0.14;
+}
+
+.iphone-st.is-wechatpreset-open .iphone-st__page--wechatpreset,
+.iphone-st.is-wechatgrouppreset-open .iphone-st__page--wechatgrouppreset,
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--wechatmomentspreset {
+  transform: translateX(0);
+}
