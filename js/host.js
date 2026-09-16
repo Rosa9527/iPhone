@@ -697,6 +697,7 @@ function iphoneFloorSectionTagFor(header) {
   if (matched) return IPHONE_FLOOR_SECTION_TAG_HEADS.wechatGroup.replace('{name}', iphoneFloorSectionTagName(matched[1], '未知群聊'));
   if (text === '朋友圈动态：') return IPHONE_FLOOR_SECTION_TAG_HEADS.wechatMoments;
   if (text === '小红书笔记：') return IPHONE_FLOOR_SECTION_TAG_HEADS.xhsNotes;
+  if (text === '淘宝订单：') return IPHONE_FLOOR_SECTION_TAG_HEADS.taobaoOrders;
   return null;
 }
 

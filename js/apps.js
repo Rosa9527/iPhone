@@ -4119,6 +4119,8 @@ function iphoneSettingsIcons() {
     inject: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v9.4"/><path d="m8.3 9.5 3.7 3.7 3.7-3.7"/><path d="M4.7 15.2v2.8c0 1 .8 1.8 1.8 1.8h11c1 0 1.8-.8 1.8-1.8v-2.8"/></g></svg>',
     // 「零钱评估提示词」行图标（¥ 硬币，与微信钱包图标集的 coinYen 同款）
     coinYen: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M9.4 12.2h5.2"/><path d="M9.4 15.1h5.2"/><path d="m9.4 7.6 2.6 4.6 2.6-4.6"/><path d="M12 12.2v4.5"/></g></svg>',
+    // 「淘宝提示词」行图标（购物袋，与淘宝图标集的 bag 同款）
+    shop: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4.6 8h14.8l-1.2 11.2a1.8 1.8 0 0 1-1.8 1.6H7.6a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.6 10.4V6.6a3.4 3.4 0 0 1 6.8 0v3.8"/></g></svg>',
   };
 }
 
@@ -4688,6 +4690,14 @@ function buildSettingsAppScreen() {
     action: () => screen.classList.add('is-xhspreset-open'),
   });
 
+  // 「淘宝提示词」入口（v0.28.0）：编辑商品生成（下拉刷新 / 搜索）的提示词组合。
+  const taobaoPresetRow = makeRow({
+    icon: 'shop',
+    tone: '#ff5000',
+    label: '淘宝提示词',
+    action: () => screen.classList.add('is-taobaopreset-open'),
+  });
+
   // 「第三方注入」入口（v0.26.0）：开关 + 将要附带的内容预览（别的扩展注入酒馆
   // 主提示词、被本插件顺带带进手机请求的那些段）。
   const injectDetail = document.createElement('span');
@@ -4731,6 +4741,8 @@ function buildSettingsAppScreen() {
   wechatPresetGroup.appendChild(wechatAssessRow);
   const xhsPresetGroup = makeGroup();
   xhsPresetGroup.appendChild(xhsPresetRow);
+  const taobaoPresetGroup = makeGroup();
+  taobaoPresetGroup.appendChild(taobaoPresetRow);
   const injectGroup = makeGroup();
   injectGroup.appendChild(injectRow);
   const searchBox = document.createElement('div');
@@ -4746,6 +4758,7 @@ function buildSettingsAppScreen() {
   mainScroll.appendChild(presetGroup);
   mainScroll.appendChild(wechatPresetGroup);
   mainScroll.appendChild(xhsPresetGroup);
+  mainScroll.appendChild(taobaoPresetGroup);
   mainScroll.appendChild(injectGroup);
   mainPage.appendChild(mainNav);
   mainPage.appendChild(mainScroll);
@@ -5173,6 +5186,7 @@ function buildSettingsAppScreen() {
   const saveWechatGroupPreset = (patch) => savePromptPreset('wechatGroup', IPHONE_WECHAT_GROUP_PRESET_DEFAULT, patch);
   const saveWechatMomentsPreset = (patch) => savePromptPreset('wechatMoments', IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT, patch);
   const saveXhsNotesPreset = (patch) => savePromptPreset('xhsNotes', IPHONE_XHS_PRESET_DEFAULT, patch);
+  const saveTaobaoProductsPreset = (patch) => savePromptPreset('taobaoProducts', IPHONE_TAOBAO_PRESET_DEFAULT, patch);
   const saveWechatAssessPreset = (patch) => savePromptPreset('wechatAssess', IPHONE_WECHAT_ASSESS_PRESET_DEFAULT, patch);
 
   // 预设编辑器（v0.12.0 从私聊子页抽取成工厂，私聊/群聊/动态三页共用；v0.18.0
@@ -5583,6 +5597,36 @@ function buildSettingsAppScreen() {
     },
   });
 
+  /* -- 淘宝「商品生成提示词」页（v0.28.0：首页刷新与搜索共用的请求组合） -- */
+  const taobaoProductsPresetPage = buildPresetPage({
+    pageClass: 'iphone-st__page--taobaopreset',
+    openClass: 'is-taobaopreset-open',
+    navTitle: '淘宝提示词',
+    sectionPrefix: '淘宝商品',
+    // 淘宝只生成商品（点购买就是扣钱，没有第二轮 AI 回复），npcSection: false
+    // 省掉扮演与对白指导，也没有回复指导段。
+    npcSection: false,
+    guidanceSection: {
+      title: '商品生成指导',
+      footText: '包在 <taobao_guidance> 里随 system 发送的生成指导：一次推几个、商品细节要多真、怎么贴合剧情与买家情况、标题与价格的写法、评价怎么编等；改写后即时生效，留空则整段不发送（只靠角色扮演指令与输出格式，商品会显得空洞）。',
+    },
+    formatFootText: 'AI 回复按「标题：」开头的商品区块解析（品类 / 标题 / 卖点 / 价格 / 原价 / 销量 / 店铺 / 城市 / 标签 / 优惠 / 分期 / 详情 / 评价）；'
+      + '「品类：」必须落在插件内置的 12 个大类里（插件按品类给商品挑封面底色），标题与价格必填；这段包在 <output_format> 里随 system 发送，模型没按格式输出时整次刷新作废并提示重试。',
+    footText: '可用占位符：{{user}} = 你的名字，{{char}} = 当前角色。'
+      + '首页下拉刷新与搜索框提交各调一次 API，搜索时关键词随请求附上（<search_query>），生成 1~6 个商品。'
+      + '随请求附带：已推过的商品标题（避免重复推荐）、买家的微信零钱余额与最近订单（价位要相称）、'
+      + '世界书与酒馆剧情上下文、最新手机记录楼层、第三方注入内容。修改即时保存。',
+    resetLabel: '恢复淘宝默认预设',
+    save: saveTaobaoProductsPreset,
+    getPreset: () => iphoneGetTaobaoPreset(),
+    defaults: IPHONE_TAOBAO_PRESET_DEFAULT,
+    floorLogLabels: {
+      on: '附带最新手机记录楼层',
+      off: '不附带手机记录楼层',
+      footText: '把酒馆里最新一楼的 iPhone_Message 聊天记录（每段各自用方括号标签包裹，可能含多个联系人/群聊的记录段，含 QQ 与微信的记录，超长截尾保留最近记录）包进 <taobao_chat_log> 随 system 发送。',
+    },
+  });
+
   /* -- 微信「零钱评估提示词」页（v0.27.0：零钱页「评估」按钮的请求组合） -- */
   const wechatAssessPresetPage = buildPresetPage({
     pageClass: 'iphone-st__page--wechatassesspreset',
@@ -5736,6 +5780,7 @@ function buildSettingsAppScreen() {
   screen.appendChild(wechatMomentsPresetPage);
   screen.appendChild(wechatAssessPresetPage);
   screen.appendChild(xhsNotesPresetPage);
+  screen.appendChild(taobaoProductsPresetPage);
   screen.appendChild(injectPage);
   refreshMainDetail();
   refreshInjectDetail();
@@ -5751,12 +5796,13 @@ function buildSettingsAppScreen() {
 }
 
 // 应用 id → 内页构建器；注册表里没有内页的应用点击后回落到通用占位页。
-// buildLogsAppScreen 定义在 js/logs.js、buildXhsAppScreen 在 js/xhs.js
-//（拼接后同一作用域，函数声明提升可引用）。
+// buildLogsAppScreen 定义在 js/logs.js、buildXhsAppScreen 在 js/xhs.js、
+// buildTaobaoAppScreen 在 js/taobao.js（拼接后同一作用域，函数声明提升可引用）。
 const IPHONE_APP_SCREEN_BUILDERS = Object.freeze({
   qq: buildQqAppScreen,
   wechat: buildWechatAppScreen,
   xhs: buildXhsAppScreen,
+  taobao: buildTaobaoAppScreen,
   worldbook: iphoneBuildWorldBookScreen,
   settings: buildSettingsAppScreen,
   logs: iphoneBuildLogsAppScreen,

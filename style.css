@@ -8915,3 +8915,2157 @@
 }
 
 .iphone-st__inject.is-open .iphone-st__inject-body { display: block; }
+
+/* ===== 淘宝应用（v0.28.0） =====
+   结构与 js/taobao.js 一一对应；类前缀 iphone-tb__（主界面与各覆盖层统一用它）。
+   商品没有图片素材：封面位是一块「品类渐变底色 + 品类词」的文字图块（.iphone-tb__thumb
+   与 --<品类id> 的配色类），是这套界面里唯一的「图」。 */
+
+/* 桌面图标：橙红渐变底 + 白色「淘」字（内联 SVG，见 constants.js 的 IPHONE_APPS） */
+.iphone-app-icon--taobao {
+  background: linear-gradient(160deg, #ff7a2f, #ff4400 62%, #f52d00);
+}
+
+/* ---------- 主屏骨架 ---------- */
+/* 淘宝整体是浅灰底（真实淘宝的页面底色不是纯白） */
+.iphone-tb {
+  background: #f4f4f6;
+}
+
+.iphone-tb__listview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.iphone-tb__sheet-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.iphone-tb__tabpage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iphone-tb__tabpage.is-hidden {
+  display: none;
+}
+
+.iphone-tb__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.iphone-tb__scroll::-webkit-scrollbar {
+  width: 0;
+}
+
+/* ---------- 头部：频道条 + 搜索框 ---------- */
+.iphone-tb__header {
+  flex: none;
+  padding: 56px 0 8px;
+  background: linear-gradient(180deg, #ff5000 0%, #ff5000 62%, rgba(255, 80, 0, 0) 100%);
+}
+
+.iphone-tb__channels {
+  display: flex;
+  gap: 4px;
+  padding: 2px 10px 9px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.iphone-tb__channels::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-tb__channel {
+  flex: none;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 13px;
+  background: none;
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.iphone-tb__channel.is-active {
+  background: #fff;
+  color: #ff5000;
+  font-weight: 700;
+}
+
+.iphone-tb__searchbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 10px;
+  padding: 0 10px;
+  height: 36px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(120, 40, 0, 0.1);
+}
+
+.iphone-tb__searchbar-ico {
+  display: flex;
+  flex: none;
+  color: #ff5000;
+}
+
+.iphone-tb__searchbar-ico svg {
+  width: 17px;
+  height: 17px;
+}
+
+.iphone-tb__searchbar-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #c4c4c8;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.iphone-tb__searchbar-city {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+  color: #ff5000;
+  font-size: 12.5px;
+}
+
+.iphone-tb__searchbar-city svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---------- 底部标签栏 ---------- */
+.iphone-tb__tabbar {
+  display: flex;
+  flex: none;
+  padding: 6px 4px 26px;
+  border-top: 0.5px solid #ececee;
+  background: #fff;
+}
+
+.iphone-tb__tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0 0;
+  border: none;
+  background: none;
+  color: #9a9aa0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-tb__tab-ico {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.iphone-tb__tab-ico svg {
+  width: 23px;
+  height: 23px;
+}
+
+.iphone-tb__tab i {
+  font-style: normal;
+  font-size: 10.5px;
+}
+
+.iphone-tb__tab.is-active {
+  color: #ff5000;
+  font-weight: 600;
+}
+
+/* 购物车角标：条目数 */
+.iphone-tb__tab-badge,
+.iphone-tb__prod-navbadge {
+  position: absolute;
+  top: -3px;
+  left: 60%;
+  min-width: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #ff3b30;
+  color: #fff;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  text-align: center;
+}
+
+/* ---------- 下拉刷新指示器 ---------- */
+.iphone-tb__refresh {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+  height: 0;
+  overflow: hidden;
+  color: #9a9aa0;
+  font-size: 12.5px;
+  user-select: none;
+}
+
+.iphone-tb__refresh.is-anim {
+  transition: height 0.25s ease;
+}
+
+.iphone-tb__refresh-spin {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-bottom: 8px;
+  border: 2px solid #ececef;
+  border-top-color: #ff5000;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.iphone-tb__refresh-text {
+  margin-bottom: 8px;
+}
+
+.iphone-tb__home.is-pulling .iphone-tb__refresh-spin,
+.iphone-tb__refresh.is-refreshing .iphone-tb__refresh-spin {
+  opacity: 1;
+  animation: iphone-qqz-spin 0.7s linear infinite;
+}
+
+/* ---------- 商品「文字封面」：品类渐变块 ---------- */
+.iphone-tb__thumb {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(150deg, #dfe3ea, #c3cad6);
+  color: #fff;
+}
+
+.iphone-tb__thumb-label {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+}
+
+.iphone-tb__thumb-off {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 1px 6px 2px 5px;
+  border-radius: 0 7px 0 8px;
+  background: rgba(0, 0, 0, 0.34);
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
+}
+
+/* 品类配色：每个大类一套渐变（同一个商品每次渲染都是同一块颜色） */
+.iphone-tb__thumb--default { background: linear-gradient(150deg, #dfe3ea, #c3cad6); }
+.iphone-tb__thumb--shuma   { background: linear-gradient(150deg, #6f8cff, #3f5ce0); }
+.iphone-tb__thumb--jiadian { background: linear-gradient(150deg, #56c2e8, #2b86c5); }
+.iphone-tb__thumb--fushi   { background: linear-gradient(150deg, #ff8fa8, #f0507a); }
+.iphone-tb__thumb--meizhuang { background: linear-gradient(150deg, #ff9ec4, #e85ba0); }
+.iphone-tb__thumb--shipin   { background: linear-gradient(150deg, #ffb45c, #f0812b); }
+.iphone-tb__thumb--jiaju    { background: linear-gradient(150deg, #8fbf8a, #4f9152); }
+.iphone-tb__thumb--muying    { background: linear-gradient(150deg, #ffc978, #f2a03c); }
+.iphone-tb__thumb--yundong   { background: linear-gradient(150deg, #5fd0bd, #2d9c8c); }
+.iphone-tb__thumb--tushu     { background: linear-gradient(150deg, #9d8ff0, #6a56d8); }
+.iphone-tb__thumb--qiche     { background: linear-gradient(150deg, #7f93ab, #4b5f78); }
+.iphone-tb__thumb--zhubao    { background: linear-gradient(150deg, #f6c453, #d99b16); }
+.iphone-tb__thumb--chongwu   { background: linear-gradient(150deg, #9fd06a, #63a32e); }
+
+/* ---------- 标签（天猫 / 包邮 / 官方正品…） ---------- */
+.iphone-tb__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.iphone-tb__tag {
+  padding: 0.5px 4px;
+  border-radius: 3px;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.iphone-tb__tag--red {
+  background: #ffeced;
+  color: #e03e3e;
+  box-shadow: inset 0 0 0 0.5px rgba(224, 62, 62, 0.34);
+}
+
+.iphone-tb__tag--green {
+  background: #e9f7ee;
+  color: #1f9d55;
+  box-shadow: inset 0 0 0 0.5px rgba(31, 157, 85, 0.3);
+}
+
+.iphone-tb__tag--orange {
+  background: #fff1e6;
+  color: #f56a00;
+  box-shadow: inset 0 0 0 0.5px rgba(245, 106, 0, 0.3);
+}
+
+.iphone-tb__tag--blue {
+  background: #eaf2ff;
+  color: #2f6fed;
+  box-shadow: inset 0 0 0 0.5px rgba(47, 111, 237, 0.28);
+}
+
+.iphone-tb__tag--gray {
+  background: #f1f1f3;
+  color: #86868b;
+}
+
+/* ---------- 商品卡片（列表 / 搜索结果共用） ---------- */
+.iphone-tb__feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px 14px;
+}
+
+.iphone-tb__card {
+  display: flex;
+  gap: 10px;
+  padding: 9px;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.iphone-tb__card:active {
+  background: #fafafa;
+}
+
+.iphone-tb__card .iphone-tb__thumb {
+  width: 104px;
+  height: 104px;
+}
+
+.iphone-tb__card-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.iphone-tb__card-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 19px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.iphone-tb__card-selling {
+  overflow: hidden;
+  margin: 0;
+  color: #9a9aa0;
+  font-size: 11.5px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 1px 0 0;
+}
+
+.iphone-tb__card-price b {
+  color: #ff5000;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.iphone-tb__card-price b i {
+  margin-right: 0.5px;
+  font-style: normal;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.iphone-tb__card-price s {
+  color: #b8b8bd;
+  font-size: 11px;
+  text-decoration: line-through;
+}
+
+.iphone-tb__card-price em {
+  margin-left: auto;
+  color: #9a9aa0;
+  font-style: normal;
+  font-size: 11px;
+}
+
+.iphone-tb__card-promo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 1px 0 0;
+}
+
+.iphone-tb__card-coupon,
+.iphone-tb__card-installment {
+  padding: 0.5px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.iphone-tb__card-coupon {
+  background: #ffece8;
+  color: #ff5000;
+}
+
+.iphone-tb__card-installment {
+  background: #f2f2f5;
+  color: #86868b;
+}
+
+.iphone-tb__card-shop {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: auto 0 0;
+  color: #86868b;
+  font-size: 11.5px;
+}
+
+.iphone-tb__card-shop span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__card-shop em {
+  display: flex;
+  flex: none;
+}
+
+.iphone-tb__card-shop em svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------- 空态 ---------- */
+.iphone-tb__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 68px 30px;
+  color: #b0b0b6;
+  text-align: center;
+}
+
+.iphone-tb__empty svg {
+  width: 44px;
+  height: 44px;
+  opacity: 0.5;
+}
+
+.iphone-tb__empty p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* ---------- 搜索页（覆盖层） ---------- */
+.iphone-tb__searchview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+}
+
+.iphone-tb__searchview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-tb__search-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 58px 12px 9px;
+  background: #ff5000;
+}
+
+.iphone-tb__search-back {
+  display: flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+.iphone-tb__search-back svg {
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-tb__search-box {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 9px;
+  height: 32px;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.iphone-tb__search-ico {
+  display: flex;
+  flex: none;
+  color: #ff5000;
+}
+
+.iphone-tb__search-ico svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-tb__search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1a1a1a;
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+
+.iphone-tb__search-input::placeholder {
+  color: #c4c4c8;
+}
+
+.iphone-tb__search-clear {
+  display: flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #c4c4c8;
+  cursor: pointer;
+}
+
+.iphone-tb__search-clear svg {
+  width: 15px;
+  height: 15px;
+}
+
+.iphone-tb__search-clear[hidden] {
+  display: none;
+}
+
+.iphone-tb__search-scan {
+  display: flex;
+  flex: none;
+  color: #9a9aa0;
+}
+
+.iphone-tb__search-scan svg {
+  width: 17px;
+  height: 17px;
+}
+
+.iphone-tb__search-go {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.iphone-tb__search-go:disabled {
+  opacity: 0.6;
+}
+
+.iphone-tb__search-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.iphone-tb__search-block {
+  padding: 14px 14px 4px;
+}
+
+.iphone-tb__search-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 9px;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.iphone-tb__search-clearall {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #9a9aa0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.iphone-tb__hotlist {
+  display: flex;
+  flex-direction: column;
+}
+
+.iphone-tb__hotitem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-tb__hotitem i {
+  flex: none;
+  width: 16px;
+  color: #b0b0b6;
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.iphone-tb__hotitem.is-top i {
+  color: #ff5000;
+}
+
+.iphone-tb__hotitem span {
+  overflow: hidden;
+  color: #3c3c43;
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__historylist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.iphone-tb__historyitem {
+  padding: 5px 11px;
+  border: none;
+  border-radius: 14px;
+  background: #f4f4f6;
+  color: #3c3c43;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.iphone-tb__search-status {
+  margin: 0;
+  padding: 12px 14px 4px;
+  color: #9a9aa0;
+  font-size: 12.5px;
+}
+
+.iphone-tb__search-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 10px 16px;
+}
+
+/* ---------- 商品详情（覆盖层） ---------- */
+.iphone-tb__productview {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  background: #f4f4f6;
+}
+
+.iphone-tb__productview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-tb__prod-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 58px 12px 9px;
+  background: #fff;
+}
+
+.iphone-tb__prod-back {
+  display: flex;
+  flex: none;
+  margin-right: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+.iphone-tb__prod-back svg {
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-tb__prod-nav-title {
+  flex: 1;
+  color: #1a1a1a;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.iphone-tb__prod-navbtn {
+  position: relative;
+  display: flex;
+  flex: none;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: #3c3c43;
+  cursor: pointer;
+}
+
+.iphone-tb__prod-navbtn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.iphone-tb__prod-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.iphone-tb__prod-err {
+  flex: none;
+  margin: 0;
+  padding: 7px 14px;
+  background: #fff7e6;
+  color: #a86a00;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.iphone-tb__prod-err[hidden] {
+  display: none;
+}
+
+/* 顶部大图位：品类渐变块（比列表里的封面更高更宽） */
+.iphone-tb__prod-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  background: linear-gradient(150deg, #dfe3ea, #c3cad6);
+}
+
+.iphone-tb__prod-hero-label {
+  color: #fff;
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* 价格区浮在大图位下方（真实淘宝的价格卡压着主图往下垂） */
+.iphone-tb__prod-price {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  transform: translateY(50%);
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(60, 40, 20, 0.1);
+}
+
+.iphone-tb__prod-price-main {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+}
+
+.iphone-tb__prod-price-main span {
+  color: #ff5000;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.iphone-tb__prod-price-main b {
+  color: #ff5000;
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 30px;
+}
+
+.iphone-tb__prod-price-main b i {
+  font-style: normal;
+  font-size: 16px;
+}
+
+.iphone-tb__prod-price-main em {
+  color: #ff5000;
+  font-style: normal;
+  font-size: 12.5px;
+}
+
+.iphone-tb__prod-price-main s {
+  margin-left: auto;
+  color: #b8b8bd;
+  font-size: 11.5px;
+  text-decoration: line-through;
+}
+
+.iphone-tb__prod-sales {
+  display: block;
+  margin-top: 1px;
+  color: #9a9aa0;
+  font-size: 11.5px;
+}
+
+.iphone-tb__prod-coupon,
+.iphone-tb__prod-installment {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 5px 0 0;
+  font-size: 12px;
+}
+
+.iphone-tb__prod-coupon span,
+.iphone-tb__prod-installment span {
+  flex: none;
+  padding: 0.5px 4px;
+  border-radius: 3px;
+  background: #ffece8;
+  color: #ff5000;
+  font-size: 10.5px;
+}
+
+.iphone-tb__prod-installment span {
+  background: #eef3ff;
+  color: #2f6fed;
+}
+
+.iphone-tb__prod-coupon b,
+.iphone-tb__prod-installment b {
+  overflow: hidden;
+  flex: 1;
+  color: #3c3c43;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__prod-coupon em,
+.iphone-tb__prod-installment em {
+  display: flex;
+  flex: none;
+  color: #c4c4c8;
+}
+
+.iphone-tb__prod-coupon em svg,
+.iphone-tb__prod-installment em svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* 标题区（给价格卡的下半留出空间） */
+.iphone-tb__prod-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 34px 10px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.iphone-tb__prod-title {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 23px;
+}
+
+.iphone-tb__prod-selling {
+  margin: 0;
+  color: #86868b;
+  font-size: 12.5px;
+  line-height: 18px;
+}
+
+.iphone-tb__prod-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 0;
+}
+
+.iphone-tb__prod-badges span {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #f4f4f6;
+  color: #86868b;
+  font-size: 10.5px;
+}
+
+/* 店铺卡 */
+.iphone-tb__prod-shop {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 8px 10px 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.iphone-tb__prod-shop-ico {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #ffb27a, #ff6a1f);
+  color: #fff;
+}
+
+.iphone-tb__prod-shop-ico svg {
+  width: 20px;
+  height: 20px;
+}
+
+.iphone-tb__prod-shop-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-tb__prod-shop-name {
+  overflow: hidden;
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__prod-shop-meta {
+  margin: 1px 0 0;
+  color: #9a9aa0;
+  font-size: 11px;
+}
+
+.iphone-tb__prod-shop em {
+  display: flex;
+  flex: none;
+  color: #c4c4c8;
+}
+
+.iphone-tb__prod-shop em svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 保障条 */
+.iphone-tb__prod-guarantee {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 8px 10px 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.iphone-tb__prod-guarantee span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #5c5c61;
+  font-size: 11.5px;
+}
+
+.iphone-tb__prod-guarantee svg {
+  width: 13px;
+  height: 13px;
+  color: #1f9d55;
+}
+
+/* 评价区 */
+.iphone-tb__prod-reviews {
+  margin: 8px 10px 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.iphone-tb__prod-review-head {
+  margin: 0 0 8px;
+  color: #1a1a1a;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.iphone-tb__prod-review-head span {
+  margin-left: 5px;
+  color: #9a9aa0;
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.iphone-tb__prod-review + .iphone-tb__prod-review {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.iphone-tb__prod-review-name {
+  margin: 0;
+  color: #3c3c43;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.iphone-tb__prod-review-text {
+  margin: 2px 0 0;
+  color: #1a1a1a;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.iphone-tb__prod-review-meta {
+  margin: 3px 0 0;
+  color: #b0b0b6;
+  font-size: 11px;
+}
+
+/* 详情文字 */
+.iphone-tb__prod-detail {
+  margin: 8px 10px 14px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.iphone-tb__prod-detail-head {
+  margin: 0 0 6px;
+  color: #1a1a1a;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.iphone-tb__prod-detail-text {
+  margin: 0;
+  color: #5c5c61;
+  font-size: 12.5px;
+  line-height: 20px;
+  white-space: pre-wrap;
+}
+
+/* 底部购买条：店铺 / 客服 / 收藏 + 加入购物车 + 立即购买 */
+.iphone-tb__prod-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 24px;
+  border-top: 0.5px solid #ececee;
+  background: #fff;
+}
+
+.iphone-tb__prod-tab {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 42px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #6c6c71;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-tb__prod-tab svg {
+  width: 20px;
+  height: 20px;
+}
+
+.iphone-tb__prod-tab i {
+  font-style: normal;
+  font-size: 10px;
+}
+
+.iphone-tb__prod-tab.is-on {
+  color: #ff5000;
+}
+
+.iphone-tb__prod-tab.is-on svg {
+  fill: rgba(255, 80, 0, 0.12);
+}
+
+.iphone-tb__prod-addcart,
+.iphone-tb__prod-buy {
+  flex: 1;
+  height: 38px;
+  border: none;
+  border-radius: 19px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.iphone-tb__prod-addcart {
+  background: linear-gradient(135deg, #ffb02e, #ff8f00);
+}
+
+.iphone-tb__prod-buy {
+  background: linear-gradient(135deg, #ff7a2f, #ff4400);
+}
+
+.iphone-tb__prod-addcart:active,
+.iphone-tb__prod-buy:active {
+  filter: brightness(0.94);
+}
+
+/* ---------- 购买浮层（选数量 → 确认付款） ---------- */
+.iphone-tb__sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.iphone-tb__sheet-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  animation: iphone-tb-fade 160ms ease-out;
+}
+
+@keyframes iphone-tb-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.iphone-tb__sheet-body {
+  position: relative;
+  padding: 14px 16px 30px;
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+  animation: iphone-tb-sheet-in 220ms cubic-bezier(0.32, 0.72, 0.35, 1);
+}
+
+@keyframes iphone-tb-sheet-in {
+  from { transform: translateY(28px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.iphone-tb__sheet-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.iphone-tb__sheet-thumb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 8px;
+  background: linear-gradient(150deg, #ff8f5f, #ff5000);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.iphone-tb__sheet-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-tb__sheet-price {
+  margin: 2px 0 0;
+  color: #ff5000;
+  font-size: 13px;
+}
+
+.iphone-tb__sheet-price b {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.iphone-tb__sheet-stock {
+  margin: 3px 0 0;
+  color: #9a9aa0;
+  font-size: 11.5px;
+}
+
+.iphone-tb__sheet-balance {
+  margin: 3px 0 0;
+  color: #86868b;
+  font-size: 11.5px;
+}
+
+.iphone-tb__sheet-balance.is-short {
+  color: #e03e3e;
+  font-weight: 600;
+}
+
+.iphone-tb__sheet-close {
+  display: flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #c4c4c8;
+  cursor: pointer;
+}
+
+.iphone-tb__sheet-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.iphone-tb__sheet-qty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0 0;
+  color: #1a1a1a;
+  font-size: 13.5px;
+}
+
+/* 数量步进器（购买浮层与购物车共用） */
+.iphone-tb__stepper {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #f4f4f6;
+}
+
+.iphone-tb__stepper button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #3c3c43;
+  cursor: pointer;
+}
+
+.iphone-tb__stepper button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.iphone-tb__stepper i {
+  min-width: 30px;
+  color: #1a1a1a;
+  font-style: normal;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.iphone-tb__sheet-foot {
+  margin: 16px 0 0;
+  color: #5c5c61;
+  font-size: 12.5px;
+  text-align: right;
+}
+
+.iphone-tb__sheet-foot b {
+  color: #ff5000;
+  font-size: 16px;
+}
+
+.iphone-tb__sheet-pay {
+  width: 100%;
+  height: 44px;
+  margin: 12px 0 0;
+  border: none;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #ff7a2f, #ff4400);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.iphone-tb__sheet-pay.is-disabled {
+  background: #d8d8dc;
+  cursor: default;
+}
+
+/* ---------- 分类页 ---------- */
+.iphone-tb__cat-hint,
+.iphone-tb__cat-foot {
+  margin: 0;
+  padding: 14px 16px 0;
+  color: #9a9aa0;
+  font-size: 12.5px;
+}
+
+.iphone-tb__cat-foot {
+  padding: 12px 16px 16px;
+}
+
+.iphone-tb__cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px 12px 4px;
+}
+
+.iphone-tb__cat-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 76px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  background: linear-gradient(150deg, #dfe3ea, #c3cad6);
+}
+
+.iphone-tb__cat-cell span {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.16);
+}
+
+/* ---------- 购物车页 ---------- */
+.iphone-tb__cart-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 8px 10px 0;
+  padding: 9px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.iphone-tb__cart-check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1.4px solid #d0d0d5;
+  border-radius: 50%;
+  background: none;
+  color: transparent;
+  cursor: pointer;
+}
+
+.iphone-tb__cart-check svg {
+  width: 13px;
+  height: 13px;
+}
+
+.iphone-tb__cart-check.is-on {
+  border-color: #ff5000;
+  background: #ff5000;
+  color: #fff;
+}
+
+.iphone-tb__cart-row .iphone-tb__thumb--cart {
+  width: 72px;
+  height: 72px;
+}
+
+.iphone-tb__cart-row .iphone-tb__thumb-label {
+  font-size: 14px;
+}
+
+.iphone-tb__cart-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.iphone-tb__cart-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 13.5px;
+  line-height: 18px;
+  cursor: pointer;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.iphone-tb__cart-price {
+  margin: 0;
+}
+
+.iphone-tb__cart-price b {
+  color: #ff5000;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.iphone-tb__cart-qty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.iphone-tb__cart-del {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #9a9aa0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.iphone-tb__cart-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 24px;
+  border-top: 0.5px solid #ececee;
+  background: #fff;
+}
+
+.iphone-tb__cart-all {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #6c6c71;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.iphone-tb__cart-all.is-on {
+  color: #ff5000;
+  font-weight: 600;
+}
+
+.iphone-tb__cart-sum {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.iphone-tb__cart-sum p {
+  margin: 0;
+  color: #5c5c61;
+  font-size: 12.5px;
+}
+
+.iphone-tb__cart-sum b {
+  color: #ff5000;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.iphone-tb__cart-balance {
+  color: #9a9aa0;
+  font-size: 10.5px;
+}
+
+.iphone-tb__cart-pay {
+  flex: none;
+  padding: 0 22px;
+  height: 36px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ff7a2f, #ff4400);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.iphone-tb__cart-pay.is-disabled {
+  background: #d8d8dc;
+  cursor: default;
+}
+
+.iphone-tb__cart-err {
+  margin: 8px 12px 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #fff7e6;
+  color: #a86a00;
+  font-size: 11.5px;
+  line-height: 17px;
+}
+
+/* ---------- 消息页 ---------- */
+.iphone-tb__msg-entries {
+  display: flex;
+  gap: 8px;
+  padding: 10px 10px 0;
+}
+
+.iphone-tb__msg-entry {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 0;
+  border: none;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-tb__msg-entry-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.iphone-tb__msg-entry-ico svg {
+  width: 19px;
+  height: 19px;
+}
+
+.iphone-tb__msg-entry.is-orange .iphone-tb__msg-entry-ico { background: linear-gradient(150deg, #ffb45c, #f0812b); }
+.iphone-tb__msg-entry.is-blue .iphone-tb__msg-entry-ico { background: linear-gradient(150deg, #6f8cff, #3f5ce0); }
+.iphone-tb__msg-entry.is-red .iphone-tb__msg-entry-ico { background: linear-gradient(150deg, #ff8fa8, #f0507a); }
+
+.iphone-tb__msg-entry i {
+  color: #3c3c43;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.iphone-tb__msg-list {
+  padding: 10px 10px 16px;
+}
+
+.iphone-tb__msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.iphone-tb__msg-avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #ffb27a, #ff6a1f);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.iphone-tb__msg-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-tb__msg-name {
+  overflow: hidden;
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__msg-text {
+  margin: 2px 0 0;
+  color: #86868b;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.iphone-tb__msg-time {
+  flex: none;
+  color: #b0b0b6;
+  font-size: 11px;
+}
+
+/* ---------- 「我的淘宝」页 ---------- */
+.iphone-tb__me-hero {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 18px 16px 16px;
+  background: linear-gradient(160deg, #ff7a2f, #ff4400);
+}
+
+.iphone-tb__me-avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #ff5000;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.iphone-tb__me-who {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-tb__me-name {
+  overflow: hidden;
+  margin: 0;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__me-meta {
+  margin: 3px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11.5px;
+}
+
+.iphone-tb__me-setting {
+  display: flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+}
+
+.iphone-tb__me-setting svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* 零钱卡：余额与微信同源（只读展示 + 说明入口） */
+.iphone-tb__me-wallet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 20px);
+  margin: 10px 10px 0;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-tb__me-wallet-ico {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #ffd08a, #f5a623);
+  color: #fff;
+}
+
+.iphone-tb__me-wallet-ico svg {
+  width: 19px;
+  height: 19px;
+}
+
+.iphone-tb__me-wallet-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.iphone-tb__me-wallet-info i {
+  color: #9a9aa0;
+  font-style: normal;
+  font-size: 11.5px;
+}
+
+.iphone-tb__me-wallet-info b {
+  color: #1a1a1a;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.iphone-tb__me-wallet em {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+  color: #9a9aa0;
+  font-style: normal;
+  font-size: 11.5px;
+}
+
+.iphone-tb__me-wallet em svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* 订单卡：状态行 4 格 */
+.iphone-tb__me-orders {
+  margin: 10px 10px 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.iphone-tb__me-orders-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 11px;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.iphone-tb__me-more {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #9a9aa0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.iphone-tb__me-more svg {
+  width: 13px;
+  height: 13px;
+}
+
+.iphone-tb__me-order-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.iphone-tb__me-order-cell {
+  position: relative;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  color: #3c3c43;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.iphone-tb__me-order-cell i {
+  position: absolute;
+  top: 2px;
+  left: 56%;
+  min-width: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #ff3b30;
+  color: #fff;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 15px;
+}
+
+/* 工具行 */
+.iphone-tb__me-tools {
+  margin: 10px 10px 16px;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.iphone-tb__me-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-tb__me-row + .iphone-tb__me-row {
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.iphone-tb__me-row-ico {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: #ff5000;
+}
+
+.iphone-tb__me-row-ico svg {
+  width: 20px;
+  height: 20px;
+}
+
+.iphone-tb__me-row i {
+  flex: 1;
+  color: #1a1a1a;
+  font-style: normal;
+  font-size: 13.5px;
+}
+
+.iphone-tb__me-row em {
+  color: #9a9aa0;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.iphone-tb__me-row > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: #c4c4c8;
+}
+
+/* ---------- 订单列表（覆盖层） ---------- */
+.iphone-tb__orders {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  background: #f4f4f6;
+}
+
+.iphone-tb__orders.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-tb__orders-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 58px 12px 9px;
+  background: #fff;
+}
+
+.iphone-tb__orders-back {
+  display: flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+.iphone-tb__orders-back svg {
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-tb__orders-title {
+  flex: 1;
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.iphone-tb__orders-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.iphone-tb__order {
+  margin: 8px 10px 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.iphone-tb__order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 9px;
+}
+
+.iphone-tb__order-head span {
+  overflow: hidden;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__order-head i {
+  flex: none;
+  margin-left: 8px;
+  color: #ff5000;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.iphone-tb__order-body {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.iphone-tb__order-body .iphone-tb__thumb--order {
+  width: 62px;
+  height: 62px;
+}
+
+.iphone-tb__order-body .iphone-tb__thumb-label {
+  font-size: 13px;
+}
+
+.iphone-tb__order-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-tb__order-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 13px;
+  line-height: 18px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.iphone-tb__order-qty {
+  margin: 3px 0 0;
+  color: #9a9aa0;
+  font-size: 11.5px;
+}
+
+.iphone-tb__order-price {
+  flex: none;
+  margin: 0;
+  color: #5c5c61;
+  font-size: 11.5px;
+  text-align: right;
+}
+
+.iphone-tb__order-price b {
+  display: block;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.iphone-tb__order-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.iphone-tb__order-no {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #b0b0b6;
+  font-size: 10.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-tb__order-btn {
+  flex: none;
+  padding: 0 12px;
+  height: 28px;
+  border: 0.5px solid #d0d0d5;
+  border-radius: 14px;
+  background: none;
+  color: #3c3c43;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.iphone-tb__order-btn.is-main {
+  border-color: #ff5000;
+  color: #ff5000;
+}
+
+/* ---------- 轻提示 ---------- */
+.iphone-tb__toast {
+  position: absolute;
+  left: 50%;
+  bottom: 108px;
+  z-index: 6;
+  max-width: 300px;
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 18px;
+  text-align: center;
+  transform: translate(-50%, 8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.iphone-tb__toast.is-show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}

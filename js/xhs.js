@@ -448,7 +448,7 @@ function iphoneXhsCommentLikes(comment) {
 function iphoneXhsCommentIp(data, comment, note) {
   if (iphoneIsXhsPlayerAuthor(comment?.name)) return iphoneGetXhsProfile().ip;
   const netizen = iphoneXhsFindNetizen(data, comment?.name);
-  return netizen?.ip || note?.ip || '江苏';
+  return netizen?.ip || note?.ip || IPHONE_XHS_ME.ip;
 }
 
 // 笔记作者展示信息：网友池优先，玩家自己的笔记走「我」的资料。
@@ -1385,7 +1385,7 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
     meta.textContent = [
       iphoneXhsTimeLabel(note.ts),
       note.location ? note.location : '',
-      `IP属地：${note.ip || author.ip || '江苏'}`,
+      `IP属地：${note.ip || author.ip || IPHONE_XHS_ME.ip}`,
       author.xhsId ? `小红书号：${author.xhsId}` : '',
     ].filter(Boolean).join(' · ');
     body.appendChild(meta);
@@ -1848,7 +1848,7 @@ function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
       </label>
       <label class="iphone-xhs__prof-row">
         <span class="iphone-xhs__prof-label">IP 属地</span>
-        <input class="iphone-xhs__prof-input" type="text" data-field="ip" maxlength="16" placeholder="如：江苏" autocomplete="off">
+        <input class="iphone-xhs__prof-input" type="text" data-field="ip" maxlength="16" placeholder="如：${IPHONE_XHS_ME.ip}" autocomplete="off">
       </label>
       <label class="iphone-xhs__prof-row iphone-xhs__prof-row--bio">
         <span class="iphone-xhs__prof-label">简介</span>

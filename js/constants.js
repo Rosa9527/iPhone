@@ -1,7 +1,7 @@
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.27.0';
+const IPHONE_MODULE_VERSION = '0.28.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -85,6 +85,14 @@ const IPHONE_APPS = Object.freeze([
     id: 'xhs',
     name: '小红书',
     iconClass: 'iphone-app-icon--xhs',
+  },
+  {
+    id: 'taobao',
+    name: '淘宝',
+    iconClass: 'iphone-app-icon--taobao',
+    // 矢量图标直接内联 SVG（buildIphoneAppIcon 支持）：白色「淘」字，底色由
+    // .iphone-app-icon--taobao 的橙红渐变给出（官方图标就是橙底 + 淘字构成）。
+    iconSvg: '<svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17.4" text-anchor="middle" font-size="15" font-family="PingFang SC,Hiragino Sans GB,Microsoft YaHei,sans-serif" font-weight="700" fill="#fff">淘</text></svg>',
   },
   {
     id: 'settings',
@@ -493,7 +501,7 @@ const IPHONE_XHS_PRESET_DEFAULT = Object.freeze({
 // 头像与简介由玩家在「编辑资料」里改。
 const IPHONE_XHS_ME = Object.freeze({
   xhsId: '8823771906',
-  ip: '江苏',
+  ip: '上海',
 });
 // 小红书头像款式（assets/xhs-avatar-*.png，DiceBear 生成，见 README「素材来源」）：
 // me = 默认（纯 CSS 灰底人形占位，无覆盖类），其余 20 款为覆盖类。
@@ -545,7 +553,7 @@ const IPHONE_XHS_COVERS = Object.freeze([
 // 推荐 = 全部笔记；其余按话题与标题关键词过滤（见 iphoneXhsNoteMatchesChannel）。
 const IPHONE_XHS_CHANNELS = Object.freeze(['推荐', 'RED', '热点', '直播', '短剧', '穿搭']);
 // 首页右上角切换的城市（仅作展示，对照真实小红书的定位入口）。
-const IPHONE_XHS_CITY_DEFAULT = '盐城';
+const IPHONE_XHS_CITY_DEFAULT = '上海';
 // 底部标签栏：首页 / 市集 / 发布 / 消息 / 我（中间是红色圆形「+」发布钮）。
 const IPHONE_XHS_TABS = Object.freeze(['首页', '市集', '发布', '消息', '我']);
 // 笔记详情的默认演示数据：小红书号、点赞/收藏/评论的初始计数量级。
@@ -566,6 +574,134 @@ const IPHONE_XHS_MSG_ENTRIES = Object.freeze([
   { id: 'follows', label: '新增关注', tone: 'blue' },
   { id: 'comments', label: '评论和@', tone: 'green' },
 ]);
+// ---------- 淘宝（v0.28.0） ----------
+// 与小红书的异同：同是「下拉刷新调 API 生成内容、点进去看详情」，但淘宝的内容是
+// 商品（价格 / 销量 / 店铺 / 库存属性），详情页带「购买」动作——下单走的是本插件
+// 微信「零钱」余额（wechat.js 的 iphoneChangeWechatBalance），两边即时联动。
+// 数据存 chatMetadata.IPhone 的 taobaoData（与 qqData / wechatData / xhsData 并列），
+// 换聊天自动切换；记录楼层段头 `淘宝订单：`（段标签 [淘宝订单]）。
+//
+// 商品生成（首页下拉刷新 / 搜索）：一次生成 1~6 个商品入口。商品没有图片——
+// 展示卡是一块按「品类」上色的文字图块（品类词 + 标签），标题 / 价格 / 销量 /
+// 店铺全走文字，这是刻意的设计（模型报品类，插件按品类挑渐变底色，见
+// IPHONE_TAOBAO_CATEGORIES）。
+const IPHONE_TAOBAO_PRODUCT_GUIDANCE = `# 任务
+- 你要为「淘宝」生成商品：首页下拉刷新时生成 1~6 个「猜你喜欢」的推荐商品；用户搜索时，围绕搜索词生成 1~6 个相关商品。
+- 商品要像真实淘宝上架的东西：品牌或系列名、型号 / 规格、卖点、价格、销量、店铺名，都要具体、经得起推敲。
+- 商品要贴合当前剧情与玩家的处境：玩家最近在做什么、缺什么、身在何处、什么身份，推荐就该有什么倾向（学生党的笔记本与平价耳机、上班族的通勤包与咖啡机、租房党的收纳与小家电……）；搜索时则严格围绕搜索词。
+- 一次刷新里商品的品类要散开（数码 / 服饰 / 食品 / 家居……），不要五六个都是手机壳；价格区间也要有高有低，像真实的推荐流。
+
+# 商品写法
+- 标题是淘宝标题的写法：品牌 + 系列 / 型号 + 卖点 + 适用场景，用空格或斜杠分隔，可以带「官方正品」「旗舰店」这类词；30 字以内，不要换行。
+- 卖点写 2~4 个短句，用「｜」分隔（如「16英寸高刷电竞屏｜RTX5060满功耗显卡｜三风扇散热」）。
+- 价格要符合商品的真实定位：手机壳十几块、游戏本几千到上万、一杯挂耳咖啡几十块；不要所有商品都是同一个价。原价（划线价）必须高于现价，「优惠」写券或立减，「分期」只在价格较高（比如 1000 元以上）时写。
+- 销量写成淘宝的样子：「100+人付款」「5000+人付款」「已售 300+」「2万+人付款」；店铺写带后缀的店名（专卖店 / 旗舰店 / 官方旗舰店 / 七年老店……）。
+- 评价区写 1~4 条买家评价，像真实淘宝评价：短、口语、有人夸有人挑刺、偶尔带「[捂脸]」这类表情文字；评价人写淘宝式的昵称（如「t**8」「小*鱼」「匿名用户」）。
+- 数据要自洽：销量高的商品评价多；新上架的可以写「0人付款」或干脆不写销量。
+
+# 硬性要求
+- 商品必须真实可用：不要发明不存在的虚假品牌（可以用剧情里出现的品牌，也可以用「某某」式的通用叫法）。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_TAOBAO_PRODUCT_FORMAT = '每个商品占一个区块，输出 1~6 个区块。每个区块按下面的字段逐行书写，完整示例（商品与数据仅示意，必须换成贴合当前剧情或搜索词的真实内容）：\n\n'
+  + '品类：数码\n'
+  + '标题：Lenovo/联想 Lecoo来酷 斗战者 战7000 高刷高性能RTX5060游戏本\n'
+  + '卖点：16英寸高刷电竞屏｜RTX5060满功耗显卡｜三风扇散热\n'
+  + '价格：8698\n'
+  + '原价：8898\n'
+  + '销量：300+人付款\n'
+  + '店铺：联想艾克兰斯专卖店\n'
+  + '城市：北京\n'
+  + '标签：天猫、包邮、官方正品\n'
+  + '优惠：券满2000减200\n'
+  + '分期：3期免息 约¥2900/期起\n'
+  + '详情：联想来酷斗战者系列游戏本，十六英寸二点五K高刷屏，RTX5060 满功耗显卡与三风扇散热，适合学生党与游戏的日常使用。\n'
+  + '评价：\n'
+  + 't**8：屏幕素质超出预期，散热也压得住，比同价位轻薄本强太多。\n'
+  + '小*鱼：物流快，开箱没磕碰，就是电源适配器有点重[捂脸]\n\n'
+  + '格式说明：\n'
+  + '- 「品类」只能填这些词里的一个（只填品类名）｜数码、家电、服饰、美妆、食品、家居、母婴、运动、图书、汽车、珠宝、宠物。\n'
+  + '- 「标题」一行写完，不要换行，30 字以内。\n'
+  + '- 「卖点」写 2~4 条短句，用「｜」分隔（可省略）。\n'
+  + '- 「价格」写阿拉伯数字（元，可带小数如 9.9、92.65）；「原价」必须大于「价格」（可省略）。\n'
+  + '- 「销量」照抄淘宝的口径（如 300+人付款、已售 1万+、5000+人付款；可省略）。\n'
+  + '- 「店铺」「城市」写店名与发货城市（城市可省略）。\n'
+  + '- 「标签」用「、」分隔，从这些里挑：天猫、包邮、官方正品、百亿补贴、7天无理由、闪电发货、新品、热销（可省略）。\n'
+  + '- 「优惠」写券或立减（如「券满2000减200」「超级立减10%」「政府补贴15%」，可省略）。\n'
+  + '- 「分期」只在价格 1000 元以上时写（如「3期免息 约¥2900/期起」，可省略）。\n'
+  + '- 「详情」一句话介绍商品，一行写完、不要换行（可省略）。\n'
+  + '- 「评价：」单独占一行，下面每行一条「评价人：内容」，1~4 条（可省略）。\n'
+  + '只输出符合格式的商品区块，不要输出任何解释、旁白或格式以外的文字。';
+// 「设置 · 淘宝提示词」：商品生成用的提示词组合，存 settings.promptPresets.taobaoProducts。
+// 字段与其余预设同义（没有 reply 段：淘宝的互动内容随商品一次生成，不做二次追问）。
+const IPHONE_TAOBAO_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在扮演「淘宝」——一个商品应有尽有的电商平台。'
+    + '平台上的店铺、商品与买家评价都由你现场发明，可以呼应世界书与主线剧情里的时代背景、城市与流行话题，'
+    + '让推荐的商品贴合「{{user}}」当下的处境与需求。',
+  worldBook: true,
+  latestFloor: false, // 与另外几个内容生成页一致：默认不带记录楼层
+  historyFloors: 5,
+  npcLogic: IPHONE_QQ_NPC_LOGIC,
+  dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+  guidance: IPHONE_TAOBAO_PRODUCT_GUIDANCE,
+  format: IPHONE_TAOBAO_PRODUCT_FORMAT,
+});
+// 商品品类：展示卡的渐变底色按它选（style.css 的 .iphone-tb__thumb--*），
+// 也是「分类」页的宫格内容（点一格 = 搜该品类）。
+const IPHONE_TAOBAO_CATEGORIES = Object.freeze([
+  { id: 'shuma', label: '数码', keys: ['数码', '手机', '电脑', '耳机', '相机', '键盘', '显卡', '平板', '游戏机', '路由器', '硬盘', '显示器'] },
+  { id: 'jiadian', label: '家电', keys: ['家电', '电视', '冰箱', '洗衣机', '空调', '电饭煲', '微波炉', '吸尘器', '吹风机', '净水器', '扫地机'] },
+  { id: 'fushi', label: '服饰', keys: ['服饰', '衣', '裤', '裙', '外套', '卫衣', '衬衫', '毛衣', '羽绒', '鞋', '袜', '帽', '内搭', '西装'] },
+  { id: 'meizhuang', label: '美妆', keys: ['美妆', '口红', '面霜', '精华', '粉底', '香水', '面膜', '洗面奶', '防晒', '眼影', '护肤'] },
+  { id: 'shipin', label: '食品', keys: ['食品', '零食', '咖啡', '茶', '牛奶', '水果', '巧克力', '螺蛳粉', '面包', '坚果', '饮料', '酒', '米', '油'] },
+  { id: 'jiaju', label: '家居', keys: ['家居', '收纳', '床', '沙发', '桌', '椅', '灯', '被', '枕', '锅', '碗', '杯', '窗帘', '地毯', '置物'] },
+  { id: 'muying', label: '母婴', keys: ['母婴', '奶粉', '尿不湿', '婴儿', '童装', '玩具', '辅食', '推车', '孕妇'] },
+  { id: 'yundong', label: '运动', keys: ['运动', '跑步', '健身', '瑜伽', '球', '自行车', '泳', '瑜伽垫', '哑铃', '冲锋衣', '登山'] },
+  { id: 'tushu', label: '图书', keys: ['图书', '书', '小说', '教材', '绘本', '画集', '词典', '杂志'] },
+  { id: 'qiche', label: '汽车', keys: ['汽车', '车', '轮胎', '车载', '机油', '座椅', '行车记录仪', '导航'] },
+  { id: 'zhubao', label: '珠宝', keys: ['珠宝', '项链', '戒指', '手链', '耳环', '手表', '饰品', '黄金', '玉'] },
+  { id: 'chongwu', label: '宠物', keys: ['宠物', '猫', '狗', '猫粮', '狗粮', '猫砂', '宠物玩具', '窝'] },
+]);
+// 未命中品类时的兜底展示样式（.iphone-tb__thumb--default）与品类词。
+const IPHONE_TAOBAO_CATEGORY_FALLBACK = '好物';
+// 商品卡片的标签池（模型写别的也认，只是不上色；这几个走高亮色）。
+const IPHONE_TAOBAO_TAG_TONES = Object.freeze({
+  天猫: 'red',
+  包邮: 'green',
+  官方正品: 'red',
+  百亿补贴: 'orange',
+  '7天无理由': 'gray',
+  闪电发货: 'blue',
+  新品: 'blue',
+  热销: 'orange',
+});
+// 一次生成的商品条数上限（AI 通常写 1~6 个）、搜索历史条数上限。
+const IPHONE_TAOBAO_REFRESH_MAX_PRODUCTS = 6;
+const IPHONE_TAOBAO_HISTORY_CAP = 12;
+// 字段长度上限（归一化时截断，防脏数据撑爆界面）。
+const IPHONE_TAOBAO_TITLE_CAP = 90;
+const IPHONE_TAOBAO_SELLING_CAP = 120;
+const IPHONE_TAOBAO_SHOP_CAP = 40;
+const IPHONE_TAOBAO_DETAIL_CAP = 600;
+const IPHONE_TAOBAO_REVIEW_CAP = 200;
+const IPHONE_TAOBAO_REVIEW_MAX = 4;
+// 商品价格上限（元）：与零钱余额同一量级的收口，防脏数据把界面撑坏。
+const IPHONE_TAOBAO_PRICE_CAP = 1e9;
+// 底部标签栏：首页（淘）/ 分类 / 消息 / 购物车 / 我的淘宝（对照真实淘宝）。
+const IPHONE_TAOBAO_TABS = Object.freeze(['首页', '分类', '消息', '购物车', '我的淘宝']);
+// 首页顶部频道（对照真实淘宝的推荐 / 包邮 / 3C数码 / 穿搭 / 美食）。
+const IPHONE_TAOBAO_CHANNELS = Object.freeze(['推荐', '包邮', '3C数码', '穿搭', '美食', '家居']);
+// 首页右上角切换的城市（仅作展示，对照真实淘宝的定位入口）。
+const IPHONE_TAOBAO_CITY_DEFAULT = '上海';
+// 搜索页的热搜词（空态展示，点一下即搜；对照真实淘宝的热搜榜）。
+const IPHONE_TAOBAO_HOT_SEARCHES = Object.freeze([
+  '游戏本', '无线耳机', '夏季连衣裙', '猫粮', '防晒霜', '空气炸锅', '人体工学椅', '跑步鞋', '咖啡豆', '收纳箱',
+]);
+// 商品详情页底部的买家保障（纯展示，对照真实淘宝详情页）。
+const IPHONE_TAOBAO_GUARANTEES = Object.freeze(['正品保障', '极速退款', '7天无理由', '破损包退']);
+// 「我」的淘宝资料占位演示值：昵称默认跟随酒馆 {{user}}（与其余应用同款规则）。
+const IPHONE_TAOBAO_ME = Object.freeze({
+  nick: '淘气值 587',
+});
 // 「我」的微信资料占位演示值：微信号留空时回退这个；昵称默认跟随酒馆 {{user}}。
 const IPHONE_WECHAT_ME = Object.freeze({
   wxId: 'wxid_8f2k1m9v0q',
@@ -788,7 +924,8 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；
   // wechatChat / wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）；
   // xhsNotes = 小红书笔记生成与评论回复（v0.26.0 起）；
-  // wechatAssess = 微信零钱资产评估（v0.27.0 起）。
+  // wechatAssess = 微信零钱资产评估（v0.27.0 起）；
+  // taobaoProducts = 淘宝商品生成（v0.28.0 起）。
   promptPresets: {
     qqChat: { ...IPHONE_QQ_CHAT_PRESET_DEFAULT },
     groupChat: { ...IPHONE_QQ_GROUP_PRESET_DEFAULT },
@@ -798,6 +935,7 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
     wechatMoments: { ...IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT },
     xhsNotes: { ...IPHONE_XHS_PRESET_DEFAULT },
     wechatAssess: { ...IPHONE_WECHAT_ASSESS_PRESET_DEFAULT },
+    taobaoProducts: { ...IPHONE_TAOBAO_PRESET_DEFAULT },
   },
 });
 // 思考强度选项：reasoning_effort 是 OpenAI 兼容标准参数（Ollama /v1/chat/completions
@@ -825,10 +963,10 @@ const IPHONE_FLOOR_TAG_NAME = 'iPhone_Message';
 const IPHONE_FLOOR_TAG_OPEN = `<${IPHONE_FLOOR_TAG_NAME}>`;
 const IPHONE_FLOOR_TAG_CLOSE = `</${IPHONE_FLOOR_TAG_NAME}>`;
 // 记录楼层的段头识别（v0.18.0 起 QQ 与微信共用同一楼层，按段头切分；v0.26.0 加
-// 小红书）：QQ 私聊/群聊/空间动态 + 微信私聊/群聊/朋友圈动态 + 小红书笔记，
-// 七种段头并列，互不干扰。用整行做段键（match[0]），分组只用于兼容旧写法，
-// 取用时不看分组。
-const IPHONE_FLOOR_SECTION_RE = /^(?:与?「(.+)」的QQ聊天记录|群「(.+)」的QQ群聊记录|QQ空间动态|与?「(.+)」的微信聊天记录|群「(.+)」的微信群聊记录|朋友圈动态|小红书笔记)：$/;
+// 小红书，v0.28.0 加淘宝订单）：QQ 私聊/群聊/空间动态 + 微信私聊/群聊/朋友圈动态 +
+// 小红书笔记 + 淘宝订单，八种段头并列，互不干扰。用整行做段键（match[0]），分组
+// 只用于兼容旧写法，取用时不看分组。
+const IPHONE_FLOOR_SECTION_RE = /^(?:与?「(.+)」的QQ聊天记录|群「(.+)」的QQ群聊记录|QQ空间动态|与?「(.+)」的微信聊天记录|群「(.+)」的微信群聊记录|朋友圈动态|小红书笔记|淘宝订单)：$/;
 // 记录段的标签（v0.21.0 起）：外层仍是 <iPhone_Message>，标签内每个记录段
 // 各自再套一层自己的标签；段标签自 v0.23.0 起改用方括号包（只有最外层
 // iPhone_Message 保留尖括号），形如
@@ -853,9 +991,10 @@ const IPHONE_FLOOR_SECTION_TAG_HEADS = Object.freeze({
   wechatGroup: '微信_群聊_{name}',
   wechatMoments: '朋友圈动态',
   xhsNotes: '小红书笔记',
+  taobaoOrders: '淘宝订单',
 });
 // 段标签名本体：不含外侧定界符与开标签前的 /（两种定界符由解析函数剥离）。
-const IPHONE_FLOOR_SECTION_TAG_NAME_RE = /^(?:(?:QQ|微信)_(?:私聊|群聊)_[^\s[\]<>/]+|QQ空间动态|朋友圈动态|小红书笔记)$/;
+const IPHONE_FLOOR_SECTION_TAG_NAME_RE = /^(?:(?:QQ|微信)_(?:私聊|群聊)_[^\s[\]<>/]+|QQ空间动态|朋友圈动态|小红书笔记|淘宝订单)$/;
 
 // ---------- 悬浮球 ----------
 // 造型为 Apple LOGO（simple-icons「Apple」，MIT 图标集，白色填充 + 投影）。

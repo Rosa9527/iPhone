@@ -29,10 +29,19 @@
            test.html?app=xhs&xhscompose=1 → 发布笔记页
            test.html?app=xhs&xhsinbox=likes|follows|comments → 消息页的聚合子页
            test.html?app=settings&xhspreset=1 → 再推入「小红书提示词」子页
+           test.html?app=taobao → 自动打开手机并进入淘宝
+           test.html?app=taobao&tbtab=category|messages|cart|me → 直达淘宝对应 Tab
+           test.html?app=taobao&tbproduct=N → 进淘宝后点开首页第 N 个商品（1 起）
+           test.html?app=taobao&tbsearch=关键词 → 直达搜索页并直接搜这个词
+           test.html?app=taobao&tbsearch=1 → 直达搜索页空态（热搜榜 / 搜索历史）
+           test.html?app=taobao&tborders=all|paid|shipped|review|star|history
+                                              → 直达「我的淘宝」的订单 / 收藏子页
+           test.html?app=settings&taobaopreset=1 → 再推入「淘宝提示词」子页
            test.html?app=settings&inject=1 → 再推入「第三方注入」子页（配 &st=1
                                               时先模拟一次捕获，列表里就有内容）
-           test.html?seed=1 → 注入演示小红书数据（网友 / 笔记 / 评论 / 私密笔记），
-                             本地测试台没有 AI，配合 ?app=xhs 才有的看
+           test.html?seed=1 → 注入演示小红书数据（网友 / 笔记 / 评论 / 私密笔记）与
+                             淘宝数据（商品 / 购物车 / 订单），本地测试台没有 AI，
+                             配合 ?app=xhs / ?app=taobao 才有的看
            任意 URL 加 &st=1 → 安装模拟宿主上下文（酒馆聊天楼层 + 设置持久化，
            镜像到 localStorage 的 iPhone_mock_host），用于 iPhone_Message 楼层同步测试；
            ?st=1 下控制台可调 __iPhoneMockInject() 模拟第三方注入并触发捕获，
@@ -43,7 +52,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iPhone 扩展 · 本地测试台</title>
-<link rel="stylesheet" href="style.css?v=0.27.0">
+<link rel="stylesheet" href="style.css?v=0.28.0">
 <style>
   body {
     margin: 0;
@@ -224,9 +233,9 @@
   <script src="index.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
-    /* ?seed=1：注入一批演示网友 / 笔记 / 评论。本地测试台没有 AI，不注种子就没
-       内容可验收（瀑布流、评论区、「我」的笔记网格都是空态）。只在当前存档里
-       还没有小红书数据时写入，不覆盖真实数据。 */
+    /* ?seed=1：注入一批演示网友 / 笔记 / 评论，以及演示淘宝商品 / 购物车 / 订单。
+       本地测试台没有 AI，不注种子就没内容可验收（瀑布流、商品流、评论区、订单
+       列表都是空态）。只在当前存档里还没有对应数据时写入，不覆盖真实数据。 */
     if (params.has('seed')) {
       const seedStorage = iphoneGetQqStorage();
       if (!(seedStorage.xhsData && seedStorage.xhsData.notes && seedStorage.xhsData.notes.length)) {
@@ -235,12 +244,12 @@
         seedStorage.xhsData = {
           netizens: [
             { id: 'xn_seed1', name: '小鹿今天吃什么', xhsId: 'lulu_eats', ip: '上海', bio: '一人食便当日记｜省钱也要吃好', avatar: 'a1' },
-            { id: 'xn_seed2', name: '盐城租房日记', xhsId: 'yancheng_rent', ip: '江苏', bio: '打工人｜记录出租屋改造', avatar: 'a2' },
+            { id: 'xn_seed2', name: '上海租房日记', xhsId: 'shanghai_rent', ip: '上海', bio: '打工人｜记录出租屋改造', avatar: 'a2' },
             { id: 'xn_seed3', name: '阿May的衣柜', xhsId: 'may_ootd', ip: '广东', bio: '155 小个子穿搭', avatar: 'a3' },
             { id: 'xn_seed4', name: '老陈养猫', xhsId: 'chen_cats', ip: '四川', bio: '两只布偶的铲屎官', avatar: 'a4' },
             { id: 'xn_seed5', name: '数码小白鼠', xhsId: 'tech_mouse', ip: '北京', bio: '只买对的，不买贵的', avatar: 'a5' },
             { id: 'xn_seed6', name: '汤圆不圆', xhsId: 'tangyuan', ip: '浙江', bio: '', avatar: 'a6' },
-            { id: 'xn_seed7', name: '打工人小张', xhsId: 'zhang_work', ip: '江苏', bio: '', avatar: 'a7' },
+            { id: 'xn_seed7', name: '打工人小张', xhsId: 'zhang_work', ip: '上海', bio: '', avatar: 'a7' },
             { id: 'xn_seed8', name: '周末去哪儿', xhsId: 'weekend_go', ip: '云南', bio: '一年去 30 个地方', avatar: 'a8' },
           ],
           notes: [
@@ -257,14 +266,14 @@
               ],
             },
             {
-              id: 'n_seed2', authorId: 'xn_seed2', authorName: '盐城租房日记', ts: now - hour * 8,
+              id: 'n_seed2', authorId: 'xn_seed2', authorName: '上海租房日记', ts: now - hour * 8,
               coverId: 'c10', title: '花 800 块把出租屋阳台改成了小书房',
               text: '房东不让打孔，全程用免钉胶和伸缩杆。桌子是二手平台 200 收的，椅子是宜家打折款。最满意的是那盏落地灯，晚上开着写东西特别有感觉。周末基本都赖在这里不出来了。',
-              topics: ['出租屋改造', '阳台书房', '租房'], location: '盐城', ip: '江苏',
+              topics: ['出租屋改造', '阳台书房', '租房'], location: '上海', ip: '上海',
               likes: 3420, collects: 2108,
               comments: [
                 { name: '阿May的衣柜', text: '这个配色好舒服，求桌布链接', ts: now - hour * 7 },
-                { name: '盐城租房日记', text: '桌布是某宝的亚麻款，搜「米白 亚麻 桌布」就有～', replyName: '阿May的衣柜', ts: now - hour * 7 },
+                { name: '上海租房日记', text: '桌布是某宝的亚麻款，搜「米白 亚麻 桌布」就有～', replyName: '阿May的衣柜', ts: now - hour * 7 },
               ],
             },
             {
@@ -318,16 +327,188 @@
               id: 'n_seed7', authorId: '__me__', authorName: '', ts: now - hour * 5,
               coverId: 'c11', title: '家里那盆绿萝终于被我养活了',
               text: '前后死了三盆，这次总算摸到门道：别老浇水。土干了再浇，浇就浇透。放在散光的地方，别直晒。',
-              topics: ['绿植', '家居'], location: '盐城', ip: '江苏', likes: 46, collects: 12, comments: [],
+              topics: ['绿植', '家居'], location: '上海', ip: '上海', likes: 46, collects: 12, comments: [],
             },
             {
               id: 'n_seed8', authorId: '__me__', authorName: '', ts: now - hour * 30,
               coverId: 'c16', title: '', text: '今天路过老街，发现那家开了十几年的面馆关门了。门口贴着转让，玻璃上还留着褪色的菜单。突然有点难过。',
-              topics: ['随手记'], location: '', ip: '江苏', likes: 23, collects: 5, comments: [], private: true,
+              topics: ['随手记'], location: '', ip: '上海', likes: 23, collects: 5, comments: [], private: true,
             },
           ],
           following: ['xn_seed1', 'xn_seed3'],
         };
+        iphoneSaveQqStorage();
+      }
+      /* 淘宝种子（v0.28.0）：商品（分属不同品类，好验收品类配色）/ 购物车两件 /
+         三笔订单（覆盖待发货 / 待收货 / 交易成功三种状态，消息页与订单页都有内容）。
+         余额先补到 5000，购买流程在本地也走得通。 */
+      if (!(seedStorage.taobaoData && seedStorage.taobaoData.products && seedStorage.taobaoData.products.length)) {
+        const now = Date.now();
+        const hour = 3600000;
+        const mkProduct = (o) => ({
+          id: o.id, category: o.category, title: o.title, selling: o.selling,
+          price: o.price, original: o.original || 0, sales: o.sales, shop: o.shop,
+          city: o.city, tags: o.tags, coupon: o.coupon || '', installment: o.installment || '',
+          detail: o.detail, reviews: o.reviews || [], ts: now - (o.ageHours || 1) * hour,
+        });
+        seedStorage.taobaoData = {
+          products: [
+            mkProduct({
+              id: 'p_seed1', category: '数码', ageHours: 3,
+              title: '【新款】机械革命 星曜 14 游戏本 锐龙R7 16G 1T RTX4060 高刷屏',
+              selling: '2.8K 120Hz 高刷｜满血 4060｜双风扇五热管',
+              price: 3489, original: 4199, sales: '300+人付款',
+              shop: '机械革命官方旗舰店', city: '苏州',
+              tags: ['天猫', '包邮', '官方正品'],
+              coupon: '券满2000减200', installment: '3期免息 约¥1163/期起',
+              detail: '星曜 14 采用 2.8K 120Hz 电竞屏，锐龙 R7 处理器配 16G 双通道内存与 1T 固态，RTX4060 满血版直连独显。机身 1.9kg，支持 100W PD 快充。适合既要性能又要便携的学生与上班族。',
+              reviews: [
+                { name: 't**8', text: '屏幕素质真不错，2.8K确实细腻，玩原神高画质稳定120帧。' },
+                { name: '小*鱼', text: '风扇声音比想象中小，键盘手感一般般，胜在价格。' },
+                { name: '阿***杰', text: '发的顺丰第二天就到了，开机激活没问题。' },
+              ],
+            }),
+            mkProduct({
+              id: 'p_seed2', category: '数码', ageHours: 6,
+              title: '漫步者 W820NB 双金标版 主动降噪头戴式蓝牙耳机 长续航',
+              selling: '48dB 深度降噪｜Hi-Res 双金标｜50 小时续航',
+              price: 339, original: 429, sales: '2万+人付款',
+              shop: '漫步者官方旗舰店', city: '深圳',
+              tags: ['百亿补贴', '包邮'],
+              coupon: '百亿补贴再减30',
+              detail: '双金标认证，支持 LDAC 高清音频。混合主动降噪最高 48dB，通勤地铁上也能安静听歌。50 小时超长续航，充电 10 分钟听歌 7 小时。',
+              reviews: [
+                { name: '耳**控', text: '降噪效果对得起价格，戴一天耳朵不疼。' },
+                { name: 'l**9', text: '音质偏均衡，低频不轰头，听人声很舒服。' },
+              ],
+            }),
+            mkProduct({
+              id: 'p_seed3', category: '服饰', ageHours: 9,
+              title: '2026 新款 小个子显瘦高腰直筒牛仔裤 春秋九分裤 显腿长',
+              selling: '高腰直筒｜微弹面料｜155 也能穿出大长腿',
+              price: 89.9, original: 199, sales: '8000+人付款',
+              shop: '米粒家女装', city: '杭州',
+              tags: ['包邮', '7天无理由'],
+              coupon: '满199减20', installment: '3期免息 约¥30/期起',
+              detail: '高腰设计卡在最细的位置，直筒版型不挑腿型。面料含 2% 氨纶，久坐不勒。深蓝 / 浅蓝 / 黑色三色可选，九分长度配什么鞋都好看。',
+              reviews: [
+                { name: '小**子', text: '身高153体重92，S码刚好，腰线真的显高。' },
+                { name: 'm***a', text: '面料挺括不塌，洗了两次没掉色。' },
+                { name: '橙*子', text: '就是发货有点慢，等了四天。' },
+              ],
+            }),
+            mkProduct({
+              id: 'p_seed4', category: '食品', ageHours: 14,
+              title: '三顿半 快饮冷萃精品超即溶咖啡 1-6号 混合装 24颗',
+              selling: '3 秒冷水即溶｜6 种烘焙度｜精品级阿拉比卡',
+              price: 199, original: 259, sales: '5万+人付款',
+              shop: '三顿半旗舰店', city: '长沙',
+              tags: ['天猫', '官方正品', '包邮'],
+              coupon: '券满199减30',
+              detail: '1-6 号对应从浅到深的烘焙度，数字越小果酸越明显。冷水热水都能 3 秒速溶，加牛奶就是一杯拿铁。小罐子喝完还能回收换周边。',
+              reviews: [
+                { name: '咖**鬼', text: '3号和4号最适合做美式，办公室常备。' },
+                { name: 'w***y', text: '包装太可爱了，罐子都留着当摆件。' },
+              ],
+            }),
+            mkProduct({
+              id: 'p_seed5', category: '家居', ageHours: 20,
+              title: '日式实木折叠收纳箱 带盖衣物整理箱 床头储物柜可坐',
+              selling: '实木框架｜可折叠不占地｜承重 80kg 可当凳子',
+              price: 129, original: 189, sales: '6000+人付款',
+              shop: '木言家居专营店', city: '佛山',
+              tags: ['包邮', '闪电发货'],
+              detail: '松木框架 + 牛津布内衬，展开是收纳箱，不用时折起来只有 8cm 厚。顶部承重 80kg，放在床边还能当小凳子坐。适合出租屋和宿舍。',
+              reviews: [
+                { name: '租**生', text: '出租屋救星，折起来塞床底完全不占地方。' },
+                { name: 'h**n', text: '做工比想象中扎实，木头没什么味道。' },
+              ],
+            }),
+            mkProduct({
+              id: 'p_seed6', category: '美妆', ageHours: 26,
+              title: '珀莱雅 双抗精华 2.0 抗氧抗糖精华液 提亮淡纹 30ml',
+              selling: '早C晚A 搭配用｜提亮暗沉｜2.0 升级版',
+              price: 249, original: 329, sales: '10万+人付款',
+              shop: '珀莱雅官方旗舰店', city: '杭州',
+              tags: ['天猫', '官方正品', '百亿补贴'],
+              coupon: '满300减50', installment: '6期免息 约¥41/期起',
+              detail: '双抗精华 2.0 在上一代基础上提高了麦角硫因浓度，抗氧抗糖双通路。质地是清爽的蛋清状，油皮夏天用也不闷。建议早晚各一次，配合防晒效果更好。',
+              reviews: [
+                { name: '皮**好', text: '用了一个月，早上起来脸色没那么黄了。' },
+                { name: 'y***u', text: '回购第三瓶，618囤最划算。' },
+                { name: '小*贝', text: '味道有点药感，习惯了还好。' },
+              ],
+            }),
+          ],
+          cart: [
+            {
+              id: 'ct_seed1', qty: 1,
+              product: {
+                id: 'p_seed2', category: '数码',
+                title: '漫步者 W820NB 双金标版 主动降噪头戴式蓝牙耳机 长续航',
+                selling: '48dB 深度降噪｜Hi-Res 双金标｜50 小时续航',
+                price: 339, original: 429, sales: '2万+人付款',
+                shop: '漫步者官方旗舰店', city: '深圳',
+                tags: ['百亿补贴', '包邮'], coupon: '百亿补贴再减30', installment: '',
+                detail: '双金标认证，支持 LDAC 高清音频。', reviews: [], ts: now - hour * 6,
+              },
+            },
+            {
+              id: 'ct_seed2', qty: 2,
+              product: {
+                id: 'p_seed4', category: '食品',
+                title: '三顿半 快饮冷萃精品超即溶咖啡 1-6号 混合装 24颗',
+                selling: '3 秒冷水即溶｜6 种烘焙度｜精品级阿拉比卡',
+                price: 199, original: 259, sales: '5万+人付款',
+                shop: '三顿半旗舰店', city: '长沙',
+                tags: ['天猫', '官方正品', '包邮'], coupon: '券满199减30', installment: '',
+                detail: '冷水热水都能 3 秒速溶。', reviews: [], ts: now - hour * 14,
+              },
+            },
+          ],
+          orders: [
+            {
+              id: 'o_seed1', no: 'TB2026091688421307', status: 'paid', qty: 1, total: 89.9,
+              ts: now - hour * 2,
+              product: {
+                id: 'p_seed3', category: '服饰',
+                title: '2026 新款 小个子显瘦高腰直筒牛仔裤 春秋九分裤 显腿长',
+                selling: '高腰直筒｜微弹面料', price: 89.9, original: 199, sales: '8000+人付款',
+                shop: '米粒家女装', city: '杭州', tags: ['包邮', '7天无理由'],
+                coupon: '满199减20', installment: '', detail: '高腰设计卡在最细的位置。', reviews: [], ts: now - hour * 9,
+              },
+            },
+            {
+              id: 'o_seed2', no: 'TB2026091510336612', status: 'shipped', qty: 1, total: 249,
+              ts: now - hour * 30,
+              product: {
+                id: 'p_seed6', category: '美妆',
+                title: '珀莱雅 双抗精华 2.0 抗氧抗糖精华液 提亮淡纹 30ml',
+                selling: '早C晚A 搭配用｜提亮暗沉', price: 249, original: 329, sales: '10万+人付款',
+                shop: '珀莱雅官方旗舰店', city: '杭州', tags: ['天猫', '官方正品'],
+                coupon: '满300减50', installment: '6期免息 约¥41/期起',
+                detail: '抗氧抗糖双通路。', reviews: [], ts: now - hour * 26,
+              },
+            },
+            {
+              id: 'o_seed3', no: 'TB2026091011294470', status: 'done', qty: 1, total: 129,
+              ts: now - hour * 130,
+              product: {
+                id: 'p_seed5', category: '家居',
+                title: '日式实木折叠收纳箱 带盖衣物整理箱 床头储物柜可坐',
+                selling: '实木框架｜可折叠不占地', price: 129, original: 189, sales: '6000+人付款',
+                shop: '木言家居专营店', city: '佛山', tags: ['包邮', '闪电发货'],
+                coupon: '', installment: '', detail: '松木框架 + 牛津布内衬。', reviews: [], ts: now - hour * 20,
+              },
+            },
+          ],
+          history: ['游戏本', '降噪耳机', '咖啡豆'],
+        };
+        // 余额补到 5000：种子里已有 3 笔订单，但余额为 0 时购买流程点不动，
+        // 本地验收「下单 → 扣零钱 → 订单列表」这条链就没法走通。
+        if (!(Number(seedStorage.wechatWallet?.balance) > 0)) {
+          seedStorage.wechatWallet = { ...(seedStorage.wechatWallet || {}), balance: 5000 };
+        }
         iphoneSaveQqStorage();
       }
     }
@@ -665,6 +846,70 @@
               else if (retries > 0) setTimeout(() => openXhsPresetWhenReady(retries - 1), 150);
             };
             setTimeout(() => openXhsPresetWhenReady(20), 1300);
+          }
+          /* ---------- 淘宝（v0.28.0）：与小红书平行的同一套深链 ---------- */
+          // 主界面对象上的钩子由 buildTaobaoAppScreen 暴露（_switchTaobaoTab /
+          // _openTaobaoProduct / _openTaobaoSearch / _openTaobaoOrders）。
+          const tbScreen = () => document.querySelector('.iphone-tb');
+          if (params.get('tbtab')) {
+            // ?tbtab=category|messages|cart|me 直达淘宝对应 Tab（首页是默认）。
+            const name = params.get('tbtab');
+            const idx = name === 'category' ? 1 : name === 'messages' ? 2 : name === 'cart' ? 3 : name === 'me' ? 4 : 0;
+            const openTbTabWhenReady = (retries) => {
+              const tb = tbScreen();
+              if (tb && typeof tb._switchTaobaoTab === 'function') tb._switchTaobaoTab(idx);
+              else if (retries > 0) setTimeout(() => openTbTabWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openTbTabWhenReady(20), 1400);
+          }
+          if (params.has('tbproduct')) {
+            // ?tbproduct=N：点开首页第 N 个商品（与首页展示顺序一致）。
+            const openTbProductWhenReady = (retries) => {
+              const tb = tbScreen();
+              if (tb && typeof tb._openTaobaoProduct === 'function') {
+                if (tb._openTaobaoProduct(Number(params.get('tbproduct')) || 1)) return;
+              }
+              if (retries > 0) setTimeout(() => openTbProductWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openTbProductWhenReady(20), 1500);
+          }
+          if (params.has('tbsearch')) {
+            // ?tbsearch=关键词 直达搜索页并直接搜这个词；&tbsearch=1（无词）只看
+            // 搜索页空态（热搜榜 / 搜索历史）——本地没有 AI，真点搜索会失败。
+            const word = params.get('tbsearch');
+            const openTbSearchWhenReady = (retries) => {
+              const tb = tbScreen();
+              if (tb && typeof tb._openTaobaoSearch === 'function') {
+                tb._openTaobaoSearch(word && word !== '1' ? word : '');
+                return;
+              }
+              if (retries > 0) setTimeout(() => openTbSearchWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openTbSearchWhenReady(20), 1500);
+          }
+          if (params.has('tborders')) {
+            // ?tborders=all|paid|shipped|review|star|history：先切「我的淘宝」，
+            // 再进订单列表子页（收藏 / 足迹也在这个子页里换数据源）。
+            const openTbOrdersWhenReady = (retries) => {
+              const tb = tbScreen();
+              if (tb && typeof tb._switchTaobaoTab === 'function') {
+                tb._switchTaobaoTab(4);
+                tb._openTaobaoOrders(params.get('tborders') || 'all');
+                return;
+              }
+              if (retries > 0) setTimeout(() => openTbOrdersWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openTbOrdersWhenReady(20), 1400);
+          }
+          if (params.has('taobaopreset')) {
+            // ?app=settings&taobaopreset=1：设置页里点「淘宝提示词」行，直达该子页。
+            const openTbPresetWhenReady = (retries) => {
+              const row = [...document.querySelectorAll('.iphone-st__row')]
+                .find((el) => el.textContent.includes('淘宝提示词'));
+              if (row) row.click();
+              else if (retries > 0) setTimeout(() => openTbPresetWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openTbPresetWhenReady(20), 1300);
           }
           if (params.has('inject')) {
             // ?app=settings&inject=1：设置页里点「第三方注入」行，直达该子页。
