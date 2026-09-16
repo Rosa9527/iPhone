@@ -1,11 +1,11 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-16 17:05:59 · 文件数: 11 · 指纹: 721cd9bb
+// 构建时间: 2026-09-16 18:26:10 · 文件数: 11 · 指纹: b3141752
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.26.0';
+const IPHONE_MODULE_VERSION = '0.27.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -602,15 +602,77 @@ const IPHONE_WECHAT_ME_AVATAR_PRESETS = Object.freeze([
 ]);
 // 微信「服务 / 钱包」的占位演示数据（v0.22.1，纯前端）：存 chatMetadata.IPhone
 // 的 wechatWallet 字段，随聊天文件走；读取时按这套默认值归一化补齐（金额均为元）。
-// 后续接真实数据时只需替换 getter 的数据来源，页面不用动。
+// balance 自 v0.27.0 起默认 0：零钱不再是写死的演示值，改由「我 → 服务 → 钱包 →
+// 零钱 → 评估」调一次 API、按玩家在剧情里的资产状况评估出来（见 wechat.js 的
+// iphoneAssessWechatWallet）。没评估过就是 0，转账 / 收款照旧在它之上加减。
 const IPHONE_WECHAT_WALLET_DEFAULTS = Object.freeze({
-  balance: 5478.65,  // 零钱余额：服务页绿卡「钱包」下方与钱包页「零钱」行都显示它
+  balance: 0,        // 零钱余额：服务页绿卡「钱包」下方与钱包页「零钱」行都显示它
   lctRate: 1.1,      // 零钱通收益率（%，钱包页「零钱通」后的橙色小字）
   cards: Object.freeze([
     { id: 'wc1', bank: '招商银行', tail: '6688' },
     { id: 'wc2', bank: '中国工商银行', tail: '3021' },
     { id: 'wc3', bank: '中国建设银行', tail: '5512' },
   ]),
+});
+// 上次评估理由的存储上限（只作展示与下次评估的参考，不必留全文）。
+const IPHONE_WECHAT_ASSESS_NOTE_CAP = 300;
+
+// ---------- 微信零钱「评估」（v0.27.0） ----------
+// 零钱余额不再是写死的演示值：钱包 → 零钱 → 「评估」调一次对话 API，把提示词
+// 与上下文（世界书 / 第三方注入 / 主线楼层 / 记录楼层 / 玩家资料 / 微信账号与
+// 联系人 / 当前钱包状态）一起发给模型，由它按剧情里的资产状况给出一个合适的
+// 余额，覆盖写回 wechatWallet.balance（详见 wechat.js 的 iphoneAssessWechatWallet）。
+//
+// 评估指导（<assess_guidance>）：告诉模型「评什么、凭什么是合理的」——零钱是
+// 流动资金而非全部身家，要跟身份、时代、地区、近期收支对得上；剧情里有明确
+// 数字就以它为准，不要凭空发明。
+const IPHONE_WECHAT_ASSESS_GUIDANCE = `# 任务
+- 你要评估玩家「{{user}}」此刻的资产状况，给出一个与剧情相符的「零钱」余额。
+- 零钱是微信里随时可花的流动资金（约等于随身钱包里的现金 + 活期），不是 TA 的全部身家：房产、车、存款、投资、公司资产都不算在内。
+
+# 依据（有就用，没有别硬编）
+- 世界书设定：身份、职业、家庭、年龄、所在城市、所处时代——这是判断消费水平的第一依据。
+- 主线剧情与记录楼层：最近有没有发工资、接单、中奖、借钱、还债、交房租、大额消费……刚刚进账或破财，余额就要跟着变。
+- 其他扩展提供的状态信息里若有与金钱相关的数值（存款、收入、欠款等），视为权威数据，与它保持一致。
+- 剧情里已经写明过具体金额的，以剧情为准，不要另发明一个数字。
+- 玩家自己填写的微信资料（昵称、微信号）可以辅助判断 TA 的身份与风格。
+
+# 判断标准
+- 身份匹配：学生 / 打工人 / 白领 / 自由职业 / 老板 / 富家子弟……不同身份的日常现金流差别很大，宁可保守也不要浮夸。
+- 时代与地区匹配：一线城市与小城市、当下与过去，同样身份的消费水平不同；剧情若在古代、异世界或科幻设定里，换算成符合那个世界物价的数字。
+- 与近期收支自洽：剧情刚写过 TA 穷困潦倒或刚破产，就给 0 或很小的数；刚有一笔收入进账，就给得宽裕些。
+- 零钱是零花钱的量级，不是身家：除非剧情明确写着 TA 惯于把大笔现钱放在微信零钱里，否则不要给到与身份不符的巨款。
+- 有点零头更像真实账户：不必强求整数，两位小数里带一点零钱即可（如 3280.65、156.80）。
+
+# 边界
+- 本次评估结果是**新的零钱余额**（直接覆盖，不是增量），请给出你判断的最终数值。
+- 金额用人民币元；剧情设定在其他世界时，按该世界的货币体系给出数值即可（插件按「元」显示）。
+- 信息不足时按身份给出一个稳妥的中间值，不要因为资料少就一律给 0；也允许给出 0.00（确实身无分文的情形）。`;
+// 评估输出格式（<output_format>）：必须是机器可读的两行，插件按「零钱余额：」
+// 行解析金额（容错见 wechat.js 的 iphoneParseWechatAssessReply），解析不出
+// 数字时整次评估作废并提示重试。
+const IPHONE_WECHAT_ASSESS_FORMAT = '只输出两行，不要任何开场白、解释或结尾补充：\n\n'
+  + '零钱余额：3280.65\n'
+  + '理由：一句话说明判断依据（身份、时代与近期收支）。\n\n'
+  + '格式说明：第一行固定以「零钱余额：」开头，后面只写数字——人民币元、两位小数、不要货币符号与千分位（如 3280.65、0.00）；'
+  + '第二行固定以「理由：」开头，把依据写成一句完整的话，不要换行、不要分点。'
+  + '除这两行外不要输出任何内容（不要表格、不要代码块、不要复述以上说明）。';
+// 「设置 · 零钱评估提示词」：零钱资产评估用的提示词组合，存
+// settings.promptPresets.wechatAssess。字段与其余预设同义，但没有「扮演与对白
+// 指导」——评估是一次后台计算，不是对话，那段指导在这里没有意义（编辑页也不显示，
+// 见 apps.js 的 buildPresetPage 的 npcSection 开关）。历史楼层默认给到 10 层：
+// 资产评估要看得出近期的收支脉络，比聊天场景需要更长的上下文。
+const IPHONE_WECHAT_ASSESS_PRESET_DEFAULT = Object.freeze({
+  persona: '你是「微信支付」的资产风控系统，负责核对用户「{{user}}」的账户状况。'
+    + '你熟悉 TA 所处的世界与处境：身份、职业、收入来源、所在城市与时代，都以上下文资料为准。'
+    + '你的职责是根据这些资料，给 TA 的微信零钱核定一个合乎情理的余额。',
+  worldBook: true,
+  latestFloor: true, // 记录楼层是判断「最近进账还是破财」最直接的来源
+  historyFloors: 10,
+  npcLogic: '',
+  dialogueGuidance: '',
+  guidance: IPHONE_WECHAT_ASSESS_GUIDANCE,
+  format: IPHONE_WECHAT_ASSESS_FORMAT,
 });
 // QQ 聊天的记录楼层段头（iPhone_Message 楼层；与微信的段头并列、互不干扰）：
 // 私聊 `与「联系人」的QQ聊天记录：`、群聊 `群「群名」的QQ群聊记录：`、
@@ -729,7 +791,8 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 「动态提示词」/「朋友圈提示词」/「小红书提示词」里编辑）。qqChat = QQ 联系人
   // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；
   // wechatChat / wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）；
-  // xhsNotes = 小红书笔记生成与评论回复（v0.26.0 起）。
+  // xhsNotes = 小红书笔记生成与评论回复（v0.26.0 起）；
+  // wechatAssess = 微信零钱资产评估（v0.27.0 起）。
   promptPresets: {
     qqChat: { ...IPHONE_QQ_CHAT_PRESET_DEFAULT },
     groupChat: { ...IPHONE_QQ_GROUP_PRESET_DEFAULT },
@@ -738,6 +801,7 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
     wechatGroup: { ...IPHONE_WECHAT_GROUP_PRESET_DEFAULT },
     wechatMoments: { ...IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT },
     xhsNotes: { ...IPHONE_XHS_PRESET_DEFAULT },
+    wechatAssess: { ...IPHONE_WECHAT_ASSESS_PRESET_DEFAULT },
   },
 });
 // 思考强度选项：reasoning_effort 是 OpenAI 兼容标准参数（Ollama /v1/chat/completions
@@ -7143,6 +7207,8 @@ function iphoneSettingsIcons() {
     feed: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M19.5 9.9A8 8 0 1 1 13.4 4.7"/><path fill="currentColor" d="M17.6 1.3c.36 1.83 1.34 2.8 3.17 3.17-1.83.36-2.8 1.34-3.17 3.17-.36-1.83-1.34-2.8-3.17-3.17 1.83-.36 2.8-1.34 3.17-3.17z"/></svg>',
     // 「第三方注入」行图标（↓ 落入托盘：捕获别的扩展注入的内容）
     inject: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v9.4"/><path d="m8.3 9.5 3.7 3.7 3.7-3.7"/><path d="M4.7 15.2v2.8c0 1 .8 1.8 1.8 1.8h11c1 0 1.8-.8 1.8-1.8v-2.8"/></g></svg>',
+    // 「零钱评估提示词」行图标（¥ 硬币，与微信钱包图标集的 coinYen 同款）
+    coinYen: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M9.4 12.2h5.2"/><path d="M9.4 15.1h5.2"/><path d="m9.4 7.6 2.6 4.6 2.6-4.6"/><path d="M12 12.2v4.5"/></g></svg>',
   };
 }
 
@@ -7695,6 +7761,14 @@ function buildSettingsAppScreen() {
     label: '朋友圈提示词',
     action: () => screen.classList.add('is-wechatmomentspreset-open'),
   });
+  // 「零钱评估提示词」入口（v0.27.0）：微信「我 → 服务 → 钱包 → 零钱」页
+  // 「评估」按钮点一次调一次 API 用的提示词组合。
+  const wechatAssessRow = makeRow({
+    icon: 'coinYen',
+    tone: '#fa9d3b',
+    label: '零钱评估提示词',
+    action: () => screen.classList.add('is-wechatassesspreset-open'),
+  });
 
   // 「小红书提示词」入口（v0.26.0）：编辑网友笔记生成与评论回复的提示词组合。
   const xhsPresetRow = makeRow({
@@ -7744,6 +7818,7 @@ function buildSettingsAppScreen() {
   wechatPresetGroup.appendChild(wechatChatRow);
   wechatPresetGroup.appendChild(wechatGroupRow);
   wechatPresetGroup.appendChild(wechatMomentsRow);
+  wechatPresetGroup.appendChild(wechatAssessRow);
   const xhsPresetGroup = makeGroup();
   xhsPresetGroup.appendChild(xhsPresetRow);
   const injectGroup = makeGroup();
@@ -8188,19 +8263,26 @@ function buildSettingsAppScreen() {
   const saveWechatGroupPreset = (patch) => savePromptPreset('wechatGroup', IPHONE_WECHAT_GROUP_PRESET_DEFAULT, patch);
   const saveWechatMomentsPreset = (patch) => savePromptPreset('wechatMoments', IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT, patch);
   const saveXhsNotesPreset = (patch) => savePromptPreset('xhsNotes', IPHONE_XHS_PRESET_DEFAULT, patch);
+  const saveWechatAssessPreset = (patch) => savePromptPreset('wechatAssess', IPHONE_WECHAT_ASSESS_PRESET_DEFAULT, patch);
 
   // 预设编辑器（v0.12.0 从私聊子页抽取成工厂，私聊/群聊/动态三页共用；v0.18.0
-  // 起微信的三组提示词页也复用，经 floorLog 换成微信的楼层段称谓）：导航 +
-  // 角色扮演指令 + 扮演与对白指导 + 上下文注入（世界书开关 / 记录楼层开关 /
-  // 主线楼层数）+ 可选写作指导（guidanceSection，仅「动态提示词」页）+ 可选
-  // 回复指导与回复格式（replySection，仅「动态提示词」页，v0.17.0）+ 输出格式 +
-  // 占位符说明 + 恢复默认；仅标题、存档键、个别脚注与默认值不同。
-  const buildPresetPage = ({ pageClass, openClass, navTitle, sectionPrefix, formatFootText, footText, resetLabel, save, getPreset, defaults, guidanceSection, replySection, floorLogLabels }) => {
+  // 起微信的三组提示词页也复用，经 floorLog 换成微信的楼层段称谓；v0.27.0 起
+  // 「零钱评估提示词」页用 npcSection: false 省掉扮演与对白指导）：导航 +
+  // 角色扮演指令 + 可选的扮演与对白指导（npcSection，默认显示）+ 上下文注入
+  //（世界书开关 / 记录楼层开关 / 主线楼层数）+ 可选写作指导（guidanceSection，
+  // 仅「动态提示词」与「零钱评估」页）+ 可选回复指导与回复格式（replySection，
+  // 仅「动态提示词」页，v0.17.0）+ 输出格式 + 占位符说明 + 恢复默认；仅标题、
+  // 存档键、个别脚注与默认值不同。
+  const buildPresetPage = ({ pageClass, openClass, navTitle, sectionPrefix, formatFootText, footText, resetLabel, save, getPreset, defaults, guidanceSection, replySection, floorLogLabels, npcSection }) => {
     // 记录楼层的称谓（QQ 页用「QQ」，微信页用「微信」；<qq_chat_log> / <wechat_chat_log>）
     const floorLogOn = floorLogLabels?.on ?? '附带最新QQ记录楼层';
     const floorLogOff = floorLogLabels?.off ?? '不附带QQ记录楼层';
     const floorLogFootText = floorLogLabels?.footText
       ?? '把酒馆里最新一楼的 iPhone_Message 聊天记录（每段各自用方括号标签包裹，可能含多个联系人/群聊的记录段，超长截尾保留最近记录）包进 <qq_chat_log> 随 system 发送；清空聊天后它就是仅存的历史。';
+    // 扮演逻辑 / 对白规范的默认文案取自本页的 defaults：聊天类预设是内置两条
+    // 指导，零钱评估是空串（「恢复默认」回到同一处，不另硬编码）。
+    const npcDefault = defaults.npcLogic ?? IPHONE_QQ_NPC_LOGIC;
+    const dialogueDefault = defaults.dialogueGuidance ?? IPHONE_QQ_DIALOGUE_GUIDANCE;
     const preset = getPreset();
     const page = document.createElement('div');
     page.className = `iphone-st__page ${pageClass}`;
@@ -8238,36 +8320,40 @@ function buildSettingsAppScreen() {
     personaFoot.textContent = '拼在 system 最前、包在 <roleplay_instructions> 里的角色扮演指令。';
     scroll.appendChild(personaFoot);
 
-    /* -- 扮演逻辑 + 对白规范（多行文本域，留空不附带） -- */
-    scroll.appendChild(sectionTitle(`${sectionPrefix} · 扮演与对白指导`));
-    const npcInput = document.createElement('textarea');
-    npcInput.className = 'iphone-st__textarea';
-    npcInput.rows = 8;
-    npcInput.spellcheck = false;
-    npcInput.placeholder = '（留空则不附带扮演逻辑指导）';
-    npcInput.value = preset.npcLogic;
-    npcInput.addEventListener('input', () => save({ npcLogic: npcInput.value }));
-    const npcGroup = formGroup();
-    npcGroup.appendChild(npcInput);
-    scroll.appendChild(npcGroup);
-    const npcFoot = document.createElement('p');
-    npcFoot.className = 'iphone-st__foot';
-    npcFoot.textContent = '随 system 附带的扮演逻辑（包在 <npc_logic> 里）：「先是人，后是设定」、主体性与行为动机等；改写后即时生效，留空则整段不发送。';
-    scroll.appendChild(npcFoot);
-    const dialogueInput = document.createElement('textarea');
-    dialogueInput.className = 'iphone-st__textarea';
-    dialogueInput.rows = 8;
-    dialogueInput.spellcheck = false;
-    dialogueInput.placeholder = '（留空则不附带对白规范）';
-    dialogueInput.value = preset.dialogueGuidance;
-    dialogueInput.addEventListener('input', () => save({ dialogueGuidance: dialogueInput.value }));
-    const dialogueGroup = formGroup();
-    dialogueGroup.appendChild(dialogueInput);
-    scroll.appendChild(dialogueGroup);
-    const dialogueFoot = document.createElement('p');
-    dialogueFoot.className = 'iphone-st__foot';
-    dialogueFoot.textContent = '随 system 附带的对白规范（包在 <dialogue_guidance> 里）：口语化、生活化、带情绪与立场、禁播报腔；改写后即时生效，留空则整段不发送。';
-    scroll.appendChild(dialogueFoot);
+    /* -- 扮演逻辑 + 对白规范（多行文本域，留空不附带；npcSection: false 时整段不显示） -- */
+    let npcInput = null;
+    let dialogueInput = null;
+    if (npcSection !== false) {
+      scroll.appendChild(sectionTitle(`${sectionPrefix} · 扮演与对白指导`));
+      npcInput = document.createElement('textarea');
+      npcInput.className = 'iphone-st__textarea';
+      npcInput.rows = 8;
+      npcInput.spellcheck = false;
+      npcInput.placeholder = '（留空则不附带扮演逻辑指导）';
+      npcInput.value = preset.npcLogic;
+      npcInput.addEventListener('input', () => save({ npcLogic: npcInput.value }));
+      const npcGroup = formGroup();
+      npcGroup.appendChild(npcInput);
+      scroll.appendChild(npcGroup);
+      const npcFoot = document.createElement('p');
+      npcFoot.className = 'iphone-st__foot';
+      npcFoot.textContent = '随 system 附带的扮演逻辑（包在 <npc_logic> 里）：「先是人，后是设定」、主体性与行为动机等；改写后即时生效，留空则整段不发送。';
+      scroll.appendChild(npcFoot);
+      dialogueInput = document.createElement('textarea');
+      dialogueInput.className = 'iphone-st__textarea';
+      dialogueInput.rows = 8;
+      dialogueInput.spellcheck = false;
+      dialogueInput.placeholder = '（留空则不附带对白规范）';
+      dialogueInput.value = preset.dialogueGuidance;
+      dialogueInput.addEventListener('input', () => save({ dialogueGuidance: dialogueInput.value }));
+      const dialogueGroup = formGroup();
+      dialogueGroup.appendChild(dialogueInput);
+      scroll.appendChild(dialogueGroup);
+      const dialogueFoot = document.createElement('p');
+      dialogueFoot.className = 'iphone-st__foot';
+      dialogueFoot.textContent = '随 system 附带的对白规范（包在 <dialogue_guidance> 里）：口语化、生活化、带情绪与立场、禁播报腔；改写后即时生效，留空则整段不发送。';
+      scroll.appendChild(dialogueFoot);
+    }
 
     /* -- 可选写作指导（仅「动态提示词」页：<dynamics_guidance>） -- */
     let guidanceInput = null;
@@ -8426,13 +8512,13 @@ function buildSettingsAppScreen() {
     resetRow.addEventListener('click', () => {
       save({
         ...defaults,
-        npcLogic: IPHONE_QQ_NPC_LOGIC,
-        dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+        npcLogic: npcDefault,
+        dialogueGuidance: dialogueDefault,
       });
       personaInput.value = defaults.persona;
       formatInput.value = defaults.format;
-      npcInput.value = IPHONE_QQ_NPC_LOGIC;
-      dialogueInput.value = IPHONE_QQ_DIALOGUE_GUIDANCE;
+      if (npcInput) npcInput.value = npcDefault;
+      if (dialogueInput) dialogueInput.value = dialogueDefault;
       if (guidanceInput) guidanceInput.value = String(defaults.guidance ?? '');
       if (replyGuidanceInput) replyGuidanceInput.value = String(defaults.replyGuidance ?? '');
       if (replyFormatInput) replyFormatInput.value = String(defaults.replyFormat ?? '');
@@ -8587,6 +8673,30 @@ function buildSettingsAppScreen() {
     },
   });
 
+  /* -- 微信「零钱评估提示词」页（v0.27.0：零钱页「评估」按钮的请求组合） -- */
+  const wechatAssessPresetPage = buildPresetPage({
+    pageClass: 'iphone-st__page--wechatassesspreset',
+    openClass: 'is-wechatassesspreset-open',
+    navTitle: '零钱评估提示词',
+    sectionPrefix: '零钱评估',
+    // 评估是后台算钱，不涉及扮演与对白指导（npcSection: false 整段不显示）
+    npcSection: false,
+    guidanceSection: {
+      title: '评估指导',
+      footText: '包在 <assess_guidance> 里随 system 发送的评估标准：零钱是什么、按哪些依据估、给多少钱合理、边界在哪；改写后即时生效，留空则整段不发送（只靠角色扮演指令与输出格式，结果可能飘）。',
+    },
+    formatFootText: 'AI 回复必须含「零钱余额：金额」一行（插件据此改写余额，读不出数字就整次作废并提示重试），'
+      + '第二行写「理由：…」存进零钱页的说明小字；这段包在 <output_format> 里随 system 发送，模型没按格式输出时评估失败。',
+    footText: '可用占位符：{{user}} = 你的名字，{{char}} = 微信昵称。'
+      + '随请求附带：世界书设定、酒馆主线最近对话、最新记录楼层、第三方注入内容、'
+      + '本机联系人 / 群聊名单、当前微信账户（昵称 / 微信号 / 现有余额 / 上次评估结果与理由）与评估指导。修改即时保存。',
+    resetLabel: '恢复零钱评估默认预设',
+    save: saveWechatAssessPreset,
+    getPreset: () => iphoneGetWechatAssessPreset(),
+    defaults: IPHONE_WECHAT_ASSESS_PRESET_DEFAULT,
+    floorLogLabels: wxFloorLogLabels,
+  });
+
   /* ============ 第三方注入子页（v0.26.0） ============ */
   // 开关 + 将要附带的内容预览：别的扩展经 setExtensionPrompt 注入酒馆主提示词的
   // 内容（万华镜的变量表等），本插件实时读宿主注册表 + 上轮快照补齐，随手机各请求
@@ -8714,6 +8824,7 @@ function buildSettingsAppScreen() {
   screen.appendChild(wechatPresetPage);
   screen.appendChild(wechatGroupPresetPage);
   screen.appendChild(wechatMomentsPresetPage);
+  screen.appendChild(wechatAssessPresetPage);
   screen.appendChild(xhsNotesPresetPage);
   screen.appendChild(injectPage);
   refreshMainDetail();
@@ -8989,9 +9100,15 @@ function iphoneNormalizeWechatWallet(raw) {
     return Math.round(Number(num.toPrecision(6)) * 100) / 100;
   };
   const cards = Array.isArray(source.cards) ? source.cards : defaults.cards;
+  // 上次「评估」（v0.27.0）：时间戳 + 模型给的理由，只作展示与下次评估的参考。
+  const assessedAt = Math.max(0, Math.floor(Number(source.assessedAt) || 0));
+  const assessNote = String(source.assessNote || '').replace(/\s+/g, ' ').trim()
+    .slice(0, IPHONE_WECHAT_ASSESS_NOTE_CAP);
   return {
     balance: iphoneWechatRoundMoney(source.balance, defaults.balance),
     lctRate: rate(source.lctRate, defaults.lctRate),
+    ...(assessedAt ? { assessedAt } : {}),
+    ...(assessNote ? { assessNote } : {}),
     cards: cards
       .map((card, index) => {
         if (!card || typeof card !== 'object') return null;
@@ -9005,8 +9122,9 @@ function iphoneNormalizeWechatWallet(raw) {
   };
 }
 
-// 读取钱包数据：没存过就返回默认演示值（不落盘，保持聊天文件干净），存过脏值
-//（字符串金额 / 尾号带空格等）归一化后顺手写回。
+// 读取钱包数据：没存过就返回默认值（不落盘，保持聊天文件干净），存过脏值
+//（字符串金额 / 尾号带空格等）归一化后顺手写回。默认余额为 0（v0.27.0 起）——
+// 余额由「零钱 · 评估」按剧情核定，或由转账 / 收款增减。
 function iphoneGetWechatWallet() {
   const storage = iphoneGetQqStorage();
   const raw = storage.wechatWallet && typeof storage.wechatWallet === 'object' ? storage.wechatWallet : null;
@@ -9055,6 +9173,234 @@ function iphoneWechatServiceIcons() {
   }
   return out;
 }
+
+// ---------- 微信零钱「评估」（v0.27.0） ----------
+// 零钱余额的来源：v0.22.1 起是写死的演示值，v0.27.0 起改由「我 → 服务 → 钱包 →
+// 零钱 → 评估」调一次对话 API 现场评出来——把提示词与上下文（世界书 / 第三方
+// 注入 / 酒馆主线 / 记录楼层 / 玩家微信资料 / 联系人名单 / 当前钱包状态）一起
+// 发给模型，由它按剧情里玩家的资产状况给出一个合适的余额，覆盖写回
+// wechatWallet.balance。转账 / 收款仍在这份余额之上加减，两边即时联动。
+// 预设存 settings.promptPresets.wechatAssess（「设置 · 零钱评估提示词」）。
+
+// 评估预设：字段与其余预设同义，但 npcLogic / dialogueGuidance 默认留空——评估
+// 是一次后台计算而非对话，那两段指导在这里没有意义（编辑页也不显示）。
+function iphoneGetWechatAssessPreset() {
+  const defaults = IPHONE_WECHAT_ASSESS_PRESET_DEFAULT;
+  const raw = iphoneGetSettings().promptPresets?.wechatAssess || {};
+  const persona = typeof raw.persona === 'string' ? raw.persona : defaults.persona;
+  const worldBook = typeof raw.worldBook === 'boolean' ? raw.worldBook : defaults.worldBook;
+  const latestFloor = typeof raw.latestFloor === 'boolean' ? raw.latestFloor : defaults.latestFloor;
+  const npcLogic = typeof raw.npcLogic === 'string' ? raw.npcLogic : defaults.npcLogic;
+  const dialogueGuidance = typeof raw.dialogueGuidance === 'string' ? raw.dialogueGuidance : defaults.dialogueGuidance;
+  let historyFloors = Math.round(Number(raw.historyFloors));
+  if (!Number.isFinite(historyFloors)) historyFloors = defaults.historyFloors;
+  historyFloors = Math.min(50, Math.max(0, historyFloors));
+  const guidance = typeof raw.guidance === 'string' ? raw.guidance : defaults.guidance;
+  const format = typeof raw.format === 'string' ? raw.format : defaults.format;
+  return { persona, worldBook, latestFloor, historyFloors, npcLogic, dialogueGuidance, guidance, format };
+}
+
+// 解析评估回复：只认「金额 + 理由」两样，金额拿不到就当整次评估失败（宁可报错
+// 让玩家重试，也不要凭空改余额——余额是剧情数据，写错比不写更糟）。
+// 金额容错：先认约定的「零钱余额：」，再认「余额 / 金额 / balance」等同义标签
+//（模型偶发把标签写简略），最后退到 JSON 形状的 balance 字段；金额里的千分位、
+// 货币符号、`元` 后缀都吃掉。负数按 0 收住——零钱不可能是负的（欠款在剧情里
+// 走别的说法，不体现为零钱为负）。
+function iphoneParseWechatAssessReply(reply) {
+  const text = String(reply ?? '').replace(/\r\n?/g, '\n').trim();
+  if (!text) return null;
+  const amountSources = [
+    /零钱余额\s*[:：]?\s*[¥￥]?\s*(-?[0-9][0-9,]*(?:\.[0-9]{1,2})?)/,
+    /(?:^|\n)\s*(?:余额|金额|数值)\s*[:：]\s*[¥￥]?\s*(-?[0-9][0-9,]*(?:\.[0-9]{1,2})?)/,
+    /["'【]?\s*balance\s*["'】]?\s*[:：]\s*[¥￥]?\s*(-?[0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
+  ];
+  let amount = null;
+  for (const re of amountSources) {
+    const match = re.exec(text);
+    if (!match) continue;
+    const rawValue = Number(match[1].replace(/,/g, ''));
+    if (!Number.isFinite(rawValue)) continue;
+    // 负数按 0 收住：零钱不可能是负的（欠款在剧情里走别的说法，不体现为余额为负），
+    // 模型算出负数说明它按「透支」理解了，收成 0 比整次作废更贴近它想表达的处境。
+    const parsed = iphoneWechatRoundMoney(rawValue < 0 ? 0 : rawValue, NaN);
+    if (Number.isFinite(parsed)) { amount = parsed; break; }
+  }
+  if (amount == null) return null;
+  // 理由：优先认「理由：」标签，其次取金额那一行之后的第一行有字内容
+  //（模型偶尔只给一行金额、不写理由，此时宁可留空，也别把金额行当成理由抄一遍）
+  let note = '';
+  const noteMatch = /理由\s*[:：]\s*([^\n]+)/.exec(text);
+  if (noteMatch) {
+    note = noteMatch[1];
+  } else {
+    const lines = text.split('\n').map((line) => line.trim());
+    const amountLine = lines.findIndex((line) => /余额|金额|数值|balance/i.test(line) && /\d/.test(line));
+    const after = lines
+      .slice(amountLine >= 0 ? amountLine + 1 : 0)
+      .find((line) => line && !/^[[{`]/.test(line) && !/[:：]\s*[¥￥]?\s*-?[\d,]+(?:\.\d+)?\s*元?\s*$/.test(line));
+    note = after || '';
+  }
+  return {
+    balance: amount,
+    note: String(note)
+      .replace(/^["'`\s]+|["'`\s]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .slice(0, IPHONE_WECHAT_ASSESS_NOTE_CAP),
+  };
+}
+
+// 直接落一个新余额（评估用；转账 / 收款走 iphoneChangeWechatBalance 的增量接口）。
+// assessNote / assessedAt 一并写入，供零钱页展示「上次评估」与下次评估作参考。
+// 数值不可用（非有限数 / 超出上限）时原样保留旧余额，也不落评估时间——没评出结果
+// 就不是一次评估，别在界面上留下「已评估」的痕迹。
+function iphoneSetWechatBalance(balance, note) {
+  const wallet = iphoneGetWechatWallet();
+  const next = iphoneWechatRoundMoney(balance, NaN);
+  if (!Number.isFinite(next)) return wallet.balance;
+  const storage = iphoneGetQqStorage();
+  storage.wechatWallet = {
+    ...wallet,
+    balance: next,
+    assessedAt: Date.now(),
+    ...(note ? { assessNote: note } : {}),
+  };
+  iphoneSaveQqStorage();
+  return next;
+}
+
+// 微信里已建立关系的人（联系人 + 群聊）：评估时给模型当社会关系参考——收入来源
+// 与消费层级常常能从「跟谁打交道」推出来。
+function iphoneWechatAssessRosterText() {
+  const data = iphoneGetWechatData();
+  const friends = data.friends.map((f) => String(f.name || '').trim()).filter(Boolean);
+  const groups = data.groups.map((g) => String(g.name || '').trim()).filter(Boolean);
+  const lines = [];
+  if (friends.length) lines.push(`联系人（${friends.length} 位）：${friends.join('、')}`);
+  if (groups.length) lines.push(`群聊（${groups.length} 个）：${groups.join('、')}`);
+  return lines.join('\n');
+}
+
+// 调一次对话 API 评估零钱余额并写回，返回 { balance, note, previous }。
+// 上下文尽量给全（见下 sysParts 各段）：评估结论的质量取决于模型对「玩家是什么
+// 人、身处何处、最近发生了什么」的了解程度，能带的段都带上——世界书给身份，
+// 主线与记录楼层给近期收支，第三方注入给变量状态（万华镜的金钱类变量就在里面），
+// 微信资料与联系人名单给消费层级的旁证，当前钱包状态则让结论能自洽（已有余额高
+// 就没必要推翻重来，模型多数时候会给出相近量级）。
+async function iphoneAssessWechatWallet() {
+  const settings = iphoneGetSettings();
+  const ctx = iphoneGetContextSafe();
+  const preset = iphoneGetWechatAssessPreset();
+  const resolve = (text) => iphoneResolveTavernMacros(text, ctx);
+  const wallet = iphoneGetWechatWallet();
+  const profile = iphoneGetWechatProfile();
+  const playerName = String(ctx?.name1 || '').trim() || '用户';
+
+  let worldText = '';
+  if (preset.worldBook) {
+    try {
+      worldText = resolve(iphoneWbBuildPromptText(await iphoneWbCollectState()) || '');
+    } catch (error) {
+      iphoneLog('warn', '世界书内容注入失败，本次评估不带世界书', error);
+    }
+  }
+
+  const historyFloors = Math.max(0, Math.round(Number(preset.historyFloors) || 0));
+  const historyLines = historyFloors > 0
+    ? (Array.isArray(ctx?.chat) ? ctx.chat : [])
+      .filter((mes) => mes && !mes.is_system
+        && iphoneExtractMessageFloorInner(mes.mes) == null
+        && String(mes.mes ?? '').trim())
+      .slice(-historyFloors)
+      .map((mes) => `${String(mes.name || '').trim() || '旁白'}：${resolve(String(mes.mes).trim())}`)
+    : [];
+
+  let floorLogText = '';
+  if (preset.latestFloor) {
+    const chatFloors = Array.isArray(ctx?.chat) ? ctx.chat : [];
+    for (let i = chatFloors.length - 1; i >= 0; i -= 1) {
+      const inner = iphoneExtractMessageFloorInner(chatFloors[i]?.mes);
+      if (inner == null) continue;
+      const text = resolve(String(inner).trim());
+      if (!text) break;
+      if (text.length > IPHONE_QQ_FLOOR_LOG_CAP) {
+        let cut = text.slice(-IPHONE_QQ_FLOOR_LOG_CAP);
+        const newlineAt = cut.indexOf('\n');
+        if (newlineAt >= 0) cut = cut.slice(newlineAt + 1);
+        floorLogText = `……（更早的记录已略）\n${cut}`;
+      } else {
+        floorLogText = text;
+      }
+      break;
+    }
+  }
+
+  const accountLines = [
+    `微信昵称：${profile.name}`,
+    `微信号：${profile.wxId || '（未设置）'}`,
+    `当前零钱余额：¥${iphoneWechatMoney(wallet.balance)}`,
+  ];
+  if (wallet.assessedAt) {
+    accountLines.push(`上次评估：${new Date(wallet.assessedAt).toLocaleString('zh-CN', { hour12: false })}`
+      + (wallet.assessNote ? `（当时的理由：${wallet.assessNote}）` : ''));
+  }
+  const accountText = accountLines.join('\n');
+
+  const rosterText = iphoneWechatAssessRosterText();
+  const persona = preset.persona.trim();
+  const npcLogic = preset.npcLogic.trim();
+  const dialogueGuidance = preset.dialogueGuidance.trim();
+  const guidance = String(preset.guidance ?? '').trim();
+  const format = String(preset.format ?? '').trim();
+  const worldTextTrimmed = worldText.trim();
+  const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
+
+  const sysParts = [];
+  if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
+  const outlineItems = [];
+  if (persona) outlineItems.push('<roleplay_instructions>…</roleplay_instructions>：你的职责与视角——微信支付的资产风控系统；');
+  if (npcLogic) outlineItems.push('<npc_logic>…</npc_logic>：扮演逻辑——「先是人，后是设定」，按自身立场与动机行事；');
+  if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：表达规范——口语化、生活化、带情绪与立场，禁止播报腔；');
+  if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
+  if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
+  if (floorLogText) outlineItems.push('<wechat_chat_log>…</wechat_chat_log>：最近一次同步到酒馆楼层的手机记录，可能包含多个记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）——近期的收支与消费线索多在这里；');
+  if (rosterText) outlineItems.push('<wechat_contacts>…</wechat_contacts>：玩家微信里的联系人与群聊名单，可辅助判断 TA 的社交圈与消费层级；');
+  outlineItems.push('<wechat_account>…</wechat_account>：玩家的微信资料与账户当前状态（昵称 / 微信号 / 当前零钱余额 / 上次评估）；');
+  if (guidance) outlineItems.push('<assess_guidance>…</assess_guidance>：资产评估的评定标准——评什么、凭什么是合理的；');
+  if (format) outlineItems.push('<output_format>…</output_format>：输出格式要求，位于提示词末尾，必须严格遵守；');
+  sysParts.push('【提示词结构说明】本次请求的提示词由以下部分组成，均已用 XML 标签包裹并附介绍：\n'
+    + outlineItems.map((item) => `- ${item}`).join('\n'));
+  if (npcLogic) sysParts.push(`以下是扮演逻辑指导（决定你如何理解与演绎角色）：\n<npc_logic>\n${resolve(npcLogic)}\n</npc_logic>`);
+  if (dialogueGuidance) sysParts.push(`以下是表达规范（决定你如何说话与写内容）：\n<dialogue_guidance>\n${resolve(dialogueGuidance)}\n</dialogue_guidance>`);
+  if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
+  if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
+  if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的手机记录（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），近期的收支与消费线索多在这里：\n<wechat_chat_log>\n${floorLogText}\n</wechat_chat_log>`);
+  if (rosterText) sysParts.push(`以下是玩家微信里的联系人与群聊名单（辅助判断 TA 的社交圈与消费层级）：\n<wechat_contacts>\n${rosterText}\n</wechat_contacts>`);
+  sysParts.push(`以下是玩家的微信资料与账户当前状态：\n<wechat_account>\n${accountText}\n</wechat_account>`);
+  if (guidance) sysParts.push(`以下是资产评估的评定标准（决定你怎么评）：\n<assess_guidance>\n${resolve(guidance)}\n</assess_guidance>`);
+  if (format) sysParts.push(`以下是输出格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
+
+  const userContent = `请评估「${playerName}」此刻的资产状况，给出 TA 微信零钱应有的余额。`
+    + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const reply = await iphoneRequestChatCompletion(settings, [
+    { role: 'system', content: sysParts.join('\n\n') },
+    { role: 'user', content: userContent },
+  ]);
+
+  const parsed = iphoneParseWechatAssessReply(reply);
+  if (!parsed) {
+    throw new Error('AI 没有返回可用的评估结果（需要「零钱余额：金额」一行）。');
+  }
+  const previous = wallet.balance;
+  const balance = iphoneSetWechatBalance(parsed.balance, parsed.note);
+  iphoneLog('info', `零钱评估完成：¥${iphoneWechatMoney(previous)} → ¥${iphoneWechatMoney(balance)}`
+    + (parsed.note ? `（${parsed.note}）` : ''));
+  return { balance, note: parsed.note, previous };
+}
+
 
 // ---------- 微信转账 / 收款（v0.24.0；行内容错与 [已收款] 记账 v0.24.3） ----------
 // 约定（AI 与玩家共用一套写法）：消息内容写 `[转账]金额 说明`，渲染成转账气泡；
@@ -11255,11 +11601,12 @@ function iphoneWechatBuildServicePage(icons, svcIcons, onBack, onOpenWallet) {
   return view;
 }
 
-// ---------- 微信「钱包」页（v0.22.1，前端占位） ----------
+// ---------- 微信「钱包」页（v0.22.1，前端占位；v0.27.0 零钱行可点） ----------
 // 按微信 8.x 钱包页复刻：无顶部卡片，直接是分行白底列表（每行左侧彩色线稿
 // 图标 + 名称 + 右侧说明），行间 0.5px 细线；导航右侧「账单」。分组灰缝把
 // 零钱类 / 分付 / 支付分类隔开，底部居中「身份信息 | 支付设置」小字。
-function iphoneWechatBuildWalletView(icons, svcIcons, onBack) {
+// onOpenChange（v0.27.0）：点「零钱」行进零钱明细页（评估入口在那里）。
+function iphoneWechatBuildWalletView(icons, svcIcons, onBack, onOpenChange) {
   const view = document.createElement('div');
   view.className = 'iphone-wx__svc';
 
@@ -11276,11 +11623,19 @@ function iphoneWechatBuildWalletView(icons, svcIcons, onBack) {
   body.className = 'iphone-wx__svc-body iphone-wx__svc-body--wallet';
 
   const wallet = iphoneGetWechatWallet();
-  // 分组：[{ rows }]，组间 8px 灰缝；每行 { icon, color, label, note, value }
+  // 分组：[{ rows }]，组间 8px 灰缝；每行 { icon, color, label, note, value, action, balance }
+  // （balance: true 的行的金额挂 data-wallet-balance，评估后外层就地刷新用）
   const groups = [
     {
       rows: [
-        { icon: 'coinYen', color: '#fa9d3b', label: '零钱', value: `¥${iphoneWechatMoney(wallet.balance)}` },
+        {
+          icon: 'coinYen',
+          color: '#fa9d3b',
+          label: '零钱',
+          value: `¥${iphoneWechatMoney(wallet.balance)}`,
+          action: onOpenChange,
+          balance: true,
+        },
         // 收益率与真实微信一致固定两位小数（1.1 → 1.10%）
         { icon: 'diamond', color: '#fa9d3b', label: '零钱通', note: `收益率${Number(wallet.lctRate).toFixed(2)}%` },
         { icon: 'bankCard', color: '#2f7dfa', label: '银行卡' },
@@ -11318,9 +11673,10 @@ function iphoneWechatBuildWalletView(icons, svcIcons, onBack) {
         <span class="iphone-wx__wal-ico" style="color:${row.color}" aria-hidden="true">${svcIcons[row.icon]}</span>
         <span class="iphone-wx__wal-label">${row.label}</span>
         ${row.note ? `<span class="iphone-wx__wal-note">${row.note}</span>` : ''}
-        ${row.value ? `<span class="iphone-wx__wal-value">${row.value}</span>` : ''}
+        ${row.value ? `<span class="iphone-wx__wal-value"${row.balance ? ' data-wallet-balance' : ''}>${row.value}</span>` : ''}
         <span class="iphone-wx__dsc-chev" aria-hidden="true">${icons.chevronRight}</span>
       `;
+      if (typeof row.action === 'function') el.addEventListener('click', row.action);
       block.appendChild(el);
     }
     list.appendChild(block);
@@ -11334,6 +11690,129 @@ function iphoneWechatBuildWalletView(icons, svcIcons, onBack) {
 
   view.appendChild(nav);
   view.appendChild(body);
+  return view;
+}
+
+// ---------- 微信「零钱」页（v0.27.0） ----------
+// 按真实微信「我 → 服务 → 钱包 → 零钱」复刻：导航栏右侧「零钱明细」、居中黄色
+// 圆形「¥」图标、灰色小字「我的零钱」与大号金额，下接一块圆角白卡的零钱通入口
+//（钻石图标 + 「转入零钱通，能赚又能花」+ 收益率小字），页面下方两枚大按钮。
+// 与真实微信的唯一差别（插件设定）：按钮不是「充值 / 提现」，而是**「评估」**——
+// 点它调一次对话 API，按玩家在剧情里的资产状况评估出一个合适的零钱余额（见
+// iphoneAssessWechatWallet）。评估中按钮转「评估中…」并禁用；失败在金额下方
+// 红字提示；成功后金额就地翻新并显示评估理由与时间。
+function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
+  const view = document.createElement('div');
+  view.className = 'iphone-wx__svc';
+
+  const nav = document.createElement('header');
+  nav.className = 'iphone-wx__svc-nav';
+  nav.innerHTML = `
+    <button type="button" class="iphone-wx__svc-back" aria-label="返回">${icons.back}</button>
+    <p class="iphone-wx__svc-navtitle">零钱</p>
+    <button type="button" class="iphone-wx__svc-navaction">零钱明细</button>
+  `;
+  nav.querySelector('.iphone-wx__svc-back').addEventListener('click', onBack);
+
+  const body = document.createElement('div');
+  body.className = 'iphone-wx__svc-body iphone-wx__chg';
+
+  // 金额区（黄圆 + 「我的零钱」+ 大号金额 + 评估理由/错误行）。黄圆里是白色「¥」
+  // 字形——真实零钱页就是这么一枚符号，不用图标集里的硬币线稿（那是钱包列表的）。
+  const head = document.createElement('div');
+  head.className = 'iphone-wx__chg-head';
+  head.innerHTML = `
+    <span class="iphone-wx__chg-ico" aria-hidden="true">¥</span>
+    <p class="iphone-wx__chg-label">我的零钱</p>
+    <p class="iphone-wx__chg-amount" data-chg-amount></p>
+    <p class="iphone-wx__chg-note" data-chg-note hidden></p>
+  `;
+  const amountEl = head.querySelector('[data-chg-amount]');
+  const noteEl = head.querySelector('[data-chg-note]');
+  body.appendChild(head);
+
+  // 零钱通入口（纯展示，与钱包页同一条数据）
+  const wallet = iphoneGetWechatWallet();
+  const lct = document.createElement('button');
+  lct.type = 'button';
+  lct.className = 'iphone-wx__chg-lct';
+  lct.innerHTML = `
+    <span class="iphone-wx__chg-lctico" aria-hidden="true">${svcIcons.diamond}</span>
+    <span class="iphone-wx__chg-lctmain">
+      <span class="iphone-wx__chg-lcttitle">转入零钱通，能赚又能花</span>
+      <span class="iphone-wx__chg-lctsub">零钱通 七日年化${Number(wallet.lctRate).toFixed(2)}%</span>
+    </span>
+    <span class="iphone-wx__dsc-chev" aria-hidden="true">${icons.chevronRight}</span>
+  `;
+  body.appendChild(lct);
+
+  // 按钮区：评估（绿，主操作）。真实微信这里是「充值 / 提现」，本插件只保留
+  // 「评估」这一个入口——余额是评估出来的，没有充值 / 提现这回事。
+  const actions = document.createElement('div');
+  actions.className = 'iphone-wx__chg-actions';
+  const assessBtn = document.createElement('button');
+  assessBtn.type = 'button';
+  assessBtn.className = 'iphone-wx__chg-btn iphone-wx__chg-btn--primary';
+  assessBtn.textContent = '评估';
+  actions.appendChild(assessBtn);
+  body.appendChild(actions);
+
+  const foot = document.createElement('p');
+  foot.className = 'iphone-wx__chg-foot';
+  foot.textContent = '本服务由财付通提供';
+  body.appendChild(foot);
+
+  // 金额与理由的就地刷新（评估成功后调用；返回按钮等外部触发也走它）
+  const renderWallet = () => {
+    const current = iphoneGetWechatWallet();
+    amountEl.textContent = `¥ ${iphoneWechatMoney(current.balance)}`;
+    if (current.assessedAt && current.assessNote) {
+      noteEl.hidden = false;
+      noteEl.dataset.state = 'note';
+      noteEl.textContent = `${new Date(current.assessedAt).toLocaleString('zh-CN', { hour12: false })} 评估：${current.assessNote}`;
+    } else if (current.assessedAt) {
+      noteEl.hidden = false;
+      noteEl.dataset.state = 'note';
+      noteEl.textContent = `已于 ${new Date(current.assessedAt).toLocaleString('zh-CN', { hour12: false })} 评估`;
+    } else {
+      noteEl.hidden = false;
+      noteEl.dataset.state = 'note';
+      noteEl.textContent = '还没有评估过，点下面的「评估」按剧情给你的零钱定个数额。';
+    }
+  };
+  renderWallet();
+
+  let assessing = false;
+  const runAssess = async () => {
+    if (assessing) return;
+    assessing = true;
+    assessBtn.disabled = true;
+    assessBtn.textContent = '评估中…';
+    noteEl.hidden = false;
+    noteEl.dataset.state = 'busy';
+    noteEl.textContent = '正在结合剧情与人物设定评估你的资产状况…';
+    try {
+      const result = await iphoneAssessWechatWallet();
+      renderWallet();
+      iphoneLog('info', `零钱评估：¥${iphoneWechatMoney(result.previous)} → ¥${iphoneWechatMoney(result.balance)}`);
+      onChanged?.(result);
+    } catch (error) {
+      iphoneLog('warn', '零钱评估失败', error);
+      noteEl.hidden = false;
+      noteEl.dataset.state = 'error';
+      noteEl.textContent = String(error?.message || error) || '评估失败，请重试。';
+    } finally {
+      assessing = false;
+      assessBtn.disabled = false;
+      assessBtn.textContent = '评估';
+    }
+  };
+  assessBtn.addEventListener('click', () => { void runAssess(); });
+
+  view.appendChild(nav);
+  view.appendChild(body);
+  // 评估后金额变了：让外层（服务页绿卡 / 钱包页零钱行）也跟着刷新
+  view._refreshChangeView = renderWallet;
   return view;
 }
 
@@ -12827,8 +13306,10 @@ function buildWechatAppScreen() {
     formView.classList.add('is-open');
   }
 
-  // —— 覆盖层八：服务 / 钱包（v0.22.1；每次打开重建，余额等数据取最新） ——
-  // 服务页是钱包页的下层：钱包页返回只关自己，服务页仍在底下（与微信一致）。
+  // —— 覆盖层八：服务 / 钱包 / 零钱（v0.22.1；零钱页 v0.27.0 起可评估） ——
+  // 三层叠加：零钱盖在钱包上、钱包盖在服务上，返回只关自己（与微信一致）。
+  // 每层每次打开都重建，余额等数据取最新；评估改了余额后，上层的绿卡与零钱行
+  // 靠各自的 _refresh 钩子在返回时翻新（见下）。
   const svcIcons = iphoneWechatServiceIcons();
   const serviceView = document.createElement('div');
   serviceView.className = 'iphone-wx__profview iphone-wx__svcview';
@@ -12846,9 +13327,37 @@ function buildWechatAppScreen() {
     walletView.innerHTML = '';
     walletView.appendChild(iphoneWechatBuildWalletView(icons, svcIcons, () => {
       walletView.classList.remove('is-open');
-    }));
+      // 零钱页里评估过余额：回服务页前把绿卡余额刷新到最新
+      refreshWxServiceBalance();
+    }, () => openWxChangeView()));
     walletView.classList.add('is-open');
   }
+
+  const changeView = document.createElement('div');
+  changeView.className = 'iphone-wx__profview iphone-wx__svcview iphone-wx__svcview--change';
+  function openWxChangeView() {
+    changeView.innerHTML = '';
+    changeView.appendChild(iphoneWechatBuildChangeView(icons, svcIcons, () => {
+      changeView.classList.remove('is-open');
+      // 返回钱包页：零钱行显示的是打开那一刻的余额，评估过就要翻新
+      refreshWxWalletBalance();
+    }));
+    changeView.classList.add('is-open');
+  }
+
+  // 服务页绿卡 / 钱包页零钱行的余额就地刷新（评估后返回时调用；两层都还在 DOM 里，
+  // 只是被盖住，所以直接改节点文本即可，不必重建 —— 重建会把下面已打开的层也重置）。
+  const refreshWxServiceBalance = () => {
+    serviceView.querySelectorAll('[data-wallet-balance]').forEach((el) => {
+      el.textContent = `¥${iphoneWechatMoney(iphoneGetWechatWallet().balance)}`;
+    });
+  };
+  const refreshWxWalletBalance = () => {
+    walletView.querySelectorAll('[data-wallet-balance]').forEach((el) => {
+      el.textContent = `¥${iphoneWechatMoney(iphoneGetWechatWallet().balance)}`;
+    });
+    refreshWxServiceBalance();
+  };
 
   // 联系人/群聊数据变化后的统一刷新：会话列表 + 通讯录
   screen._renderWechatSocial = () => {
@@ -12866,6 +13375,7 @@ function buildWechatAppScreen() {
   screen.appendChild(formView);
   screen.appendChild(serviceView);
   screen.appendChild(walletView);
+  screen.appendChild(changeView);
   screen._switchWechatTab = switchWechatTab;
   renderChats();
   iphoneRefreshWechatMeIdentity(screen);

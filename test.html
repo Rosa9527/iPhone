@@ -18,8 +18,10 @@
            test.html?app=wechat&wxmoments=1 → 直达朋友圈动态流（全局）
            test.html?app=wechat&wxservice=1 → 切「我」Tab 后点「服务」行，进服务页
            test.html?app=wechat&wxwallet=1（配合 &wxservice=1）→ 再点「钱包」行进钱包页
+           test.html?app=wechat&wxchange=1（配合 &wxservice=1&wxwallet=1）→ 再点「零钱」行进零钱页
            test.html?app=qq&fqzone=1（配合 &chat=N）→ 经好友资料页直达她的QQ空间
            test.html?app=settings&wxpreset=1 → 再推入「微信私聊提示词」子页
+           test.html?app=settings&wxassesspreset=1 → 再推入「零钱评估提示词」子页
            test.html?app=xhs → 自动打开手机并进入小红书
            test.html?app=xhs&xhstab=market|messages|me → 直达小红书对应 Tab
            test.html?app=xhs&xhsnote=N → 进小红书后点开首页信息流第 N 篇笔记（1 起）
@@ -41,7 +43,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iPhone 扩展 · 本地测试台</title>
-<link rel="stylesheet" href="style.css?v=0.26.0">
+<link rel="stylesheet" href="style.css?v=0.27.0">
 <style>
   body {
     margin: 0;
@@ -534,9 +536,10 @@
             };
             setTimeout(() => openWxMomentsWhenReady(20), 1400);
           }
-          if (params.has('wxservice') || params.has('wxwallet')) {
+          if (params.has('wxservice') || params.has('wxwallet') || params.has('wxchange')) {
             // ?wxservice=1：切到「我」Tab 再点「服务」行，直达服务页；
-            // &wxwallet=1 再点顶部「钱包」行，直达钱包页（余额在那里）。
+            // &wxwallet=1 再点顶部「钱包」行，直达钱包页（余额在那里）；
+            // &wxchange=1 再点「零钱」行，直达零钱页（「评估」按钮在那里）。
             const openWxServiceWhenReady = (retries) => {
               const wx = document.querySelector('.iphone-wx');
               if (wx && typeof wx._switchWechatTab === 'function') {
@@ -549,13 +552,22 @@
               }
             };
             setTimeout(() => openWxServiceWhenReady(20), 1300);
-            if (params.has('wxwallet')) {
+            if (params.has('wxwallet') || params.has('wxchange')) {
               const openWxWalletWhenReady = (retries) => {
                 const row = document.querySelector('.iphone-wx__svc-herocell[data-act="wallet"]');
                 if (row) row.click();
                 else if (retries > 0) setTimeout(() => openWxWalletWhenReady(retries - 1), 150);
               };
               setTimeout(() => openWxWalletWhenReady(30), 1700);
+            }
+            if (params.has('wxchange')) {
+              const openWxChangeWhenReady = (retries) => {
+                const row = [...document.querySelectorAll('.iphone-wx__wal-row')]
+                  .find((el) => el.textContent.includes('零钱'));
+                if (row) row.click();
+                else if (retries > 0) setTimeout(() => openWxChangeWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openWxChangeWhenReady(40), 2100);
             }
           }
           if (params.has('wxpreset')) {
@@ -567,6 +579,16 @@
               else if (retries > 0) setTimeout(() => openWxPresetWhenReady(retries - 1), 150);
             };
             setTimeout(() => openWxPresetWhenReady(20), 1300);
+          }
+          if (params.has('wxassesspreset')) {
+            // ?app=settings&wxassesspreset=1：设置页里点「零钱评估提示词」行，直达该子页。
+            const openWxAssessPresetWhenReady = (retries) => {
+              const row = [...document.querySelectorAll('.iphone-st__row')]
+                .find((el) => el.textContent.includes('零钱评估提示词'));
+              if (row) row.click();
+              else if (retries > 0) setTimeout(() => openWxAssessPresetWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openWxAssessPresetWhenReady(20), 1300);
           }
           /* ---------- 小红书（v0.26.0）：与微信平行的同一套深链 ---------- */
           // 主界面对象上的钩子由 buildXhsAppScreen 暴露（_switchXhsTab / _openXhsNote …），

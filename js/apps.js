@@ -4117,6 +4117,8 @@ function iphoneSettingsIcons() {
     feed: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M19.5 9.9A8 8 0 1 1 13.4 4.7"/><path fill="currentColor" d="M17.6 1.3c.36 1.83 1.34 2.8 3.17 3.17-1.83.36-2.8 1.34-3.17 3.17-.36-1.83-1.34-2.8-3.17-3.17 1.83-.36 2.8-1.34 3.17-3.17z"/></svg>',
     // 「第三方注入」行图标（↓ 落入托盘：捕获别的扩展注入的内容）
     inject: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v9.4"/><path d="m8.3 9.5 3.7 3.7 3.7-3.7"/><path d="M4.7 15.2v2.8c0 1 .8 1.8 1.8 1.8h11c1 0 1.8-.8 1.8-1.8v-2.8"/></g></svg>',
+    // 「零钱评估提示词」行图标（¥ 硬币，与微信钱包图标集的 coinYen 同款）
+    coinYen: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M9.4 12.2h5.2"/><path d="M9.4 15.1h5.2"/><path d="m9.4 7.6 2.6 4.6 2.6-4.6"/><path d="M12 12.2v4.5"/></g></svg>',
   };
 }
 
@@ -4669,6 +4671,14 @@ function buildSettingsAppScreen() {
     label: '朋友圈提示词',
     action: () => screen.classList.add('is-wechatmomentspreset-open'),
   });
+  // 「零钱评估提示词」入口（v0.27.0）：微信「我 → 服务 → 钱包 → 零钱」页
+  // 「评估」按钮点一次调一次 API 用的提示词组合。
+  const wechatAssessRow = makeRow({
+    icon: 'coinYen',
+    tone: '#fa9d3b',
+    label: '零钱评估提示词',
+    action: () => screen.classList.add('is-wechatassesspreset-open'),
+  });
 
   // 「小红书提示词」入口（v0.26.0）：编辑网友笔记生成与评论回复的提示词组合。
   const xhsPresetRow = makeRow({
@@ -4718,6 +4728,7 @@ function buildSettingsAppScreen() {
   wechatPresetGroup.appendChild(wechatChatRow);
   wechatPresetGroup.appendChild(wechatGroupRow);
   wechatPresetGroup.appendChild(wechatMomentsRow);
+  wechatPresetGroup.appendChild(wechatAssessRow);
   const xhsPresetGroup = makeGroup();
   xhsPresetGroup.appendChild(xhsPresetRow);
   const injectGroup = makeGroup();
@@ -5162,19 +5173,26 @@ function buildSettingsAppScreen() {
   const saveWechatGroupPreset = (patch) => savePromptPreset('wechatGroup', IPHONE_WECHAT_GROUP_PRESET_DEFAULT, patch);
   const saveWechatMomentsPreset = (patch) => savePromptPreset('wechatMoments', IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT, patch);
   const saveXhsNotesPreset = (patch) => savePromptPreset('xhsNotes', IPHONE_XHS_PRESET_DEFAULT, patch);
+  const saveWechatAssessPreset = (patch) => savePromptPreset('wechatAssess', IPHONE_WECHAT_ASSESS_PRESET_DEFAULT, patch);
 
   // 预设编辑器（v0.12.0 从私聊子页抽取成工厂，私聊/群聊/动态三页共用；v0.18.0
-  // 起微信的三组提示词页也复用，经 floorLog 换成微信的楼层段称谓）：导航 +
-  // 角色扮演指令 + 扮演与对白指导 + 上下文注入（世界书开关 / 记录楼层开关 /
-  // 主线楼层数）+ 可选写作指导（guidanceSection，仅「动态提示词」页）+ 可选
-  // 回复指导与回复格式（replySection，仅「动态提示词」页，v0.17.0）+ 输出格式 +
-  // 占位符说明 + 恢复默认；仅标题、存档键、个别脚注与默认值不同。
-  const buildPresetPage = ({ pageClass, openClass, navTitle, sectionPrefix, formatFootText, footText, resetLabel, save, getPreset, defaults, guidanceSection, replySection, floorLogLabels }) => {
+  // 起微信的三组提示词页也复用，经 floorLog 换成微信的楼层段称谓；v0.27.0 起
+  // 「零钱评估提示词」页用 npcSection: false 省掉扮演与对白指导）：导航 +
+  // 角色扮演指令 + 可选的扮演与对白指导（npcSection，默认显示）+ 上下文注入
+  //（世界书开关 / 记录楼层开关 / 主线楼层数）+ 可选写作指导（guidanceSection，
+  // 仅「动态提示词」与「零钱评估」页）+ 可选回复指导与回复格式（replySection，
+  // 仅「动态提示词」页，v0.17.0）+ 输出格式 + 占位符说明 + 恢复默认；仅标题、
+  // 存档键、个别脚注与默认值不同。
+  const buildPresetPage = ({ pageClass, openClass, navTitle, sectionPrefix, formatFootText, footText, resetLabel, save, getPreset, defaults, guidanceSection, replySection, floorLogLabels, npcSection }) => {
     // 记录楼层的称谓（QQ 页用「QQ」，微信页用「微信」；<qq_chat_log> / <wechat_chat_log>）
     const floorLogOn = floorLogLabels?.on ?? '附带最新QQ记录楼层';
     const floorLogOff = floorLogLabels?.off ?? '不附带QQ记录楼层';
     const floorLogFootText = floorLogLabels?.footText
       ?? '把酒馆里最新一楼的 iPhone_Message 聊天记录（每段各自用方括号标签包裹，可能含多个联系人/群聊的记录段，超长截尾保留最近记录）包进 <qq_chat_log> 随 system 发送；清空聊天后它就是仅存的历史。';
+    // 扮演逻辑 / 对白规范的默认文案取自本页的 defaults：聊天类预设是内置两条
+    // 指导，零钱评估是空串（「恢复默认」回到同一处，不另硬编码）。
+    const npcDefault = defaults.npcLogic ?? IPHONE_QQ_NPC_LOGIC;
+    const dialogueDefault = defaults.dialogueGuidance ?? IPHONE_QQ_DIALOGUE_GUIDANCE;
     const preset = getPreset();
     const page = document.createElement('div');
     page.className = `iphone-st__page ${pageClass}`;
@@ -5212,36 +5230,40 @@ function buildSettingsAppScreen() {
     personaFoot.textContent = '拼在 system 最前、包在 <roleplay_instructions> 里的角色扮演指令。';
     scroll.appendChild(personaFoot);
 
-    /* -- 扮演逻辑 + 对白规范（多行文本域，留空不附带） -- */
-    scroll.appendChild(sectionTitle(`${sectionPrefix} · 扮演与对白指导`));
-    const npcInput = document.createElement('textarea');
-    npcInput.className = 'iphone-st__textarea';
-    npcInput.rows = 8;
-    npcInput.spellcheck = false;
-    npcInput.placeholder = '（留空则不附带扮演逻辑指导）';
-    npcInput.value = preset.npcLogic;
-    npcInput.addEventListener('input', () => save({ npcLogic: npcInput.value }));
-    const npcGroup = formGroup();
-    npcGroup.appendChild(npcInput);
-    scroll.appendChild(npcGroup);
-    const npcFoot = document.createElement('p');
-    npcFoot.className = 'iphone-st__foot';
-    npcFoot.textContent = '随 system 附带的扮演逻辑（包在 <npc_logic> 里）：「先是人，后是设定」、主体性与行为动机等；改写后即时生效，留空则整段不发送。';
-    scroll.appendChild(npcFoot);
-    const dialogueInput = document.createElement('textarea');
-    dialogueInput.className = 'iphone-st__textarea';
-    dialogueInput.rows = 8;
-    dialogueInput.spellcheck = false;
-    dialogueInput.placeholder = '（留空则不附带对白规范）';
-    dialogueInput.value = preset.dialogueGuidance;
-    dialogueInput.addEventListener('input', () => save({ dialogueGuidance: dialogueInput.value }));
-    const dialogueGroup = formGroup();
-    dialogueGroup.appendChild(dialogueInput);
-    scroll.appendChild(dialogueGroup);
-    const dialogueFoot = document.createElement('p');
-    dialogueFoot.className = 'iphone-st__foot';
-    dialogueFoot.textContent = '随 system 附带的对白规范（包在 <dialogue_guidance> 里）：口语化、生活化、带情绪与立场、禁播报腔；改写后即时生效，留空则整段不发送。';
-    scroll.appendChild(dialogueFoot);
+    /* -- 扮演逻辑 + 对白规范（多行文本域，留空不附带；npcSection: false 时整段不显示） -- */
+    let npcInput = null;
+    let dialogueInput = null;
+    if (npcSection !== false) {
+      scroll.appendChild(sectionTitle(`${sectionPrefix} · 扮演与对白指导`));
+      npcInput = document.createElement('textarea');
+      npcInput.className = 'iphone-st__textarea';
+      npcInput.rows = 8;
+      npcInput.spellcheck = false;
+      npcInput.placeholder = '（留空则不附带扮演逻辑指导）';
+      npcInput.value = preset.npcLogic;
+      npcInput.addEventListener('input', () => save({ npcLogic: npcInput.value }));
+      const npcGroup = formGroup();
+      npcGroup.appendChild(npcInput);
+      scroll.appendChild(npcGroup);
+      const npcFoot = document.createElement('p');
+      npcFoot.className = 'iphone-st__foot';
+      npcFoot.textContent = '随 system 附带的扮演逻辑（包在 <npc_logic> 里）：「先是人，后是设定」、主体性与行为动机等；改写后即时生效，留空则整段不发送。';
+      scroll.appendChild(npcFoot);
+      dialogueInput = document.createElement('textarea');
+      dialogueInput.className = 'iphone-st__textarea';
+      dialogueInput.rows = 8;
+      dialogueInput.spellcheck = false;
+      dialogueInput.placeholder = '（留空则不附带对白规范）';
+      dialogueInput.value = preset.dialogueGuidance;
+      dialogueInput.addEventListener('input', () => save({ dialogueGuidance: dialogueInput.value }));
+      const dialogueGroup = formGroup();
+      dialogueGroup.appendChild(dialogueInput);
+      scroll.appendChild(dialogueGroup);
+      const dialogueFoot = document.createElement('p');
+      dialogueFoot.className = 'iphone-st__foot';
+      dialogueFoot.textContent = '随 system 附带的对白规范（包在 <dialogue_guidance> 里）：口语化、生活化、带情绪与立场、禁播报腔；改写后即时生效，留空则整段不发送。';
+      scroll.appendChild(dialogueFoot);
+    }
 
     /* -- 可选写作指导（仅「动态提示词」页：<dynamics_guidance>） -- */
     let guidanceInput = null;
@@ -5400,13 +5422,13 @@ function buildSettingsAppScreen() {
     resetRow.addEventListener('click', () => {
       save({
         ...defaults,
-        npcLogic: IPHONE_QQ_NPC_LOGIC,
-        dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+        npcLogic: npcDefault,
+        dialogueGuidance: dialogueDefault,
       });
       personaInput.value = defaults.persona;
       formatInput.value = defaults.format;
-      npcInput.value = IPHONE_QQ_NPC_LOGIC;
-      dialogueInput.value = IPHONE_QQ_DIALOGUE_GUIDANCE;
+      if (npcInput) npcInput.value = npcDefault;
+      if (dialogueInput) dialogueInput.value = dialogueDefault;
       if (guidanceInput) guidanceInput.value = String(defaults.guidance ?? '');
       if (replyGuidanceInput) replyGuidanceInput.value = String(defaults.replyGuidance ?? '');
       if (replyFormatInput) replyFormatInput.value = String(defaults.replyFormat ?? '');
@@ -5561,6 +5583,30 @@ function buildSettingsAppScreen() {
     },
   });
 
+  /* -- 微信「零钱评估提示词」页（v0.27.0：零钱页「评估」按钮的请求组合） -- */
+  const wechatAssessPresetPage = buildPresetPage({
+    pageClass: 'iphone-st__page--wechatassesspreset',
+    openClass: 'is-wechatassesspreset-open',
+    navTitle: '零钱评估提示词',
+    sectionPrefix: '零钱评估',
+    // 评估是后台算钱，不涉及扮演与对白指导（npcSection: false 整段不显示）
+    npcSection: false,
+    guidanceSection: {
+      title: '评估指导',
+      footText: '包在 <assess_guidance> 里随 system 发送的评估标准：零钱是什么、按哪些依据估、给多少钱合理、边界在哪；改写后即时生效，留空则整段不发送（只靠角色扮演指令与输出格式，结果可能飘）。',
+    },
+    formatFootText: 'AI 回复必须含「零钱余额：金额」一行（插件据此改写余额，读不出数字就整次作废并提示重试），'
+      + '第二行写「理由：…」存进零钱页的说明小字；这段包在 <output_format> 里随 system 发送，模型没按格式输出时评估失败。',
+    footText: '可用占位符：{{user}} = 你的名字，{{char}} = 微信昵称。'
+      + '随请求附带：世界书设定、酒馆主线最近对话、最新记录楼层、第三方注入内容、'
+      + '本机联系人 / 群聊名单、当前微信账户（昵称 / 微信号 / 现有余额 / 上次评估结果与理由）与评估指导。修改即时保存。',
+    resetLabel: '恢复零钱评估默认预设',
+    save: saveWechatAssessPreset,
+    getPreset: () => iphoneGetWechatAssessPreset(),
+    defaults: IPHONE_WECHAT_ASSESS_PRESET_DEFAULT,
+    floorLogLabels: wxFloorLogLabels,
+  });
+
   /* ============ 第三方注入子页（v0.26.0） ============ */
   // 开关 + 将要附带的内容预览：别的扩展经 setExtensionPrompt 注入酒馆主提示词的
   // 内容（万华镜的变量表等），本插件实时读宿主注册表 + 上轮快照补齐，随手机各请求
@@ -5688,6 +5734,7 @@ function buildSettingsAppScreen() {
   screen.appendChild(wechatPresetPage);
   screen.appendChild(wechatGroupPresetPage);
   screen.appendChild(wechatMomentsPresetPage);
+  screen.appendChild(wechatAssessPresetPage);
   screen.appendChild(xhsNotesPresetPage);
   screen.appendChild(injectPage);
   refreshMainDetail();

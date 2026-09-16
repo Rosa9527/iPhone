@@ -6479,9 +6479,13 @@
    入口图标是彩色线稿 SVG（路径见 wechat.js 的 IPHONE_WECHAT_SVC_ICON_PATHS，
    取自 GitHub tabler/tabler-icons，MIT），颜色由调用处的 style="color:…" 决定。 */
 
-/* 覆盖层容器：服务 / 钱包两层叠加（钱包盖在服务上，返回只关自己） */
+/* 覆盖层容器：服务 / 钱包 / 零钱三层叠加（零钱盖钱包、钱包盖服务，返回只关自己） */
 .iphone-wx__svcview--wallet {
   z-index: 3;
+}
+
+.iphone-wx__svcview--change {
+  z-index: 4;
 }
 
 .iphone-wx__svc {
@@ -6789,6 +6793,178 @@
   background: #c8c9cc;
 }
 
+/* ---------- 微信「零钱」页（v0.27.0） ---------- */
+/* 按真实微信「我 → 服务 → 钱包 → 零钱」复刻：导航右侧「零钱明细」、居中黄圆
+   「¥」+「我的零钱」+ 大号金额、零钱通入口卡，页面下方一枚绿色「评估」键。
+   与真实微信的差别（插件设定）：按钮不是充值 / 提现，而是调 API 评估余额。 */
+
+/* 白底（不是钱包页的浅灰）：真实零钱页整页是白的，只有金额区上下留白 */
+.iphone-wx__chg {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+/* 金额区：黄圆 + 「我的零钱」小字 + 大号金额（居中对齐，与截图一致） */
+.iphone-wx__chg-head {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px 26px;
+}
+
+.iphone-wx__chg-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #ffd100;
+  color: #fff;
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.iphone-wx__chg-label {
+  margin: 20px 0 0;
+  color: #888;
+  font-size: 16px;
+}
+
+.iphone-wx__chg-amount {
+  margin: 8px 0 0;
+  color: #191919;
+  font-size: 46px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+/* 评估理由 / 进行中 / 错误提示：金额下方一行小字 */
+.iphone-wx__chg-note {
+  margin: 12px 0 0;
+  max-width: 300px;
+  color: #9a9a9a;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.iphone-wx__chg-note[data-state='busy'] {
+  color: #576b95;
+}
+
+.iphone-wx__chg-note[data-state='error'] {
+  color: #fa5151;
+}
+
+/* 零钱通入口卡：白底 + 上下 0.5px 细线（与真实页面同款，整块可点但无业务） */
+.iphone-wx__chg-lct {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-top: 0.5px solid #ececec;
+  border-bottom: 0.5px solid #ececec;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-wx__chg-lct:active {
+  background: #f7f7f7;
+}
+
+.iphone-wx__chg-lctico {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff8e1;
+  color: #fa9d3b;
+}
+
+.iphone-wx__chg-lctico svg {
+  width: 24px;
+  height: 24px;
+}
+
+.iphone-wx__chg-lctmain {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.iphone-wx__chg-lcttitle {
+  color: #191919;
+  font-size: 16px;
+}
+
+.iphone-wx__chg-lctsub {
+  color: #9a9a9a;
+  font-size: 13px;
+}
+
+/* 按钮区：贴底居中，绿色主键（真实页是「充值」绿 +「提现」灰，这里只有评估） */
+.iphone-wx__chg-actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding: 34px 24px 0;
+}
+
+.iphone-wx__chg-btn {
+  width: 100%;
+  max-width: 300px;
+  height: 46px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 17px;
+}
+
+.iphone-wx__chg-btn--primary {
+  background: #07c160;
+  color: #fff;
+}
+
+.iphone-wx__chg-btn--primary:active {
+  background: #06ad56;
+}
+
+.iphone-wx__chg-btn:disabled {
+  background: #9fd9b8;
+  color: #f0fff7;
+  cursor: default;
+}
+
+/* 底部「本服务由财付通提供」小字 */
+.iphone-wx__chg-foot {
+  flex: none;
+  margin: 0;
+  padding: 22px 0 34px;
+  color: #b2b2b2;
+  font-size: 12.5px;
+  text-align: center;
+}
+
 /* 创建群聊 / 添加成员 · 选择联系人卡 */
 .iphone-wx__memcard {
   padding-bottom: 6px;
@@ -6948,22 +7124,26 @@
   background: #ededed;
 }
 
-/* ---------- 设置 · 微信三组提示词子页（与 QQ 三页同一套推入视差） ---------- */
+/* ---------- 设置 · 微信四组提示词子页（与 QQ 三页同一套推入视差；v0.27.0 加入
+   「零钱评估提示词」第四页） ---------- */
 .iphone-st.is-wechatpreset-open .iphone-st__page--wechatpreset,
 .iphone-st.is-wechatgrouppreset-open .iphone-st__page--wechatgrouppreset,
-.iphone-st.is-wechatmomentspreset-open .iphone-st__page--wechatmomentspreset {
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--wechatmomentspreset,
+.iphone-st.is-wechatassesspreset-open .iphone-st__page--wechatassesspreset {
   box-shadow: -14px 0 34px rgba(0, 0, 0, 0.18);
 }
 
 .iphone-st__page--wechatpreset,
 .iphone-st__page--wechatgrouppreset,
-.iphone-st__page--wechatmomentspreset {
+.iphone-st__page--wechatmomentspreset,
+.iphone-st__page--wechatassesspreset {
   transform: translateX(100%);
 }
 
 .iphone-st__page--wechatpreset::after,
 .iphone-st__page--wechatgrouppreset::after,
-.iphone-st__page--wechatmomentspreset::after {
+.iphone-st__page--wechatmomentspreset::after,
+.iphone-st__page--wechatassesspreset::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -6975,19 +7155,22 @@
 
 .iphone-st.is-wechatpreset-open .iphone-st__page--main,
 .iphone-st.is-wechatgrouppreset-open .iphone-st__page--main,
-.iphone-st.is-wechatmomentspreset-open .iphone-st__page--main {
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--main,
+.iphone-st.is-wechatassesspreset-open .iphone-st__page--main {
   transform: translateX(-26%);
 }
 
 .iphone-st.is-wechatpreset-open .iphone-st__page--main::after,
 .iphone-st.is-wechatgrouppreset-open .iphone-st__page--main::after,
-.iphone-st.is-wechatmomentspreset-open .iphone-st__page--main::after {
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--main::after,
+.iphone-st.is-wechatassesspreset-open .iphone-st__page--main::after {
   opacity: 0.14;
 }
 
 .iphone-st.is-wechatpreset-open .iphone-st__page--wechatpreset,
 .iphone-st.is-wechatgrouppreset-open .iphone-st__page--wechatgrouppreset,
-.iphone-st.is-wechatmomentspreset-open .iphone-st__page--wechatmomentspreset {
+.iphone-st.is-wechatmomentspreset-open .iphone-st__page--wechatmomentspreset,
+.iphone-st.is-wechatassesspreset-open .iphone-st__page--wechatassesspreset {
   transform: translateX(0);
 }
 

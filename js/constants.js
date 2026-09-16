@@ -1,7 +1,7 @@
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.26.0';
+const IPHONE_MODULE_VERSION = '0.27.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -598,15 +598,77 @@ const IPHONE_WECHAT_ME_AVATAR_PRESETS = Object.freeze([
 ]);
 // 微信「服务 / 钱包」的占位演示数据（v0.22.1，纯前端）：存 chatMetadata.IPhone
 // 的 wechatWallet 字段，随聊天文件走；读取时按这套默认值归一化补齐（金额均为元）。
-// 后续接真实数据时只需替换 getter 的数据来源，页面不用动。
+// balance 自 v0.27.0 起默认 0：零钱不再是写死的演示值，改由「我 → 服务 → 钱包 →
+// 零钱 → 评估」调一次 API、按玩家在剧情里的资产状况评估出来（见 wechat.js 的
+// iphoneAssessWechatWallet）。没评估过就是 0，转账 / 收款照旧在它之上加减。
 const IPHONE_WECHAT_WALLET_DEFAULTS = Object.freeze({
-  balance: 5478.65,  // 零钱余额：服务页绿卡「钱包」下方与钱包页「零钱」行都显示它
+  balance: 0,        // 零钱余额：服务页绿卡「钱包」下方与钱包页「零钱」行都显示它
   lctRate: 1.1,      // 零钱通收益率（%，钱包页「零钱通」后的橙色小字）
   cards: Object.freeze([
     { id: 'wc1', bank: '招商银行', tail: '6688' },
     { id: 'wc2', bank: '中国工商银行', tail: '3021' },
     { id: 'wc3', bank: '中国建设银行', tail: '5512' },
   ]),
+});
+// 上次评估理由的存储上限（只作展示与下次评估的参考，不必留全文）。
+const IPHONE_WECHAT_ASSESS_NOTE_CAP = 300;
+
+// ---------- 微信零钱「评估」（v0.27.0） ----------
+// 零钱余额不再是写死的演示值：钱包 → 零钱 → 「评估」调一次对话 API，把提示词
+// 与上下文（世界书 / 第三方注入 / 主线楼层 / 记录楼层 / 玩家资料 / 微信账号与
+// 联系人 / 当前钱包状态）一起发给模型，由它按剧情里的资产状况给出一个合适的
+// 余额，覆盖写回 wechatWallet.balance（详见 wechat.js 的 iphoneAssessWechatWallet）。
+//
+// 评估指导（<assess_guidance>）：告诉模型「评什么、凭什么是合理的」——零钱是
+// 流动资金而非全部身家，要跟身份、时代、地区、近期收支对得上；剧情里有明确
+// 数字就以它为准，不要凭空发明。
+const IPHONE_WECHAT_ASSESS_GUIDANCE = `# 任务
+- 你要评估玩家「{{user}}」此刻的资产状况，给出一个与剧情相符的「零钱」余额。
+- 零钱是微信里随时可花的流动资金（约等于随身钱包里的现金 + 活期），不是 TA 的全部身家：房产、车、存款、投资、公司资产都不算在内。
+
+# 依据（有就用，没有别硬编）
+- 世界书设定：身份、职业、家庭、年龄、所在城市、所处时代——这是判断消费水平的第一依据。
+- 主线剧情与记录楼层：最近有没有发工资、接单、中奖、借钱、还债、交房租、大额消费……刚刚进账或破财，余额就要跟着变。
+- 其他扩展提供的状态信息里若有与金钱相关的数值（存款、收入、欠款等），视为权威数据，与它保持一致。
+- 剧情里已经写明过具体金额的，以剧情为准，不要另发明一个数字。
+- 玩家自己填写的微信资料（昵称、微信号）可以辅助判断 TA 的身份与风格。
+
+# 判断标准
+- 身份匹配：学生 / 打工人 / 白领 / 自由职业 / 老板 / 富家子弟……不同身份的日常现金流差别很大，宁可保守也不要浮夸。
+- 时代与地区匹配：一线城市与小城市、当下与过去，同样身份的消费水平不同；剧情若在古代、异世界或科幻设定里，换算成符合那个世界物价的数字。
+- 与近期收支自洽：剧情刚写过 TA 穷困潦倒或刚破产，就给 0 或很小的数；刚有一笔收入进账，就给得宽裕些。
+- 零钱是零花钱的量级，不是身家：除非剧情明确写着 TA 惯于把大笔现钱放在微信零钱里，否则不要给到与身份不符的巨款。
+- 有点零头更像真实账户：不必强求整数，两位小数里带一点零钱即可（如 3280.65、156.80）。
+
+# 边界
+- 本次评估结果是**新的零钱余额**（直接覆盖，不是增量），请给出你判断的最终数值。
+- 金额用人民币元；剧情设定在其他世界时，按该世界的货币体系给出数值即可（插件按「元」显示）。
+- 信息不足时按身份给出一个稳妥的中间值，不要因为资料少就一律给 0；也允许给出 0.00（确实身无分文的情形）。`;
+// 评估输出格式（<output_format>）：必须是机器可读的两行，插件按「零钱余额：」
+// 行解析金额（容错见 wechat.js 的 iphoneParseWechatAssessReply），解析不出
+// 数字时整次评估作废并提示重试。
+const IPHONE_WECHAT_ASSESS_FORMAT = '只输出两行，不要任何开场白、解释或结尾补充：\n\n'
+  + '零钱余额：3280.65\n'
+  + '理由：一句话说明判断依据（身份、时代与近期收支）。\n\n'
+  + '格式说明：第一行固定以「零钱余额：」开头，后面只写数字——人民币元、两位小数、不要货币符号与千分位（如 3280.65、0.00）；'
+  + '第二行固定以「理由：」开头，把依据写成一句完整的话，不要换行、不要分点。'
+  + '除这两行外不要输出任何内容（不要表格、不要代码块、不要复述以上说明）。';
+// 「设置 · 零钱评估提示词」：零钱资产评估用的提示词组合，存
+// settings.promptPresets.wechatAssess。字段与其余预设同义，但没有「扮演与对白
+// 指导」——评估是一次后台计算，不是对话，那段指导在这里没有意义（编辑页也不显示，
+// 见 apps.js 的 buildPresetPage 的 npcSection 开关）。历史楼层默认给到 10 层：
+// 资产评估要看得出近期的收支脉络，比聊天场景需要更长的上下文。
+const IPHONE_WECHAT_ASSESS_PRESET_DEFAULT = Object.freeze({
+  persona: '你是「微信支付」的资产风控系统，负责核对用户「{{user}}」的账户状况。'
+    + '你熟悉 TA 所处的世界与处境：身份、职业、收入来源、所在城市与时代，都以上下文资料为准。'
+    + '你的职责是根据这些资料，给 TA 的微信零钱核定一个合乎情理的余额。',
+  worldBook: true,
+  latestFloor: true, // 记录楼层是判断「最近进账还是破财」最直接的来源
+  historyFloors: 10,
+  npcLogic: '',
+  dialogueGuidance: '',
+  guidance: IPHONE_WECHAT_ASSESS_GUIDANCE,
+  format: IPHONE_WECHAT_ASSESS_FORMAT,
 });
 // QQ 聊天的记录楼层段头（iPhone_Message 楼层；与微信的段头并列、互不干扰）：
 // 私聊 `与「联系人」的QQ聊天记录：`、群聊 `群「群名」的QQ群聊记录：`、
@@ -725,7 +787,8 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 「动态提示词」/「朋友圈提示词」/「小红书提示词」里编辑）。qqChat = QQ 联系人
   // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；
   // wechatChat / wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）；
-  // xhsNotes = 小红书笔记生成与评论回复（v0.26.0 起）。
+  // xhsNotes = 小红书笔记生成与评论回复（v0.26.0 起）；
+  // wechatAssess = 微信零钱资产评估（v0.27.0 起）。
   promptPresets: {
     qqChat: { ...IPHONE_QQ_CHAT_PRESET_DEFAULT },
     groupChat: { ...IPHONE_QQ_GROUP_PRESET_DEFAULT },
@@ -734,6 +797,7 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
     wechatGroup: { ...IPHONE_WECHAT_GROUP_PRESET_DEFAULT },
     wechatMoments: { ...IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT },
     xhsNotes: { ...IPHONE_XHS_PRESET_DEFAULT },
+    wechatAssess: { ...IPHONE_WECHAT_ASSESS_PRESET_DEFAULT },
   },
 });
 // 思考强度选项：reasoning_effort 是 OpenAI 兼容标准参数（Ollama /v1/chat/completions
