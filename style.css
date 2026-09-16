@@ -6990,3 +6990,1745 @@
 .iphone-st.is-wechatmomentspreset-open .iphone-st__page--wechatmomentspreset {
   transform: translateX(0);
 }
+
+
+/* ===== 小红书应用（v0.26.0） =====
+   结构与 js/xhs.js 一一对应；类前缀 iphone-xhs__（主界面与各覆盖层统一用它）。
+   位图素材（图标 / 封面 / 头像）一律经 CSS url() 背景图加载：相对 style.css 解析
+   到扩展目录内，而 DOM <img> / 内联样式里的相对路径会被宿主页面 URL 带偏。 */
+
+/* 桌面图标：小红书官方图标位图（assets/xhs-icon.jpg，取自 App Store 官方图） */
+.iphone-app-icon--xhs {
+  background: url('assets/xhs-icon.jpg') center / cover no-repeat #ff2442;
+}
+
+/* 主屏骨架：白底。列表层包住「头部 + 内容面板 + 标签栏」，笔记详情 / 编辑资料 /
+   发布 / 消息子页都是压在它上面的覆盖层 */
+.iphone-xhs {
+  background: #fff;
+}
+
+.iphone-xhs__listview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.iphone-xhs__sheet {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.iphone-xhs__tabpage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iphone-xhs__tabpage.is-hidden {
+  display: none;
+}
+
+/* ---------- 头部 ---------- */
+.iphone-xhs__header {
+  flex: none;
+  background: #fff;
+}
+
+.iphone-xhs__header.is-hidden {
+  display: none;
+}
+
+/* 首页：关注 / 发现 + 城市 + 搜索 */
+.iphone-xhs__hdrow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 58px 14px 5px;
+}
+
+.iphone-xhs__hdtab {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #8a8a8f;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.iphone-xhs__hdtab.is-active {
+  color: #17181a;
+  font-weight: 700;
+}
+
+/* 「关注」页只留关注流：频道横滑条收起（真实小红书同款行为） */
+.iphone-xhs__header.is-follow-tab .iphone-xhs__channels {
+  display: none;
+}
+
+.iphone-xhs__hdcity {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: auto;
+  padding: 3px 7px 3px 9px;
+  border: none;
+  border-radius: 11px;
+  background: #f4f4f6;
+  color: #4a4a4f;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.iphone-xhs__hdcity svg {
+  width: 13px;
+  height: 13px;
+}
+
+.iphone-xhs__hdsearch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+}
+
+.iphone-xhs__hdsearch svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* 首页频道横滑条：推荐 / RED / 热点 / 直播 / 短剧 / 穿搭 */
+.iphone-xhs__channels {
+  display: flex;
+  gap: 17px;
+  padding: 3px 14px 9px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.iphone-xhs__channels::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-xhs__channel {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #7b7b80;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.iphone-xhs__channel.is-active {
+  color: #17181a;
+  font-weight: 700;
+}
+
+/* 市集 / 消息：居中标题头 */
+.iphone-xhs__hdtitle {
+  padding: 58px 14px 10px;
+  margin: 0;
+  color: #17181a;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ---------- 滚动区与下拉刷新 ---------- */
+.iphone-xhs__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.iphone-xhs__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 下拉刷新指示器：滚动区首个子元素，高度由手势写在 style 上（0 = 收起），
+   与朋友圈同款（红圈 + 文案，底边对齐） */
+.iphone-xhs__refresh {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+  height: 0;
+  overflow: hidden;
+  color: #9a9aa0;
+  font-size: 12.5px;
+  user-select: none;
+}
+
+.iphone-xhs__refresh.is-anim {
+  transition: height 0.25s ease;
+}
+
+.iphone-xhs__refresh-spin {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-bottom: 8px;
+  border: 2px solid #ececef;
+  border-top-color: #ff2442;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.iphone-xhs__refresh-text {
+  margin-bottom: 8px;
+}
+
+/* 手势途中（.is-pulling）与松手刷新（.is-refreshing）都要转圈 */
+.iphone-xhs__home.is-pulling .iphone-xhs__refresh-spin,
+.iphone-xhs__refresh.is-refreshing .iphone-xhs__refresh-spin {
+  opacity: 1;
+  animation: iphone-qqz-spin 0.7s linear infinite;
+}
+
+.iphone-xhs__home.is-pulling {
+  user-select: none;
+}
+
+/* ---------- 首页瀑布流 ---------- */
+.iphone-xhs__feed {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 8px 18px;
+}
+
+.iphone-xhs__col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.iphone-xhs__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* 封面：位图背景按款式类铺（.iphone-xhs__cover--c01…c16），宽高比由 JS 按图库
+   数据写在 style 上，长短交错才像真实信息流 */
+.iphone-xhs__card-cover {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #ececed;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* 纯文字笔记卡（对照真实小红书的文字卡）：整张卡的「封面位」就是一段摘录，
+   没有配图，高度由文字自然撑开 */
+.iphone-xhs__card-cover--text {
+  padding: 11px 12px;
+  background: #f7f7f9;
+}
+
+.iphone-xhs__card-quote {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  color: #33343a;
+  font-size: 12.5px;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.iphone-xhs__card-title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: #17181a;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.iphone-xhs__card-foot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.iphone-xhs__card-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #8a8a8f;
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-xhs__card-like {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  color: #8a8a8f;
+  font-size: 11.5px;
+}
+
+.iphone-xhs__card-like svg {
+  width: 13px;
+  height: 13px;
+}
+
+.iphone-xhs__card-like i {
+  font-style: normal;
+}
+
+.iphone-xhs__card-foot .iphone-xhs__avatar {
+  width: 18px;
+  height: 18px;
+}
+
+.iphone-xhs__empty {
+  padding: 46px 20px 60px;
+  color: #9a9aa0;
+  font-size: 13px;
+  text-align: center;
+}
+
+.iphone-xhs__empty--grid {
+  grid-column: 1 / -1;
+}
+
+/* ---------- 头像 ---------- */
+/* 默认背景（灰底白色人形占位，纯 CSS 画的头 + 肩）必须排在款式类之前：两者特异性
+   相同，靠后的一条才生效，排在后面会把款式图整个盖掉。 */
+.iphone-xhs__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  /* 自定义 / 上传图是内联 background-image：尺寸与平铺要显式收住，否则 256px 的
+     图会按原始像素铺、圆里只露出左上角一小块 */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.iphone-xhs__me-avatar {
+  background:
+    radial-gradient(circle at 50% 32%, #fff 0 17%, rgba(255, 255, 255, 0) 17.5%),
+    radial-gradient(ellipse 40% 26% at 50% 86%, #fff 0 86%, rgba(255, 255, 255, 0) 92%),
+    #d8d8d8;
+}
+
+.iphone-xhs__me-avatar--lg {
+  width: 64px;
+  height: 64px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.iphone-xhs__avatar--a1 {
+  background: url('assets/xhs-avatar-01.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a2 {
+  background: url('assets/xhs-avatar-02.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a3 {
+  background: url('assets/xhs-avatar-03.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a4 {
+  background: url('assets/xhs-avatar-04.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a5 {
+  background: url('assets/xhs-avatar-05.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a6 {
+  background: url('assets/xhs-avatar-06.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a7 {
+  background: url('assets/xhs-avatar-07.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a8 {
+  background: url('assets/xhs-avatar-08.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a9 {
+  background: url('assets/xhs-avatar-09.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a10 {
+  background: url('assets/xhs-avatar-10.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a11 {
+  background: url('assets/xhs-avatar-11.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a12 {
+  background: url('assets/xhs-avatar-12.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a13 {
+  background: url('assets/xhs-avatar-13.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a14 {
+  background: url('assets/xhs-avatar-14.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a15 {
+  background: url('assets/xhs-avatar-15.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a16 {
+  background: url('assets/xhs-avatar-16.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a17 {
+  background: url('assets/xhs-avatar-17.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a18 {
+  background: url('assets/xhs-avatar-18.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a19 {
+  background: url('assets/xhs-avatar-19.png') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a20 {
+  background: url('assets/xhs-avatar-20.png') center / cover no-repeat #f0f0f2;
+}
+
+
+/* ---------- 笔记封面图库（16 张，题材见 IPHONE_XHS_COVERS） ---------- */
+.iphone-xhs__note-image {
+  position: relative;
+  width: 100%;
+  background-color: #ececed;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.iphone-xhs__cover--c01 {
+  background-image: url('assets/xhs-cover-01.jpg');
+}
+
+.iphone-xhs__cover--c02 {
+  background-image: url('assets/xhs-cover-02.jpg');
+}
+
+.iphone-xhs__cover--c03 {
+  background-image: url('assets/xhs-cover-03.jpg');
+}
+
+.iphone-xhs__cover--c04 {
+  background-image: url('assets/xhs-cover-04.jpg');
+}
+
+.iphone-xhs__cover--c05 {
+  background-image: url('assets/xhs-cover-05.jpg');
+}
+
+.iphone-xhs__cover--c06 {
+  background-image: url('assets/xhs-cover-06.jpg');
+}
+
+.iphone-xhs__cover--c07 {
+  background-image: url('assets/xhs-cover-07.jpg');
+}
+
+.iphone-xhs__cover--c08 {
+  background-image: url('assets/xhs-cover-08.jpg');
+}
+
+.iphone-xhs__cover--c09 {
+  background-image: url('assets/xhs-cover-09.jpg');
+}
+
+.iphone-xhs__cover--c10 {
+  background-image: url('assets/xhs-cover-10.jpg');
+}
+
+.iphone-xhs__cover--c11 {
+  background-image: url('assets/xhs-cover-11.jpg');
+}
+
+.iphone-xhs__cover--c12 {
+  background-image: url('assets/xhs-cover-12.jpg');
+}
+
+.iphone-xhs__cover--c13 {
+  background-image: url('assets/xhs-cover-13.jpg');
+}
+
+.iphone-xhs__cover--c14 {
+  background-image: url('assets/xhs-cover-14.jpg');
+}
+
+.iphone-xhs__cover--c15 {
+  background-image: url('assets/xhs-cover-15.jpg');
+}
+
+.iphone-xhs__cover--c16 {
+  background-image: url('assets/xhs-cover-16.jpg');
+}
+
+
+/* ---------- 底部标签栏：首页 / 市集 / 发布 / 消息 / 我 ---------- */
+.iphone-xhs__tabbar {
+  display: flex;
+  flex: none;
+  padding: 6px 6px 26px;
+  border-top: 0.5px solid #ececee;
+  background: #fff;
+}
+
+.iphone-xhs__tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 0 0;
+  border: none;
+  background: none;
+  color: #9a9aa0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-xhs__tab-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.iphone-xhs__tab-ico svg {
+  width: 23px;
+  height: 23px;
+}
+
+.iphone-xhs__tab i {
+  font-style: normal;
+  font-size: 10.5px;
+}
+
+.iphone-xhs__tab.is-active {
+  color: #17181a;
+  font-weight: 600;
+}
+
+/* 中间的「发布」：红色胶囊里的白加号（真实小红书的 ＋ 钮） */
+.iphone-xhs__tab--compose .iphone-xhs__tab-ico {
+  width: 46px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ff4257, #ff2442);
+  box-shadow: 0 2px 8px rgba(255, 36, 66, 0.32);
+}
+
+.iphone-xhs__tab--compose .iphone-xhs__tab-ico svg {
+  width: 19px;
+  height: 19px;
+  color: #fff;
+}
+
+.iphone-xhs__tab--compose.is-active {
+  color: #9a9aa0;
+  font-weight: 400;
+}
+
+/* ---------- 笔记详情（覆盖层） ---------- */
+.iphone-xhs__noteview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+}
+
+.iphone-xhs__noteview.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-xhs__note-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 58px 12px 9px;
+  border-bottom: 0.5px solid #f0f0f2;
+  background: #fff;
+}
+
+.iphone-xhs__note-back,
+.iphone-xhs__note-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+}
+
+.iphone-xhs__note-back svg,
+.iphone-xhs__note-more svg {
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-xhs__note-avatar {
+  display: flex;
+  flex: none;
+}
+
+.iphone-xhs__note-avatar .iphone-xhs__avatar {
+  width: 30px;
+  height: 30px;
+}
+
+.iphone-xhs__note-author {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #17181a;
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 自己发的笔记不显示「关注」，只有一枚「我」标 */
+.iphone-xhs__note-self {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 11px;
+  background: #f4f4f6;
+  color: #7b7b80;
+  font-size: 12px;
+}
+
+.iphone-xhs__note-follow {
+  flex: none;
+  padding: 4px 13px;
+  border: 1px solid #ff2442;
+  border-radius: 13px;
+  background: none;
+  color: #ff2442;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.iphone-xhs__note-follow.is-on {
+  border-color: #e0e0e3;
+  color: #9a9aa0;
+}
+
+.iphone-xhs__note-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.iphone-xhs__note-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 文字笔记的首屏：不铺图，直接展示摘录 */
+.iphone-xhs__note-image--text {
+  padding: 28px 18px;
+  background: #f7f7f9;
+}
+
+.iphone-xhs__note-quote {
+  margin: 0;
+  color: #2c2d33;
+  font-size: 15px;
+  line-height: 1.78;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.iphone-xhs__note-body {
+  padding: 13px 15px 6px;
+}
+
+.iphone-xhs__note-title {
+  margin: 0 0 8px;
+  color: #17181a;
+  font-size: 17.5px;
+  font-weight: 700;
+  line-height: 1.36;
+}
+
+.iphone-xhs__note-text {
+  margin: 0 0 9px;
+  color: #33343a;
+  font-size: 14.5px;
+  line-height: 1.76;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.iphone-xhs__note-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0 0 10px;
+}
+
+.iphone-xhs__note-topic {
+  color: #3a6ea5;
+  font-size: 13.5px;
+}
+
+.iphone-xhs__note-meta {
+  margin: 0 0 10px;
+  color: #9a9aa0;
+  font-size: 12px;
+}
+
+.iphone-xhs__note-dislike {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px 4px 8px;
+  border: none;
+  border-radius: 12px;
+  background: #f4f4f6;
+  color: #8a8a8f;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.iphone-xhs__note-dislike svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 评论区 */
+.iphone-xhs__note-comments {
+  padding: 12px 15px 20px;
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.iphone-xhs__note-chead {
+  margin: 0 0 12px;
+  color: #17181a;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.iphone-xhs__note-cempty {
+  margin: 0;
+  padding: 14px 0 26px;
+  color: #9a9aa0;
+  font-size: 13px;
+  text-align: center;
+}
+
+.iphone-xhs__c {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 0;
+}
+
+.iphone-xhs__c .iphone-xhs__avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.iphone-xhs__c-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-xhs__c-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 3px;
+  color: #7b7b80;
+  font-size: 12.5px;
+}
+
+/* 首评徽章（列表第一条） */
+.iphone-xhs__c-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #ffe9ec;
+  color: #ff2442;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.iphone-xhs__c-text {
+  margin: 0 0 4px;
+  color: #17181a;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.iphone-xhs__c-replyto {
+  color: #3a6ea5;
+}
+
+.iphone-xhs__c-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #a8a8ae;
+  font-size: 11.5px;
+}
+
+.iphone-xhs__c-reply {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #a8a8ae;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+}
+
+.iphone-xhs__c-like {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  color: #a8a8ae;
+  font-size: 10.5px;
+}
+
+.iphone-xhs__c-like svg {
+  width: 15px;
+  height: 15px;
+}
+
+.iphone-xhs__c-like i {
+  font-style: normal;
+}
+
+/* 底部互动条：留言输入 + 赞 / 收藏 / 评论 */
+.iphone-xhs__note-err {
+  flex: none;
+  margin: 0;
+  padding: 6px 15px;
+  background: #fff4f5;
+  color: #d92a44;
+  font-size: 12px;
+}
+
+.iphone-xhs__note-err[hidden] {
+  display: none;
+}
+
+.iphone-xhs__note-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px 24px;
+  border-top: 0.5px solid #f0f0f2;
+  background: #fff;
+}
+
+.iphone-xhs__note-input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 17px;
+  outline: none;
+  background: #f4f4f6;
+  color: #17181a;
+  font-family: inherit;
+  font-size: 13.5px;
+}
+
+.iphone-xhs__note-send {
+  display: none;
+  flex: none;
+  height: 32px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 16px;
+  background: #ff2442;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+/* 输入框有内容时才露出「发送」（真实小红书同款：没输入时只显示互动图标） */
+.iphone-xhs__note-send.is-active {
+  display: block;
+}
+
+.iphone-xhs__note-acts {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 13px;
+}
+
+.iphone-xhs__note-act {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #4a4a4f;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.iphone-xhs__note-act svg {
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-xhs__note-act i {
+  font-style: normal;
+}
+
+.iphone-xhs__note-like.is-on,
+.iphone-xhs__note-collect.is-on {
+  color: #ff2442;
+}
+
+/* ---------- 消息页 ---------- */
+.iphone-xhs__msg-entries {
+  display: flex;
+  padding: 6px 4px 12px;
+}
+
+.iphone-xhs__msg-entry {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-xhs__msg-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.iphone-xhs__msg-ico svg {
+  width: 22px;
+  height: 22px;
+}
+
+.iphone-xhs__msg-ico.is-pink {
+  background: linear-gradient(135deg, #ff7186, #ff2442);
+}
+
+.iphone-xhs__msg-ico.is-blue {
+  background: linear-gradient(135deg, #74b4ff, #3d7ef0);
+}
+
+.iphone-xhs__msg-ico.is-green {
+  background: linear-gradient(135deg, #6fdc9a, #22b573);
+}
+
+.iphone-xhs__msg-label {
+  color: #4a4a4f;
+  font-size: 12.5px;
+}
+
+/* 未读数：挂在图标右上角（图标 44px、居中在 1/3 宽格子里，往右推 26px 正好压角） */
+.iphone-xhs__msg-count {
+  position: absolute;
+  top: 4px;
+  right: 50%;
+  min-width: 16px;
+  padding: 0 4px;
+  transform: translateX(26px);
+  border-radius: 8px;
+  background: #ff2442;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.iphone-xhs__msg-count:empty {
+  display: none;
+}
+
+/* 聚合入口不需要右箭头，消息列表行才用 */
+.iphone-xhs__msg-chev {
+  display: none;
+}
+
+.iphone-xhs__msg-list {
+  border-top: 8px solid #f6f6f8;
+}
+
+.iphone-xhs__msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 15px;
+  border-bottom: 0.5px solid #f2f2f4;
+  cursor: pointer;
+}
+
+.iphone-xhs__msg-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-xhs__msg-name {
+  margin: 0 0 3px;
+  color: #17181a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.iphone-xhs__msg-text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: #8a8a8f;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.iphone-xhs__msg-time {
+  flex: none;
+  color: #b0b0b6;
+  font-size: 11px;
+}
+
+/* ---------- 消息聚合子页（赞和收藏 / 新增关注 / 评论和@） ---------- */
+.iphone-xhs__inbox {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+}
+
+.iphone-xhs__inbox.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-xhs__inbox-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.iphone-xhs__inbox-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- 我（个人主页） ---------- */
+.iphone-xhs__me-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.iphone-xhs__me-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 深色渐变头图：从状态栏下铺下来（状态栏文字翻白靠 .is-me-active） */
+.iphone-xhs__me-header {
+  padding: 66px 16px 14px;
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255, 92, 148, 0.42), transparent 62%),
+    radial-gradient(110% 80% at 92% 8%, rgba(96, 120, 255, 0.38), transparent 64%),
+    linear-gradient(160deg, #2b2b3c 0%, #1d1d29 55%, #17171f 100%);
+}
+
+.iphone-xhs__me-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iphone-xhs__me-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.iphone-xhs__me-name {
+  margin: 0 0 4px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.iphone-xhs__me-id,
+.iphone-xhs__me-ip {
+  margin: 0 0 2px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11.5px;
+}
+
+.iphone-xhs__me-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+}
+
+.iphone-xhs__me-edit svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-xhs__me-stats {
+  display: flex;
+  gap: 20px;
+  margin: 15px 0 11px;
+}
+
+.iphone-xhs__me-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.iphone-xhs__me-stat b {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.iphone-xhs__me-stat i {
+  font-style: normal;
+  font-size: 11.5px;
+}
+
+.iphone-xhs__me-bio {
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.iphone-xhs__me-bio.is-empty {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.iphone-xhs__me-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.iphone-xhs__me-tag {
+  padding: 2px 9px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+}
+
+.iphone-xhs__me-tabs {
+  display: flex;
+  gap: 22px;
+  padding: 12px 16px 8px;
+  border-bottom: 0.5px solid #f0f0f2;
+}
+
+.iphone-xhs__me-tab {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #8a8a8f;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.iphone-xhs__me-tab.is-active {
+  color: #17181a;
+  font-weight: 700;
+}
+
+.iphone-xhs__me-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 10px;
+  padding: 12px 10px 22px;
+}
+
+.iphone-xhs__me-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* 「我」是深色头图：状态栏文字翻白（与「日志」应用同一套 :has 写法） */
+.iphone-screen:has(.iphone-xhs.is-me-active) {
+  --sb-color: #fff;
+}
+
+/* ---------- 市集页（占位） ---------- */
+.iphone-xhs__market-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 14px 0;
+  padding: 7px 12px;
+  border-radius: 16px;
+  background: #f4f4f6;
+  color: #a8a8ae;
+  font-size: 13px;
+}
+
+.iphone-xhs__market-search svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-xhs__market-search i {
+  font-style: normal;
+}
+
+.iphone-xhs__market-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #a8a8ae;
+}
+
+.iphone-xhs__market-empty svg {
+  width: 46px;
+  height: 46px;
+  color: #e2e2e6;
+}
+
+.iphone-xhs__market-empty p {
+  margin: 0;
+  color: #6a6a70;
+  font-size: 14px;
+}
+
+.iphone-xhs__market-empty i {
+  font-style: normal;
+  font-size: 12px;
+}
+
+/* ---------- 编辑资料 / 发布（覆盖层） ---------- */
+.iphone-xhs__prof,
+.iphone-xhs__compose {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  background: #f7f7f9;
+}
+
+.iphone-xhs__prof.is-open,
+.iphone-xhs__compose.is-open {
+  display: flex;
+  animation: iphone-qqc-in 150ms ease-out;
+}
+
+.iphone-xhs__prof-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 58px 14px 10px;
+  border-bottom: 0.5px solid #ececee;
+  background: #fff;
+}
+
+.iphone-xhs__prof-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  color: #17181a;
+  cursor: pointer;
+}
+
+.iphone-xhs__prof-back svg {
+  width: 21px;
+  height: 21px;
+}
+
+.iphone-xhs__prof-title {
+  flex: 1;
+  margin: 0;
+  color: #17181a;
+  font-size: 16.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.iphone-xhs__prof-save,
+.iphone-xhs__compose-pub {
+  flex: none;
+  padding: 5px 14px;
+  border: none;
+  border-radius: 15px;
+  background: #f4f4f6;
+  color: #b0b0b6;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.iphone-xhs__prof-save.is-active,
+.iphone-xhs__compose-pub.is-active {
+  background: #ff2442;
+  color: #fff;
+}
+
+.iphone-xhs__prof-body,
+.iphone-xhs__compose-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px 24px;
+  scrollbar-width: none;
+}
+
+.iphone-xhs__prof-body::-webkit-scrollbar,
+.iphone-xhs__compose-body::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-xhs__prof-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  font-family: inherit;
+  text-align: left;
+}
+
+.iphone-xhs__prof-row--avatar {
+  cursor: pointer;
+}
+
+.iphone-xhs__prof-label {
+  flex: none;
+  color: #4a4a4f;
+  font-size: 14.5px;
+}
+
+.iphone-xhs__prof-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  outline: none;
+  color: #17181a;
+  font-family: inherit;
+  font-size: 14.5px;
+  text-align: right;
+}
+
+.iphone-xhs__prof-bio {
+  min-height: 54px;
+  resize: none;
+  line-height: 1.5;
+}
+
+.iphone-xhs__prof-row--bio {
+  align-items: flex-start;
+}
+
+.iphone-xhs__prof-row--bio .iphone-xhs__prof-label {
+  padding-top: 3px;
+}
+
+.iphone-xhs__prof-chev {
+  display: flex;
+  flex: none;
+  align-items: center;
+  color: #c4c4ca;
+}
+
+.iphone-xhs__prof-chev svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-xhs__prof-avatar {
+  margin-left: auto;
+  width: 46px;
+  height: 46px;
+}
+
+.iphone-xhs__prof-foot,
+.iphone-xhs__compose-foot {
+  margin: 4px 2px 0;
+  color: #9a9aa0;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+/* 发布页：封面四列图库 + 标题 / 正文 / 话题 / 位置 */
+.iphone-xhs__compose-covers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.iphone-xhs__compose-cover {
+  position: relative;
+  height: 78px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background-color: #ececed;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.iphone-xhs__compose-cover.is-active {
+  border-color: #ff2442;
+}
+
+.iphone-xhs__compose-cover.is-active::after {
+  content: '✓';
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  color: #fff;
+  font-size: 13px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.iphone-xhs__compose-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.iphone-xhs__compose-title,
+.iphone-xhs__compose-text,
+.iphone-xhs__compose-topics,
+.iphone-xhs__compose-loc {
+  width: 100%;
+  padding: 13px 14px;
+  border: none;
+  border-bottom: 0.5px solid #f2f2f4;
+  background: none;
+  outline: none;
+  color: #17181a;
+  font-family: inherit;
+  font-size: 14.5px;
+}
+
+.iphone-xhs__compose-loc {
+  border-bottom: none;
+}
+
+.iphone-xhs__compose-text {
+  min-height: 110px;
+  resize: none;
+  line-height: 1.6;
+}
+
+.iphone-xhs__compose-private {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff;
+  color: #4a4a4f;
+  font-size: 14px;
+}
+
+.iphone-xhs__compose-private i {
+  display: flex;
+  margin-left: auto;
+  color: #c4c4ca;
+  font-style: normal;
+}
+
+.iphone-xhs__compose-private svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iphone-xhs__compose-private input {
+  width: 17px;
+  height: 17px;
+  accent-color: #ff2442;
+}
+
+/* 资料页 / 发布页里的报错条（.iphone-xhs__note-err 的同类），发布页里跟在表单后 */
+.iphone-xhs__compose-body .iphone-xhs__note-err {
+  margin-top: 10px;
+  border-radius: 10px;
+}
+
+/* 小红书里的选择头像浮层：QQ 组件的类名不变，这里只覆盖徽章与主按钮配色 */
+.iphone-xhs__prof .iphone-qq__avpick-badge {
+  background: #ff2442;
+}
+
+.iphone-xhs__prof .iphone-qq__avpick-use {
+  background: #ff2442;
+}
+
+.iphone-xhs__prof .iphone-qq__avcrop-zoom::-webkit-slider-thumb {
+  background: #ff2442;
+}
+
+.iphone-xhs__prof .iphone-qq__avcrop-zoom::-moz-range-thumb {
+  background: #ff2442;
+}
+
+.iphone-xhs__prof .iphone-qq__avpick-grid {
+  border-radius: 0;
+}
+
+/* ---------- 设置 · 小红书提示词子页（与其余提示词页同一套推入视差） ---------- */
+.iphone-st.is-xhspreset-open .iphone-st__page--xhspreset {
+  box-shadow: -14px 0 34px rgba(0, 0, 0, 0.18);
+}
+
+.iphone-st__page--xhspreset {
+  transform: translateX(100%);
+}
+
+.iphone-st__page--xhspreset::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.34s ease;
+  pointer-events: none;
+}
+
+.iphone-st.is-xhspreset-open .iphone-st__page--main {
+  transform: translateX(-26%);
+}
+
+.iphone-st.is-xhspreset-open .iphone-st__page--main::after {
+  opacity: 0.14;
+}
+
+.iphone-st.is-xhspreset-open .iphone-st__page--xhspreset {
+  transform: translateX(0);
+}
+
+/* ---------- 设置 · 第三方注入子页（v0.26.0：与其余提示词页同一套推入视差） ---------- */
+.iphone-st.is-inject-open .iphone-st__page--inject {
+  box-shadow: -14px 0 34px rgba(0, 0, 0, 0.18);
+}
+
+.iphone-st__page--inject {
+  transform: translateX(100%);
+}
+
+.iphone-st__page--inject::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.34s ease;
+  pointer-events: none;
+}
+
+.iphone-st.is-inject-open .iphone-st__page--main {
+  transform: translateX(-26%);
+}
+
+.iphone-st.is-inject-open .iphone-st__page--main::after {
+  opacity: 0.14;
+}
+
+.iphone-st.is-inject-open .iphone-st__page--inject {
+  transform: translateX(0);
+}
+
+/* 捕获条目列表：白卡（键名 + 字数），点标题展开原文 */
+.iphone-st__inject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 16px;
+}
+
+.iphone-st__inject {
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.iphone-st__inject-head {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 16px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.iphone-st__inject-head:active { background: rgba(0, 0, 0, 0.055); }
+
+.iphone-st__inject-key {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  color: #000;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iphone-st__inject-meta {
+  flex: none;
+  font-size: 13px;
+  color: rgba(60, 60, 67, 0.6);
+}
+
+.iphone-st__inject-body {
+  display: none;
+  max-height: 320px;
+  margin: 0;
+  padding: 10px 16px 14px;
+  overflow: auto;
+  border-top: 1px solid rgba(60, 60, 67, 0.12);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: rgba(60, 60, 67, 0.9);
+}
+
+.iphone-st__inject.is-open .iphone-st__inject-body { display: block; }

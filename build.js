@@ -16,14 +16,17 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// 拼接顺序 = 依赖顺序：常量 → 工具 → 宿主适配 → 应用内页 → 微信应用 → 手机界面 → 悬浮球 → 入口。
+// 拼接顺序 = 依赖顺序：常量 → 工具 → 宿主适配 → 应用内页 → 微信应用 → 小红书应用 →
+// 手机界面 → 悬浮球 → 入口。
 const FILES = [
   'js/constants.js',
   'js/utils.js',
   'js/host.js',
   'js/logs.js',
+  'js/inject.js',
   'js/apps.js',
   'js/wechat.js',
+  'js/xhs.js',
   'js/phone.js',
   'js/sphere.js',
   'js/main.js',

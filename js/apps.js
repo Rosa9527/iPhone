@@ -712,6 +712,8 @@ async function iphoneGenerateQqDynamics(ownerId) {
   const format = String(preset.format ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -726,6 +728,7 @@ async function iphoneGenerateQqDynamics(ownerId) {
     : '<contacts>…</contacts>：QQ联系人名单——动态的发布者只能从名单中挑选；');
   if (owner) outlineItems.push('<contacts_all>…</contacts_all>：QQ全部联系人名单——点赞与评论只认这份名单里的人；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<qq_chat_log>…</qq_chat_log>：最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   if (guidance) outlineItems.push('<dynamics_guidance>…</dynamics_guidance>：QQ空间动态的写作指导；');
@@ -739,6 +742,7 @@ async function iphoneGenerateQqDynamics(ownerId) {
     : `以下是QQ联系人名单（动态的发布者只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (owner) sysParts.push(`以下是QQ全部联系人名单（点赞与评论只认这份名单里的人）：\n<contacts_all>\n${allNamesRosterText}\n</contacts_all>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<qq_chat_log>\n${floorLogText}\n</qq_chat_log>`);
   if (guidance) sysParts.push(`以下是QQ空间动态的写作指导：\n<dynamics_guidance>\n${resolve(guidance)}\n</dynamics_guidance>`);
@@ -913,6 +917,8 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   const replyFormat = String(preset.replyFormat ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -922,6 +928,7 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：表达规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   outlineItems.push('<contacts>…</contacts>：QQ联系人名单——评论人只能从名单中挑选；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<qq_chat_log>…</qq_chat_log>：最近一次同步到酒馆楼层的QQ聊天记录，供你了解最近的聊天情况；');
   outlineItems.push('<dynamic_post>…</dynamic_post>：玩家正在回复的那条动态——发布者、正文、点赞名单与评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
@@ -933,6 +940,7 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   if (dialogueGuidance) sysParts.push(`以下是表达规范（决定你如何说话与写内容）：\n<dialogue_guidance>\n${fillGuide(dialogueGuidance)}\n</dialogue_guidance>`);
   sysParts.push(`以下是QQ联系人名单（评论人只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<qq_chat_log>\n${floorLogText}\n</qq_chat_log>`);
   const identityNote = customNick && customNick !== playerName
@@ -1158,6 +1166,9 @@ async function iphoneBuildQqChatRequestMessages(entity, conversation) {
   // 由介绍行 + XML 标签承担，剥掉避免重复。
   const format = preset.format.trim().replace(/^【输出格式】\s*/, '');
 
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
+
   const sysParts = [];
   if (persona) {
     sysParts.push(`<roleplay_instructions>\n${fill(persona)}\n</roleplay_instructions>`);
@@ -1171,6 +1182,7 @@ async function iphoneBuildQqChatRequestMessages(entity, conversation) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：对白规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   if (membersText) outlineItems.push(`<group_members>…</group_members>：本群成员列表——除玩家（${userName}）外的每位成员都由你扮演，输出时用行首名字区分发言人；`);
   if (worldText) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景；');
   if (floorLogText) outlineItems.push('<qq_chat_log>…</qq_chat_log>：最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人/群聊的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   if (format) outlineItems.push('<output_format>…</output_format>：回复格式要求，位于提示词末尾，必须严格遵守；');
@@ -1199,6 +1211,9 @@ async function iphoneBuildQqChatRequestMessages(entity, conversation) {
 
   if (worldText) {
     sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldText}\n</world_info>`);
+  }
+  if (injectParts) {
+    sysParts.push(injectParts.system);
   }
   if (tavernText) {
     sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
@@ -4100,6 +4115,8 @@ function iphoneSettingsIcons() {
     friendGroup: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8.8" r="3.1"/><circle cx="16.2" cy="9.8" r="2.4"/><path d="M3.8 18.8c0-2.9 2.3-4.7 5.2-4.7s5.2 1.8 5.2 4.7"/><path d="M16.6 14.6c2.1.3 3.6 1.8 3.6 4"/></g></svg>',
     // 「动态提示词」行图标（缺口圆环 + 四角星，与 QQ 图标集的 feed 同款）
     feed: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M19.5 9.9A8 8 0 1 1 13.4 4.7"/><path fill="currentColor" d="M17.6 1.3c.36 1.83 1.34 2.8 3.17 3.17-1.83.36-2.8 1.34-3.17 3.17-.36-1.83-1.34-2.8-3.17-3.17 1.83-.36 2.8-1.34 3.17-3.17z"/></svg>',
+    // 「第三方注入」行图标（↓ 落入托盘：捕获别的扩展注入的内容）
+    inject: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v9.4"/><path d="m8.3 9.5 3.7 3.7 3.7-3.7"/><path d="M4.7 15.2v2.8c0 1 .8 1.8 1.8 1.8h11c1 0 1.8-.8 1.8-1.8v-2.8"/></g></svg>',
   };
 }
 
@@ -4653,6 +4670,40 @@ function buildSettingsAppScreen() {
     action: () => screen.classList.add('is-wechatmomentspreset-open'),
   });
 
+  // 「小红书提示词」入口（v0.26.0）：编辑网友笔记生成与评论回复的提示词组合。
+  const xhsPresetRow = makeRow({
+    icon: 'feed',
+    tone: '#ff2442',
+    label: '小红书提示词',
+    action: () => screen.classList.add('is-xhspreset-open'),
+  });
+
+  // 「第三方注入」入口（v0.26.0）：开关 + 将要附带的内容预览（别的扩展注入酒馆
+  // 主提示词、被本插件顺带带进手机请求的那些段）。
+  const injectDetail = document.createElement('span');
+  const refreshInjectDetail = () => {
+    // 与请求实际附带的内容同源：实时读当前注册表 + 快照补齐，见 inject.js。
+    const count = iphoneInjectEffectiveEntries().length;
+    if (!iphoneInjectCaptureEnabled()) {
+      injectDetail.textContent = '已关闭';
+    } else if (count) {
+      injectDetail.textContent = `${count} 条`;
+    } else {
+      injectDetail.textContent = '未捕获到';
+    }
+  };
+  const injectRow = makeRow({
+    icon: 'inject',
+    tone: '#8e8e93',
+    label: '第三方注入',
+    detailNode: injectDetail,
+    action: () => {
+      refreshInjectDetail();
+      renderInjectPreview();
+      screen.classList.add('is-inject-open');
+    },
+  });
+
   // 组装主页：大标题 → 搜索框（布局缓冲）→ 账户卡（昵称 = 酒馆 {{user}}）→
   // 「API 连接」/提示词入口
   const accountGroup = makeGroup();
@@ -4667,6 +4718,10 @@ function buildSettingsAppScreen() {
   wechatPresetGroup.appendChild(wechatChatRow);
   wechatPresetGroup.appendChild(wechatGroupRow);
   wechatPresetGroup.appendChild(wechatMomentsRow);
+  const xhsPresetGroup = makeGroup();
+  xhsPresetGroup.appendChild(xhsPresetRow);
+  const injectGroup = makeGroup();
+  injectGroup.appendChild(injectRow);
   const searchBox = document.createElement('div');
   searchBox.className = 'iphone-st__search';
   searchBox.innerHTML = `
@@ -4679,6 +4734,8 @@ function buildSettingsAppScreen() {
   mainScroll.appendChild(apiGroup);
   mainScroll.appendChild(presetGroup);
   mainScroll.appendChild(wechatPresetGroup);
+  mainScroll.appendChild(xhsPresetGroup);
+  mainScroll.appendChild(injectGroup);
   mainPage.appendChild(mainNav);
   mainPage.appendChild(mainScroll);
 
@@ -5104,6 +5161,7 @@ function buildSettingsAppScreen() {
   const saveWechatChatPreset = (patch) => savePromptPreset('wechatChat', IPHONE_WECHAT_CHAT_PRESET_DEFAULT, patch);
   const saveWechatGroupPreset = (patch) => savePromptPreset('wechatGroup', IPHONE_WECHAT_GROUP_PRESET_DEFAULT, patch);
   const saveWechatMomentsPreset = (patch) => savePromptPreset('wechatMoments', IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT, patch);
+  const saveXhsNotesPreset = (patch) => savePromptPreset('xhsNotes', IPHONE_XHS_PRESET_DEFAULT, patch);
 
   // 预设编辑器（v0.12.0 从私聊子页抽取成工厂，私聊/群聊/动态三页共用；v0.18.0
   // 起微信的三组提示词页也复用，经 floorLog 换成微信的楼层段称谓）：导航 +
@@ -5474,6 +5532,151 @@ function buildSettingsAppScreen() {
     floorLogLabels: wxFloorLogLabels,
   });
 
+  const xhsNotesPresetPage = buildPresetPage({
+    pageClass: 'iphone-st__page--xhspreset',
+    openClass: 'is-xhspreset-open',
+    navTitle: '小红书提示词',
+    sectionPrefix: '小红书笔记',
+    guidanceSection: {
+      title: '笔记写作指导',
+      footText: '包在 <xhs_guidance> 里随 system 发送的写作指导：发明网友、挑题材、标题与正文的写法、互动数据要真实等；改写后即时生效，留空则整段不发送（输出格式里仍有基本的区块示例可依）。',
+    },
+    replySection: {
+      title: '回复写作指导',
+      guidanceFootText: '包在 <reply_guidance> 里随 system 发送：玩家在笔记下留言后，由 AI 生成新的评论回复（作者本人 / 路过的网友应声）。改写后即时生效，留空则整段不发送。',
+      formatFootText: 'AI 回复按每行「评论人：内容」解析成新评论（回复某人写作「评论人 回复 被回复人：内容」）；这段包在 <output_format> 里随 system 发送，模型没按格式输出时整段兜底成作者的一条回复。',
+    },
+    formatFootText: 'AI 回复按「昵称：发布者」开头的笔记区块解析（小红书号 / IP / 简介 / 封面 / 标题 / 正文 / 话题 / 位置 / 点赞 / 收藏 / 评论区）；封面只填题材（美食 / 宠物 / 旅行 / 家居 / 数码 / 穿搭 / 探店），插件据此挑同题材的内置封面；模型没按格式输出时整次刷新作废并提示重试。',
+    footText: '可用占位符：{{user}} = 你的名字。与朋友圈不同，这里没有联系人名单——发布者是一群「网友」：'
+      + '已有网友名单随请求附上（熟面孔回归），模型也可以现场发明新网友，新面孔会自动收进网友池并在之后复用。'
+      + '世界书与酒馆剧情上下文自动附带，无需配置。修改即时保存。',
+    resetLabel: '恢复小红书默认预设',
+    save: saveXhsNotesPreset,
+    getPreset: () => iphoneGetXhsPreset(),
+    defaults: IPHONE_XHS_PRESET_DEFAULT,
+    floorLogLabels: {
+      on: '附带最新手机记录楼层',
+      off: '不附带手机记录楼层',
+      footText: '把酒馆里最新一楼的 iPhone_Message 聊天记录（每段各自用方括号标签包裹，可能含多个联系人/群聊的记录段，含 QQ 与微信的记录，超长截尾保留最近记录）包进 <xhs_chat_log> 随 system 发送；清空聊天后它就是仅存的历史。',
+    },
+  });
+
+  /* ============ 第三方注入子页（v0.26.0） ============ */
+  // 开关 + 将要附带的内容预览：别的扩展经 setExtensionPrompt 注入酒馆主提示词的
+  // 内容（万华镜的变量表等），本插件实时读宿主注册表 + 上轮快照补齐，随手机各请求
+  // 的 system 一起发给模型（见 js/inject.js）。
+  const injectPage = document.createElement('div');
+  injectPage.className = 'iphone-st__page iphone-st__page--inject';
+
+  const injectNav = document.createElement('header');
+  injectNav.className = 'iphone-st__nav';
+  injectNav.innerHTML = `
+    <button type="button" class="iphone-st__back">
+      <span class="iphone-st__back-chev" aria-hidden="true">${icons.back}</span>设置
+    </button>
+    <p class="iphone-st__nav-title">第三方注入</p>
+    <span class="iphone-st__nav-spacer" aria-hidden="true"></span>
+  `;
+  injectNav.querySelector('.iphone-st__back').addEventListener('click', () => {
+    screen.classList.remove('is-inject-open');
+    // 主页行尾灰字（条数 / 已关闭 / 未捕获到）跟着最新状态刷新——子页里按过开关
+    // 或期间宿主又跑了一轮生成，回到主页就该看到新值。
+    refreshInjectDetail();
+  });
+
+  const injectScroll = document.createElement('div');
+  injectScroll.className = 'iphone-st__scroll iphone-st__form';
+
+  // 预览列表：将要附带的每一条一段，点标题展开原文。
+  // 每条标注新鲜度：实时（此刻注册表里的值）/ 上一轮（快照带来的，扩展已清空）。
+  const injectList = document.createElement('div');
+  injectList.className = 'iphone-st__inject-list';
+
+  const renderInjectPreview = () => {
+    injectList.innerHTML = '';
+    const entries = iphoneInjectCaptureEnabled() ? iphoneInjectEffectiveEntries() : [];
+    if (!entries.length) {
+      const empty = document.createElement('p');
+      empty.className = 'iphone-st__empty';
+      empty.textContent = iphoneInjectCaptureEnabled()
+        ? '还没有可附带的注入内容。装了往酒馆提示词里注入内容的插件（万华镜的变量表、生物追踪、世界引擎等），并让它在酒馆里跑过一轮或处于开启状态后，这里就有内容了。'
+        : '已关闭：手机请求不会附带任何第三方注入内容。要启用请点上面的「附带第三方注入内容」。';
+      injectList.appendChild(empty);
+      return;
+    }
+    for (const entry of entries) {
+      const text = String(entry?.value ?? '');
+      const block = document.createElement('section');
+      block.className = 'iphone-st__inject';
+      const head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'iphone-st__inject-head';
+      const name = document.createElement('span');
+      name.className = 'iphone-st__inject-key';
+      name.textContent = String(entry?.key || '（未命名）');
+      const meta = document.createElement('span');
+      meta.className = 'iphone-st__inject-meta';
+      meta.textContent = `${text.length} 字 · ${entry?.live ? '实时' : '上一轮'}`;
+      head.append(name, meta);
+      const body = document.createElement('pre');
+      body.className = 'iphone-st__inject-body';
+      body.textContent = text;
+      head.addEventListener('click', () => block.classList.toggle('is-open'));
+      block.append(head, body);
+      injectList.appendChild(block);
+    }
+  };
+
+  /* -- 开关（附带 / 不附带） -- */
+  injectScroll.appendChild(sectionTitle('第三方注入 · 附带'));
+  const injectToggleGroup = formGroup();
+  const injectEnabledNow = iphoneInjectCaptureEnabled();
+  [
+    { value: true, label: '附带第三方注入内容' },
+    { value: false, label: '不附带（只用本插件自己拼的段）' },
+  ].forEach((opt, index) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = `iphone-st__option${index === 0 ? ' no-sep' : ''}${injectEnabledNow === opt.value ? ' is-selected' : ''}`;
+    row.innerHTML = `
+      <span class="iphone-st__option-name">${opt.label}</span>
+      <span class="iphone-st__option-check" aria-hidden="true">${icons.check}</span>
+    `;
+    row.addEventListener('click', () => {
+      settings.injectCaptureEnabled = opt.value;
+      iphoneSaveSettings(settings);
+      injectToggleGroup.querySelectorAll('.iphone-st__option')
+        .forEach((el) => el.classList.toggle('is-selected', el === row));
+      refreshInjectDetail();
+      renderInjectPreview();
+    });
+    injectToggleGroup.appendChild(row);
+  });
+  injectScroll.appendChild(injectToggleGroup);
+  const injectFoot = document.createElement('p');
+  injectFoot.className = 'iphone-st__foot';
+  injectFoot.textContent = '别的扩展（万华镜的变量表、生物追踪、世界引擎、SoulLink 的 NPC 推理等）经 '
+    + 'setExtensionPrompt 写进酒馆主提示词的内容，本插件会把它拼成 <context_injection> 段随手机各请求的 '
+    + 'system 发送——手机上的模型据此与主线剧情保持一致。内容原样转发（格式由对方决定），单条超过 2 万字'
+    + '截断。不需要任何插件配合：本插件直接读酒馆自己的注入注册表，装了就能看到。两类内容都带：'
+    + '常驻型插件（注入长期留在注册表里）取此刻的实时值；只在发送瞬间注入、生成结束就清空的插件，'
+    + '用酒馆上一轮组装提示词时抓下的那一份（标注「上一轮」）。世界书等酒馆自带内容不算第三方、'
+    + '不在此列（本插件另有 <world_info> 段）。';
+  injectScroll.appendChild(injectFoot);
+
+  /* -- 将要附带的内容预览 -- */
+  injectScroll.appendChild(sectionTitle('第三方注入 · 将要附带的内容'));
+  injectScroll.appendChild(injectList);
+  const injectListFoot = document.createElement('p');
+  injectListFoot.className = 'iphone-st__foot';
+  injectListFoot.textContent = '点条目展开原文。变量状态这类内容每轮都在变：标「实时」的是插件此刻要注入的值，'
+    + '标「上一轮」的是扩展已清空、用酒馆上一轮组装时的快照补上的（要让这类内容变新，去酒馆里点一次发送即可）。'
+    + '切换聊天会清空快照。';
+  injectScroll.appendChild(injectListFoot);
+
+  injectPage.appendChild(injectNav);
+  injectPage.appendChild(injectScroll);
+
   screen.appendChild(mainPage);
   screen.appendChild(apiPage);
   screen.appendChild(modelsPage);
@@ -5485,7 +5688,10 @@ function buildSettingsAppScreen() {
   screen.appendChild(wechatPresetPage);
   screen.appendChild(wechatGroupPresetPage);
   screen.appendChild(wechatMomentsPresetPage);
+  screen.appendChild(xhsNotesPresetPage);
+  screen.appendChild(injectPage);
   refreshMainDetail();
+  refreshInjectDetail();
   refreshModelUi();
   refreshRequestUi();
   // 账户行昵称跟随酒馆 {{user}}（构建后统一填 data-me-name 节点）
@@ -5498,10 +5704,12 @@ function buildSettingsAppScreen() {
 }
 
 // 应用 id → 内页构建器；注册表里没有内页的应用点击后回落到通用占位页。
-// buildLogsAppScreen 定义在 js/logs.js（拼接后同一作用域，函数声明提升可引用）。
+// buildLogsAppScreen 定义在 js/logs.js、buildXhsAppScreen 在 js/xhs.js
+//（拼接后同一作用域，函数声明提升可引用）。
 const IPHONE_APP_SCREEN_BUILDERS = Object.freeze({
   qq: buildQqAppScreen,
   wechat: buildWechatAppScreen,
+  xhs: buildXhsAppScreen,
   worldbook: iphoneBuildWorldBookScreen,
   settings: buildSettingsAppScreen,
   logs: iphoneBuildLogsAppScreen,

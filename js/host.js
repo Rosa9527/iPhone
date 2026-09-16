@@ -681,9 +681,9 @@ function iphoneFloorParseTagLine(line) {
   return IPHONE_FLOOR_SECTION_TAG_NAME_RE.test(inner) ? { tag: inner, closing } : null;
 }
 
-// 由段头反推该段的标签名：段头是六种固定写法之一，名字从段头里剥出。旧格式
+// 由段头反推该段的标签名：段头是七种固定写法之一，名字从段头里剥出。旧格式
 // （裸段头、无标签）的段在同步时靠它补上标签，完成原地迁移；段头认不出来
-// （不属于六种）时返回 null，该段原样保留、不包标签。
+// （不属于七种）时返回 null，该段原样保留、不包标签。
 function iphoneFloorSectionTagFor(header) {
   const text = String(header ?? '').trim();
   let matched = text.match(/^与?「(.+)」的QQ聊天记录：$/);
@@ -696,6 +696,7 @@ function iphoneFloorSectionTagFor(header) {
   matched = text.match(/^群「(.+)」的微信群聊记录：$/);
   if (matched) return IPHONE_FLOOR_SECTION_TAG_HEADS.wechatGroup.replace('{name}', iphoneFloorSectionTagName(matched[1], '未知群聊'));
   if (text === '朋友圈动态：') return IPHONE_FLOOR_SECTION_TAG_HEADS.wechatMoments;
+  if (text === '小红书笔记：') return IPHONE_FLOOR_SECTION_TAG_HEADS.xhsNotes;
   return null;
 }
 

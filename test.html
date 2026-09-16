@@ -20,14 +20,28 @@
            test.html?app=wechat&wxwallet=1（配合 &wxservice=1）→ 再点「钱包」行进钱包页
            test.html?app=qq&fqzone=1（配合 &chat=N）→ 经好友资料页直达她的QQ空间
            test.html?app=settings&wxpreset=1 → 再推入「微信私聊提示词」子页
+           test.html?app=xhs → 自动打开手机并进入小红书
+           test.html?app=xhs&xhstab=market|messages|me → 直达小红书对应 Tab
+           test.html?app=xhs&xhsnote=N → 进小红书后点开首页信息流第 N 篇笔记（1 起）
+           test.html?app=xhs&xhsprofile=1 / &xhsavatar=1 → 编辑资料页 / 选择头像浮层
+           test.html?app=xhs&xhscompose=1 → 发布笔记页
+           test.html?app=xhs&xhsinbox=likes|follows|comments → 消息页的聚合子页
+           test.html?app=settings&xhspreset=1 → 再推入「小红书提示词」子页
+           test.html?app=settings&inject=1 → 再推入「第三方注入」子页（配 &st=1
+                                              时先模拟一次捕获，列表里就有内容）
+           test.html?seed=1 → 注入演示小红书数据（网友 / 笔记 / 评论 / 私密笔记），
+                             本地测试台没有 AI，配合 ?app=xhs 才有的看
            任意 URL 加 &st=1 → 安装模拟宿主上下文（酒馆聊天楼层 + 设置持久化，
-           镜像到 localStorage 的 iPhone_mock_host），用于 iPhone_Message 楼层同步测试 -->
+           镜像到 localStorage 的 iPhone_mock_host），用于 iPhone_Message 楼层同步测试；
+           ?st=1 下控制台可调 __iPhoneMockInject() 模拟第三方注入并触发捕获，
+           另有 __iPhoneMockPersistent() / __iPhoneMockSendTimeEnd() 单独模拟两条取材
+           路径（常驻注入的实时读 / 发送期注入被清空后靠快照补齐） -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iPhone 扩展 · 本地测试台</title>
-<link rel="stylesheet" href="style.css?v=0.25.0">
+<link rel="stylesheet" href="style.css?v=0.26.0">
 <style>
   body {
     margin: 0;
@@ -128,7 +142,13 @@
       };
       // ---- 最小事件源（订阅 / 退订 / emit）：端到端测 CHAT_CHANGED 重建 ----
       const mockListeners = {};
-      mockCtx.event_types = { CHAT_CHANGED: 'CHAT_CHANGED' };
+      mockCtx.event_types = {
+        CHAT_CHANGED: 'CHAT_CHANGED',
+        // 提示词就绪事件（v0.26.0 起本插件用它捕获第三方注入）：mock 里用
+        // __iPhoneMockInject() 手动触发，见下。
+        CHAT_COMPLETION_PROMPT_READY: 'CHAT_COMPLETION_PROMPT_READY',
+        GENERATE_AFTER_COMBINE_PROMPTS: 'GENERATE_AFTER_COMBINE_PROMPTS',
+      };
       mockCtx.eventSource = {
         on: (type, fn) => { (mockListeners[type] || (mockListeners[type] = [])).push(fn); },
         removeListener: (type, fn) => {
@@ -142,11 +162,173 @@
       };
       globalThis.__iPhoneMockST = mockCtx;
       globalThis.SillyTavern = { getContext: () => mockCtx };
+      // ---- 第三方注入（v0.26.0）的测试替身 ----
+      // 本插件不认识任何具体扩展，只读宿主自己的注入注册表 extension_prompts。
+      // 这里就照两种真实扩展的写法往注册表里写，覆盖两条取材路径：
+      //   常驻型（生物追踪、世界引擎）：注入长期留在注册表里，本插件实时读到；
+      //   发送期（万华镜）：发送前写入、生成结束清空，只有「提示词就绪」那一刻的
+      //   快照能看到——所以 mock 里写完之后要手动清一次来模拟生成结束。
+      // 入口：
+      //   __iPhoneMockInject()        常驻注入 + 发送期注入 + 触发捕获（完整一轮）
+      //   __iPhoneMockInject(null)    清空注册表并触发捕获（模拟本轮没有任何注入）
+      //   __iPhoneMockPersistent(text)  只改常驻那条（不动发送期）
+      //   __iPhoneMockSendTimeEnd()   清掉发送期那条（模拟生成结束，只剩「上一轮」）
+      // 实际附带内容用 iphoneInjectEffectiveEntries() 查看、快照用
+      // iphoneInjectGetSnapshot()。写入用宿主同款结构：setExtensionPrompt 的
+      // { value, position, depth, scan, role }。
+      mockCtx.extensionPrompts = {};
+      mockCtx.substituteParams = (text) => String(text)
+        .replace(/\{\{user\}\}/g, '测试用户')
+        .replace(/\{\{char\}\}/g, '测试角色');
+      // 宿主 setExtensionPrompt 的最小复刻：真身在 script.js，扩展都是这么写的。
+      mockCtx.setExtensionPrompt = (key, value, position = 0, depth = 0, scan = false, role = 0) => {
+        mockCtx.extensionPrompts[key] = {
+          value: String(value), position: Number(position), depth: Number(depth), scan: !!scan, role: Number(role ?? 0),
+        };
+      };
+      const mockValuesText = (text) => text ?? ['<Values>', '【系统信息】本块不是剧情正文，是当前变量状态（YAML 格式）。', '', '好感度: 42', '当前章节: 第三章', '玩家名: {{user}}', '</Values>'].join('\n');
+      const mockPersistentText = '<生物追踪>\n体力: 78/100\n发情: 12%\n</生物追踪>';
+      // 两个键名照抄真实扩展（键名不影响本插件行为，只为看着像）：
+      const PERSISTENT_KEY = 'bs_biotracker_mainflow'; // 常驻型
+      const SENDTIME_KEY = 'Kaleidoscope_Values'; // 发送期
+      globalThis.__iPhoneMockPersistent = (text) => {
+        // 常驻型扩展：注入留在注册表里不清，本插件随时读得到（预览里标「实时」）。
+        if (text === null) delete mockCtx.extensionPrompts[PERSISTENT_KEY];
+        else mockCtx.setExtensionPrompt(PERSISTENT_KEY, text === undefined ? mockPersistentText : text, 1, 12, false, 0);
+        return mockCtx.extensionPrompts;
+      };
+      globalThis.__iPhoneMockSendTimeEnd = () => {
+        // 发送期扩展在生成结束时把那条清空（清空即取消注入），注册表里就没有实时值
+        // 了——此时只能靠上一轮快照补上（预览里标「上一轮」）。
+        if (mockCtx.extensionPrompts[SENDTIME_KEY]) mockCtx.extensionPrompts[SENDTIME_KEY].value = '';
+        return mockCtx.extensionPrompts;
+      };
+      globalThis.__iPhoneMockInject = (text) => {
+        if (text === null) {
+          mockCtx.extensionPrompts = {};
+        } else {
+          // 四条：常驻型一条、发送期一条，加两条应被过滤的——酒馆核心的作者注槽
+          // （世界书会并进来）与本插件自己的键（避免自吞）。
+          globalThis.__iPhoneMockPersistent();
+          mockCtx.setExtensionPrompt(SENDTIME_KEY, mockValuesText(text), 0, 0, false, 0);
+          mockCtx.setExtensionPrompt('2_floating_prompt', '<世界书条目>\n（酒馆核心注入 + 世界书，不该被当成第三方带进手机请求）\n</世界书条目>', 1, 4, false, 0);
+          mockCtx.setExtensionPrompt('iPhone_Message', '（本插件自己的注入，不该出现在第三方列表里）', 1, 5, false, 0);
+        }
+        mockCtx.eventSource.emit('CHAT_COMPLETION_PROMPT_READY', { chat: [], dryRun: false });
+        return mockCtx.extensionPrompts;
+      };
     }
   </script>
   <script src="index.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
+    /* ?seed=1：注入一批演示网友 / 笔记 / 评论。本地测试台没有 AI，不注种子就没
+       内容可验收（瀑布流、评论区、「我」的笔记网格都是空态）。只在当前存档里
+       还没有小红书数据时写入，不覆盖真实数据。 */
+    if (params.has('seed')) {
+      const seedStorage = iphoneGetQqStorage();
+      if (!(seedStorage.xhsData && seedStorage.xhsData.notes && seedStorage.xhsData.notes.length)) {
+        const now = Date.now();
+        const hour = 3600000;
+        seedStorage.xhsData = {
+          netizens: [
+            { id: 'xn_seed1', name: '小鹿今天吃什么', xhsId: 'lulu_eats', ip: '上海', bio: '一人食便当日记｜省钱也要吃好', avatar: 'a1' },
+            { id: 'xn_seed2', name: '盐城租房日记', xhsId: 'yancheng_rent', ip: '江苏', bio: '打工人｜记录出租屋改造', avatar: 'a2' },
+            { id: 'xn_seed3', name: '阿May的衣柜', xhsId: 'may_ootd', ip: '广东', bio: '155 小个子穿搭', avatar: 'a3' },
+            { id: 'xn_seed4', name: '老陈养猫', xhsId: 'chen_cats', ip: '四川', bio: '两只布偶的铲屎官', avatar: 'a4' },
+            { id: 'xn_seed5', name: '数码小白鼠', xhsId: 'tech_mouse', ip: '北京', bio: '只买对的，不买贵的', avatar: 'a5' },
+            { id: 'xn_seed6', name: '汤圆不圆', xhsId: 'tangyuan', ip: '浙江', bio: '', avatar: 'a6' },
+            { id: 'xn_seed7', name: '打工人小张', xhsId: 'zhang_work', ip: '江苏', bio: '', avatar: 'a7' },
+            { id: 'xn_seed8', name: '周末去哪儿', xhsId: 'weekend_go', ip: '云南', bio: '一年去 30 个地方', avatar: 'a8' },
+          ],
+          notes: [
+            {
+              id: 'n_seed1', authorId: 'xn_seed1', authorName: '小鹿今天吃什么', ts: now - hour * 3,
+              coverId: 'c01', title: '一周不重样的减脂便当，成本不到15块🍱',
+              text: '最近在控制体重，外卖实在吃不起也不健康，索性自己带饭。周一到周五的搭配都写在图里了，鸡胸肉用空气炸锅烤的，嫩得不像话。最贵的一餐是周三的牛肉，也就 22 块。',
+              topics: ['减脂餐', '便当', '上班带饭', '省钱'], location: '上海', ip: '上海',
+              likes: 1286, collects: 734, likeMine: true, collectMine: true,
+              comments: [
+                { name: '汤圆不圆', text: '周三那个牛肉看着好嫩，求做法！', ts: now - hour * 2 },
+                { name: '小鹿今天吃什么', text: '牛里脊切薄片，黑胡椒海盐抓一下，热锅三十秒就好～', replyName: '汤圆不圆', ts: now - hour * 2 },
+                { name: '打工人小张', text: '15块？我楼下盖饭都22了[捂脸]', ts: now - hour },
+              ],
+            },
+            {
+              id: 'n_seed2', authorId: 'xn_seed2', authorName: '盐城租房日记', ts: now - hour * 8,
+              coverId: 'c10', title: '花 800 块把出租屋阳台改成了小书房',
+              text: '房东不让打孔，全程用免钉胶和伸缩杆。桌子是二手平台 200 收的，椅子是宜家打折款。最满意的是那盏落地灯，晚上开着写东西特别有感觉。周末基本都赖在这里不出来了。',
+              topics: ['出租屋改造', '阳台书房', '租房'], location: '盐城', ip: '江苏',
+              likes: 3420, collects: 2108,
+              comments: [
+                { name: '阿May的衣柜', text: '这个配色好舒服，求桌布链接', ts: now - hour * 7 },
+                { name: '盐城租房日记', text: '桌布是某宝的亚麻款，搜「米白 亚麻 桌布」就有～', replyName: '阿May的衣柜', ts: now - hour * 7 },
+              ],
+            },
+            {
+              id: 'n_seed3', authorId: 'xn_seed3', authorName: '阿May的衣柜', ts: now - hour * 20,
+              coverId: 'c14', title: '155 小个子｜秋天这么穿显高 10cm',
+              text: '身高 155 体重 90，一直被说穿衣服压个子。总结了三条：高腰、同色系、露脚踝。图上这套是短款小西装 + 直筒裤，腰线卡在胸下，视觉上真的能拉高。',
+              topics: ['小个子穿搭', '秋季穿搭', '显高'], location: '广州', ip: '广东',
+              likes: 8760, collects: 5320,
+              comments: [
+                { name: '汤圆不圆', text: '同 155！直筒裤真的救命', ts: now - hour * 18 },
+                { name: '打工人小张', text: '上班能穿吗？还是太休闲了', ts: now - hour * 16 },
+                { name: '阿May的衣柜', text: '换双乐福鞋就很通勤啦', replyName: '打工人小张', ts: now - hour * 15 },
+              ],
+            },
+            {
+              id: 'n_seed4', authorId: 'xn_seed4', authorName: '老陈养猫', ts: now - hour * 26,
+              coverId: 'c05', title: '养了两年的布偶，说点大实话',
+              text: '先说结论：布偶没传说中那么好养。掉毛是真的掉，换季的时候一天能扫出一小团。性格确实黏人，但黏人的另一面是分离焦虑，出差三天回来它会不理你一整天。如果只是想养一只好看的猫，建议先看看别人养的视频。',
+              topics: ['布偶猫', '养猫经验', '避雷'], location: '成都', ip: '四川',
+              likes: 5230, collects: 1876,
+              comments: [
+                { name: '数码小白鼠', text: '说得太对了，我家那只也是这样', ts: now - hour * 24 },
+                // 回复了玩家（replyName 命中 {{user}}）：消息页的「回复了你的评论」就靠它
+                { name: '老陈养猫', text: '真的，出差回来那两天最难哄，得拿零食赔罪', replyName: '{{user}}', ts: now - hour * 23 },
+              ],
+            },
+            {
+              id: 'n_seed5', authorId: 'xn_seed5', authorName: '数码小白鼠', ts: now - hour * 34,
+              coverId: 'c12', title: '两千块的平板值不值得买？用了三个月的感受',
+              text: '买之前纠结了很久，怕买了吃灰。三个月下来主要用途：看剧、记笔记、偶尔画点东西。如果你指望它替代电脑，那不行。当一个大号娱乐设备，它很合格。',
+              topics: ['平板', '数码测评', '学生党'], location: '北京', ip: '北京',
+              likes: 986, collects: 432,
+              comments: [
+                { name: '周末去哪儿', text: '出门带着方便吗', ts: now - hour * 32 },
+                { name: '数码小白鼠', text: '比笔记本轻多了，就是不能装某些软件', replyName: '周末去哪儿', ts: now - hour * 31 },
+              ],
+            },
+            {
+              id: 'n_seed6', authorId: 'xn_seed8', authorName: '周末去哪儿', ts: now - hour * 44,
+              coverId: 'c07', title: '一个人去大理待了五天，花了多少钱',
+              text: '机票往返 1200，住宿青旅床位 60 一晚，吃饭一天平均 80。总共不到 2400。没去任何收费景点，就是沿着洱海骑车、在古城里乱逛、跟青旅的人聊天。比想象中便宜，也比想象中好。',
+              topics: ['大理', '独自旅行', '穷游'], location: '大理', ip: '云南',
+              likes: 12400, collects: 8930,
+              comments: [
+                { name: '小鹿今天吃什么', text: '青旅安全吗？一直不敢订', ts: now - hour * 42 },
+                { name: '周末去哪儿', text: '选评分高的、女生间，我住的那家挺好的', replyName: '小鹿今天吃什么', ts: now - hour * 41 },
+                { name: '汤圆不圆', text: '收藏了，下个月就去', ts: now - hour * 40 },
+              ],
+            },
+            {
+              id: 'n_seed7', authorId: '__me__', authorName: '', ts: now - hour * 5,
+              coverId: 'c11', title: '家里那盆绿萝终于被我养活了',
+              text: '前后死了三盆，这次总算摸到门道：别老浇水。土干了再浇，浇就浇透。放在散光的地方，别直晒。',
+              topics: ['绿植', '家居'], location: '盐城', ip: '江苏', likes: 46, collects: 12, comments: [],
+            },
+            {
+              id: 'n_seed8', authorId: '__me__', authorName: '', ts: now - hour * 30,
+              coverId: 'c16', title: '', text: '今天路过老街，发现那家开了十几年的面馆关门了。门口贴着转让，玻璃上还留着褪色的菜单。突然有点难过。',
+              topics: ['随手记'], location: '', ip: '江苏', likes: 23, collects: 5, comments: [], private: true,
+            },
+          ],
+          following: ['xn_seed1', 'xn_seed3'],
+        };
+        iphoneSaveQqStorage();
+      }
+    }
     if (params.has('open') || params.has('app')) {
       setTimeout(() => {
         openIphoneUi();
@@ -385,6 +567,99 @@
               else if (retries > 0) setTimeout(() => openWxPresetWhenReady(retries - 1), 150);
             };
             setTimeout(() => openWxPresetWhenReady(20), 1300);
+          }
+          /* ---------- 小红书（v0.26.0）：与微信平行的同一套深链 ---------- */
+          // 主界面对象上的钩子由 buildXhsAppScreen 暴露（_switchXhsTab / _openXhsNote …），
+          // 各覆盖层走同一套「轮询到就点」模式，避免与打开应用的防重入锁抢时序。
+          const xhsScreen = () => document.querySelector('.iphone-xhs');
+          if (params.get('xhstab')) {
+            // ?xhstab=market|messages|me 直达小红书对应 Tab（发布是覆盖层，走 &xhscompose=1）。
+            const name = params.get('xhstab');
+            const idx = name === 'market' ? 1 : name === 'messages' ? 3 : name === 'me' ? 4 : 0;
+            const openXhsTabWhenReady = (retries) => {
+              const xhs = xhsScreen();
+              if (xhs && typeof xhs._switchXhsTab === 'function') xhs._switchXhsTab(idx);
+              else if (retries > 0) setTimeout(() => openXhsTabWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openXhsTabWhenReady(20), 1400);
+          }
+          if (params.has('xhsnote')) {
+            // ?xhsnote=N：点开首页信息流第 N 篇笔记（与首页展示顺序一致）。
+            const openXhsNoteWhenReady = (retries) => {
+              const xhs = xhsScreen();
+              if (xhs && typeof xhs._openXhsNote === 'function') {
+                if (xhs._openXhsNote(Number(params.get('xhsnote')) || 1)) return;
+              }
+              if (retries > 0) setTimeout(() => openXhsNoteWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openXhsNoteWhenReady(20), 1500);
+          }
+          if (params.has('xhsprofile') || params.has('xhsavatar')) {
+            // ?xhsprofile=1：切到「我」Tab 再点编辑资料；&xhsavatar=1 再点头像行，直达选择头像浮层。
+            const openXhsProfWhenReady = (retries) => {
+              const xhs = xhsScreen();
+              if (xhs && typeof xhs._switchXhsTab === 'function') {
+                xhs._switchXhsTab(4);
+                xhs._openXhsProfile();
+                if (params.has('xhsavatar')) {
+                  const row = document.querySelector('.iphone-xhs__prof-row--avatar');
+                  if (row) row.click();
+                  else if (retries > 0) setTimeout(() => openXhsProfWhenReady(retries - 1), 150);
+                }
+                return;
+              }
+              if (retries > 0) setTimeout(() => openXhsProfWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openXhsProfWhenReady(20), 1400);
+          }
+          if (params.has('xhscompose')) {
+            // ?xhscompose=1：直达发布笔记页。
+            const openXhsComposeWhenReady = (retries) => {
+              const xhs = xhsScreen();
+              if (xhs && typeof xhs._openXhsCompose === 'function') xhs._openXhsCompose();
+              else if (retries > 0) setTimeout(() => openXhsComposeWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openXhsComposeWhenReady(20), 1400);
+          }
+          if (params.has('xhsinbox')) {
+            // ?xhsinbox=likes|follows|comments：先切「消息」Tab，再进对应聚合子页。
+            const openXhsInboxWhenReady = (retries) => {
+              const xhs = xhsScreen();
+              if (xhs && typeof xhs._switchXhsTab === 'function') {
+                xhs._switchXhsTab(3);
+                xhs._openXhsInbox(params.get('xhsinbox'));
+                return;
+              }
+              if (retries > 0) setTimeout(() => openXhsInboxWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openXhsInboxWhenReady(20), 1400);
+          }
+          if (params.has('xhspreset')) {
+            // ?app=settings&xhspreset=1：设置页里点「小红书提示词」行，直达该子页。
+            const openXhsPresetWhenReady = (retries) => {
+              const row = [...document.querySelectorAll('.iphone-st__row')]
+                .find((el) => el.textContent.includes('小红书提示词'));
+              if (row) row.click();
+              else if (retries > 0) setTimeout(() => openXhsPresetWhenReady(retries - 1), 150);
+            };
+            setTimeout(() => openXhsPresetWhenReady(20), 1300);
+          }
+          if (params.has('inject')) {
+            // ?app=settings&inject=1：设置页里点「第三方注入」行，直达该子页。
+            // 配 ?st=1 时先模拟一次捕获，预览列表里就有内容可看。
+            const openInjectWhenReady = (retries) => {
+              const row = [...document.querySelectorAll('.iphone-st__row')]
+                .find((el) => el.textContent.includes('第三方注入'));
+              if (row) row.click();
+              else if (retries > 0) setTimeout(() => openInjectWhenReady(retries - 1), 150);
+            };
+            if (typeof globalThis.__iPhoneMockInject === 'function') {
+              // 先跑完整一轮（两条注入都在 + 触发捕获），再把发送期那条清掉，模拟
+              // 「生成已结束」——预览里就能同时看到「实时」与「上一轮」两种标注。
+              globalThis.__iPhoneMockInject();
+              globalThis.__iPhoneMockSendTimeEnd();
+            }
+            setTimeout(() => openInjectWhenReady(20), 1300);
           }
         }
       }, 300);

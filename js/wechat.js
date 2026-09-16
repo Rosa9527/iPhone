@@ -942,6 +942,8 @@ async function iphoneBuildWechatChatRequestMessages(entity, conversation) {
   }
 
   const format = preset.format.trim().replace(/^【输出格式】\s*/, '');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) {
@@ -953,6 +955,7 @@ async function iphoneBuildWechatChatRequestMessages(entity, conversation) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：对白规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   if (membersText) outlineItems.push(`<group_members>…</group_members>：本群成员列表——除玩家（${userName}）外的每位成员都由你扮演，输出时用行首名字区分发言人；`);
   if (worldText) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景；');
   if (floorLogText) outlineItems.push('<wechat_chat_log>…</wechat_chat_log>：最近一次同步到酒馆楼层的微信聊天记录，可能包含多个联系人/群聊的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   outlineItems.push('<transfer_guidance>…</transfer_guidance>：转账与收款的写法约定——按 `[转账]金额` / `[收款]金额` 标记钱款往来，标记必须单独成条（挂在叙述句尾会认不出来），`[已收款]金额` 是界面写的记账行、不用自己写；');
@@ -975,6 +978,9 @@ async function iphoneBuildWechatChatRequestMessages(entity, conversation) {
   }
   if (worldText) {
     sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldText}\n</world_info>`);
+  }
+  if (injectParts) {
+    sysParts.push(injectParts.system);
   }
   if (tavernText) {
     sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
@@ -1068,6 +1074,8 @@ async function iphoneGenerateWechatMoments(ownerId) {
   const format = String(preset.format ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -1080,6 +1088,7 @@ async function iphoneGenerateWechatMoments(ownerId) {
     : '<contacts>…</contacts>：微信联系人名单——动态的发布者只能从名单中挑选；');
   if (owner) outlineItems.push('<contacts_all>…</contacts_all>：微信全部联系人名单——点赞与评论只认这份名单里的人；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<wechat_chat_log>…</wechat_chat_log>：最近一次同步到酒馆楼层的微信记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   if (guidance) outlineItems.push('<moments_guidance>…</moments_guidance>：朋友圈动态的写作指导；');
@@ -1093,6 +1102,7 @@ async function iphoneGenerateWechatMoments(ownerId) {
     : `以下是微信联系人名单（动态的发布者只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (owner) sysParts.push(`以下是微信全部联系人名单（点赞与评论只认这份名单里的人）：\n<contacts_all>\n${allNamesRosterText}\n</contacts_all>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的微信记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<wechat_chat_log>\n${floorLogText}\n</wechat_chat_log>`);
   if (guidance) sysParts.push(`以下是朋友圈动态的写作指导：\n<moments_guidance>\n${resolve(guidance)}\n</moments_guidance>`);
@@ -1247,6 +1257,8 @@ async function iphoneGenerateWechatMomentReply(moment) {
   const replyFormat = String(preset.replyFormat ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -1256,6 +1268,7 @@ async function iphoneGenerateWechatMomentReply(moment) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：表达规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   outlineItems.push('<contacts>…</contacts>：微信联系人名单——评论人只能从名单中挑选；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<wechat_chat_log>…</wechat_chat_log>：最近一次同步到酒馆楼层的微信记录，供你了解最近的聊天情况；');
   outlineItems.push('<dynamic_post>…</dynamic_post>：玩家正在回复的那条朋友圈——发布者、正文、点赞名单与评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
@@ -1267,6 +1280,7 @@ async function iphoneGenerateWechatMomentReply(moment) {
   if (dialogueGuidance) sysParts.push(`以下是表达规范（决定你如何说话与写内容）：\n<dialogue_guidance>\n${fillGuide(dialogueGuidance)}\n</dialogue_guidance>`);
   sysParts.push(`以下是微信联系人名单（评论人只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的微信记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<wechat_chat_log>\n${floorLogText}\n</wechat_chat_log>`);
   const identityNote = customNick && customNick !== playerName

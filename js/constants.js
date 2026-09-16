@@ -1,7 +1,7 @@
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.25.0';
+const IPHONE_MODULE_VERSION = '0.26.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -80,6 +80,11 @@ const IPHONE_APPS = Object.freeze([
     // 矢量图标直接内联 SVG（buildIphoneAppIcon 支持）：白描线翻开的书，
     // 底色由 .iphone-app-icon--worldbook 的渐变给出（Apple Books 观感）。
     iconSvg: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.8 5 9 4.4 6.6 4.4c-.9 0-1.7.1-2.4.3v13.6c.7-.2 1.5-.3 2.4-.3 2.4 0 4.2.6 5.4 1.8 1.2-1.2 3-1.8 5.4-1.8.9 0 1.7.1 2.4.3V4.7c-.7-.2-1.5-.3-2.4-.3-2.4 0-4.2.6-5.4 1.8z"/><path d="M12 6.2v13.6"/></g></svg>',
+  },
+  {
+    id: 'xhs',
+    name: '小红书',
+    iconClass: 'iphone-app-icon--xhs',
   },
   {
     id: 'settings',
@@ -395,6 +400,172 @@ const IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT = Object.freeze({
   replyGuidance: IPHONE_WECHAT_MOMENTS_REPLY_GUIDANCE,
   replyFormat: IPHONE_WECHAT_MOMENTS_REPLY_FORMAT,
 });
+
+// ---------- 小红书（v0.26.0） ----------
+// 与微信朋友圈最本质的差别：朋友圈是「联系人发帖」（名单固定、都是剧情里的人），
+// 小红书是「网友发帖」——发布者是一群与玩家素不相识的互联网陌生人。网友由 AI
+// 现场发明（昵称 / IP 属地 / 简介 / 人设），发过一次就进「网友池」沉淀下来，之后
+// 复用同一个身份继续发帖、互相评论，像真实社区那样有熟面孔。因此小红书的生成
+// 提示词里没有联系人名单，改为「已有网友名单 + 允许新造网友」。
+//
+// 小红书笔记生成（下拉刷新）：一次生成 1~3 篇网友笔记，每篇自带封面主题、标题、
+// 正文、话题、位置与互动（点赞数 / 收藏数 / 评论区）。封面主题是给插件用的——
+// 模型不能选图，改为报一个题材，插件从内置图库里挑一张同题材的封面，保证图文相符。
+const IPHONE_XHS_NOTE_GUIDANCE = `# 任务
+- 你要为「小红书」首页生成新的网友笔记：每次写 1~3 篇，像真实社区的信息流那样题材各异、长短不一。
+- 网友是互联网上素不相识的陌生人：发布者不是「{{user}}」的联系人，也不要把主线剧情里的人物直接搬进来当网友（除非设定上他们真的会发小红书）。
+- 发布者可以是已有网友名单里的人（熟面孔回归，延续 TA 一贯的人设与内容方向），也可以新造一位网友——新网友要有辨识度高的昵称、合理的小红书号和 IP 属地。
+- 题材要贴合小红书真实生态：美食探店、减脂餐、穿搭、美妆、家居收纳、租房、宠物、旅行攻略、数码测评、职场吐槽、情感困惑、学习方法、追星、手工、健身、吐槽避雷……一次刷新里不要两三篇都挤在同一题材。
+- 内容可以与当前剧情、世界书有一点点若有若无的呼应（比如同一座城市、同一个行业、正在流行的话题），但不要写成剧情的复述，更不要出现「{{user}}」的名字。
+- 每篇笔记都要有互动：点赞数、收藏数与评论区（1~3 条评论），像真实小红书那样有人捧场、有人追问、有人杠。评论区里其他网友可以互相接话，也可以由作者本人回复。
+- 数据要真实可信：普通网友的笔记点赞几十到几千，只有内容特别抓人的才上万；收藏数一般少于点赞数；评论数远少于点赞数。不要每篇都写爆款。
+
+# 笔记写法
+- 标题是小红书的灵魂：口语化、有信息量、带一点钩子（数字、对比、悬念、情绪），20 字以内，可以带 emoji。
+- 正文像真人在分享：第一人称，讲自己的经历与感受，可以有具体的细节（价格、地点、时间、品牌），分成两三句自然的短句。
+- 话题标签紧贴内容，2~4 个，用 # 开头。
+- 先是人，后是设定：不同网友的语气、关注点与生活方式要有明显差异——精致的人、糙快的人、抠门的人、爱较真的人，写出来的东西不该是一个味道。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区块。每个区块按下面的字段逐行书写，完整示例（昵称、内容与数据仅示意，必须换成贴合当前剧情的真实内容）：\n\n'
+  + '昵称：小鹿今天吃什么\n'
+  + '小红书号：lulu_eats\n'
+  + 'IP：上海\n'
+  + '简介：一人食便当日记｜省钱也要吃好\n'
+  + '封面：美食\n'
+  + '标题：一周不重样的减脂便当，成本不到15块🍱\n'
+  + '正文：最近在控制体重，外卖实在吃不起也不健康，索性自己带饭。周一到周五的搭配都写在图里了，鸡胸肉用空气炸锅烤的，嫩得不像话。最贵的一餐是周三的牛肉，也就 22 块。\n'
+  + '话题：#减脂餐 #便当 #上班带饭 #省钱\n'
+  + '位置：上海\n'
+  + '点赞：1286\n'
+  + '收藏：734\n'
+  + '评论：\n'
+  + '汤圆不圆：周三那个牛肉看着好嫩，求做法！\n'
+  + '小鹿今天吃什么 回复 汤圆不圆：牛里脊切薄片，黑胡椒海盐抓一下，热锅三十秒就好～\n'
+  + '打工人小张：15块？我楼下盖饭都22了[捂脸]\n\n'
+  + '格式说明：\n'
+  + '- 「昵称」是发布者：写已有网友名单里的名字，或新造一位网友。\n'
+  + '- 「小红书号」「IP」「简介」只有新造网友时才有意义（已有网友沿用 TA 原来的资料），写不写都行。\n'
+  + '- 「封面」从这些题材里挑一个最贴合的（只能填题材名）｜'
+  + '美食、宠物、旅行、家居、数码、穿搭、探店。\n'
+  + '- 「标题」一行写完，不要换行；「正文」一行写完，不要换行（可以用逗号分句）。\n'
+  + '- 「话题」用 # 开头，2~4 个，用空格分隔。\n'
+  + '- 「位置」写城市名（可省略）。\n'
+  + '- 「点赞」「收藏」写阿拉伯数字（可省略，省略时插件按 0 处理）。\n'
+  + '- 「评论：」单独占一行，下面每行一条评论，1~3 条，格式为「评论人：内容」，'
+  + '作者回复写作「作者昵称 回复 评论人：内容」。评论人可以是已有网友，也可以是新网友（会自动收进网友池）。\n'
+  + '只输出符合格式的笔记区块，不要输出任何解释、旁白或格式以外的文字。';
+// 小红书「评论/回复」：玩家在某篇笔记下留言后，调用一次对话 API 生成新的评论回复
+//（作者本人或路过的网友应声）。与朋友圈同一套「评论人：内容」行格式。
+const IPHONE_XHS_REPLY_GUIDANCE = `# 任务
+- 你正在小红书的一篇笔记下面：玩家「{{user}}」留下了新评论，请生成 1~3 条新的评论回复。
+- 谁来应声要合理：作者本人（笔记的发布者）看到评论多半会回；路过的网友也常常插话、追问、抖机灵、抬杠——真实小红书的评论区里，陌生网友之间的互动往往比作者还热闹。
+- 回复要顺着评论区已有的对话往下接，不复读别人说过的话；玩家点名回复了谁，优先让那个人应声。
+- 不要替玩家「{{user}}」发言：TA 的评论由玩家自己写。
+- 语气完全是小红书评论区的语气：短、口语、有网感，可以用 emoji 和网络用语，不要客气话套话。
+
+# 写法
+- 评论是一两句话，不是长文，也不是笔记正文。
+- 不同网友的语气要有差异；作者回复和路人评论要能分得出来。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_XHS_REPLY_FORMAT = '每条新评论占一行，输出 1~3 行。每行格式为「评论人：内容」，回复某人时写成「评论人 回复 被回复人：内容」。完整示例（人名与内容仅示意）：\n\n'
+  + '汤圆不圆：蹲一个空气炸锅型号🙏\n'
+  + '小鹿今天吃什么 回复 {{user}}：谢谢喜欢～下次做卤牛肉再发一篇\n\n'
+  + '格式说明：评论人必须是已有的网友昵称、这篇笔记的作者，或一位新造的网友昵称（会自动收进网友池）；不要替玩家说话。'
+  + '内容一行写完、不要换行；不要输出点赞行、笔记正文或任何解释、旁白。只输出符合格式的评论行。';
+// 「设置 · 小红书提示词」：小红书笔记生成与评论回复用的提示词组合，存
+// settings.promptPresets.xhsNotes。字段与 IPHONE_QZONE_PRESET_DEFAULT 同义，
+// 唯一差别是 guidance / format 面向「网友」而不是「联系人」。
+const IPHONE_XHS_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在扮演小红书上的网友们——一群与「{{user}}」素不相识的互联网陌生人。'
+    + '他们的昵称、IP 属地、生活方式与说话方式都由你现场发明，可以呼应世界书与主线剧情里的时代背景、城市与流行话题，'
+    + '但不要直接把剧情人物写成网友。每位网友一旦出现就要保持人设一致，像一个真实的人那样持续发帖与评论。',
+  worldBook: true,
+  latestFloor: false, // 与另外两个动态页一致：默认不带记录楼层
+  historyFloors: 5,
+  npcLogic: IPHONE_QQ_NPC_LOGIC,
+  dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+  guidance: IPHONE_XHS_NOTE_GUIDANCE,
+  format: IPHONE_XHS_NOTE_FORMAT,
+  replyGuidance: IPHONE_XHS_REPLY_GUIDANCE,
+  replyFormat: IPHONE_XHS_REPLY_FORMAT,
+});
+// 小红书「我」的资料占位演示值（小红书号 / 属地）：昵称默认跟随酒馆 {{user}}，
+// 头像与简介由玩家在「编辑资料」里改。
+const IPHONE_XHS_ME = Object.freeze({
+  xhsId: '8823771906',
+  ip: '江苏',
+});
+// 小红书头像款式（assets/xhs-avatar-*.png，DiceBear 生成，见 README「素材来源」）：
+// me = 默认（纯 CSS 灰底人形占位，无覆盖类），其余 20 款为覆盖类。
+const IPHONE_XHS_ME_AVATAR_PRESETS = Object.freeze([
+  { id: 'me', label: '默认' },
+  { id: 'a1', label: '短发男生' },
+  { id: 'a2', label: '绿发' },
+  { id: 'a3', label: '橘发' },
+  { id: 'a4', label: '黑长直' },
+  { id: 'a5', label: '卷发' },
+  { id: 'a6', label: '刘海' },
+  { id: 'a7', label: '清爽' },
+  { id: 'a8', label: '波浪' },
+  { id: 'a9', label: '利落' },
+  { id: 'a10', label: '深肤色' },
+  { id: 'a11', label: '金发' },
+  { id: 'a12', label: '眼镜' },
+  { id: 'a13', label: '卫衣' },
+  { id: 'a14', label: '条纹' },
+  { id: 'a15', label: '碎花' },
+  { id: 'a16', label: '墨镜' },
+  { id: 'a17', label: '白发' },
+  { id: 'a18', label: '辫子' },
+  { id: 'a19', label: '笑脸' },
+  { id: 'a20', label: '蓝紫' },
+]);
+// 小红书笔记封面图库：模型在生成时报一个「题材」，插件从这里挑同题材的一张
+//（未命中题材就按哈希随便挑一张），保证图文题材相符。ratio = 宽/高，瀑布流的
+// 卡片高度按它算，长短交错才像真实信息流。文件见 assets/xhs-cover-*.jpg。
+const IPHONE_XHS_COVERS = Object.freeze([
+  { id: 'c01', topic: '美食', ratio: 0.75 },
+  { id: 'c02', topic: '美食', ratio: 1 },
+  { id: 'c03', topic: '美食', ratio: 0.8 },
+  { id: 'c04', topic: '美食', ratio: 1 },
+  { id: 'c05', topic: '宠物', ratio: 0.75 },
+  { id: 'c06', topic: '宠物', ratio: 0.8 },
+  { id: 'c07', topic: '旅行', ratio: 0.75 },
+  { id: 'c08', topic: '旅行', ratio: 0.8 },
+  { id: 'c09', topic: '旅行', ratio: 1 },
+  { id: 'c10', topic: '家居', ratio: 1 },
+  { id: 'c11', topic: '家居', ratio: 0.8 },
+  { id: 'c12', topic: '数码', ratio: 1 },
+  { id: 'c13', topic: '数码', ratio: 1.3333 },
+  { id: 'c14', topic: '穿搭', ratio: 0.75 },
+  { id: 'c15', topic: '探店', ratio: 1.3333 },
+  { id: 'c16', topic: '探店', ratio: 1 },
+]);
+// 首页顶部的主频道（关注 / 发现）与「发现」下的题材横滑条（对照真实小红书首屏）：
+// 推荐 = 全部笔记；其余按话题与标题关键词过滤（见 iphoneXhsNoteMatchesChannel）。
+const IPHONE_XHS_CHANNELS = Object.freeze(['推荐', 'RED', '热点', '直播', '短剧', '穿搭']);
+// 首页右上角切换的城市（仅作展示，对照真实小红书的定位入口）。
+const IPHONE_XHS_CITY_DEFAULT = '盐城';
+// 底部标签栏：首页 / 市集 / 发布 / 消息 / 我（中间是红色圆形「+」发布钮）。
+const IPHONE_XHS_TABS = Object.freeze(['首页', '市集', '发布', '消息', '我']);
+// 笔记详情的默认演示数据：小红书号、点赞/收藏/评论的初始计数量级。
+const IPHONE_XHS_NOTE_LIKES_BASE = 0;
+// 网友池上限与头像池大小：网友发帖 / 评论时自动注册，超过上限后不再新增
+//（旧的仍在，只是不再收新面孔），头像按序号循环取用。
+const IPHONE_XHS_NETIZEN_CAP = 60;
+const IPHONE_XHS_AVATAR_POOL = 20;
+// 一次下拉刷新生成的笔记条数上限（AI 通常写 1~3 篇）。
+const IPHONE_XHS_REFRESH_MAX_NOTES = 3;
+// 笔记正文与标题的长度上限（归一化时截断，防脏数据撑爆界面）。
+const IPHONE_XHS_TITLE_CAP = 60;
+const IPHONE_XHS_TEXT_CAP = 2000;
+const IPHONE_XHS_COMMENT_CAP = 300;
+// 「消息」页的三条聚合入口（赞和收藏 / 新增关注 / 评论和@，对照真实小红书）。
+const IPHONE_XHS_MSG_ENTRIES = Object.freeze([
+  { id: 'likes', label: '赞和收藏', tone: 'pink' },
+  { id: 'follows', label: '新增关注', tone: 'blue' },
+  { id: 'comments', label: '评论和@', tone: 'green' },
+]);
 // 「我」的微信资料占位演示值：微信号留空时回退这个；昵称默认跟随酒馆 {{user}}。
 const IPHONE_WECHAT_ME = Object.freeze({
   wxId: 'wxid_8f2k1m9v0q',
@@ -545,10 +716,16 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 世界书（条目排除）：excluded = { 世界书名: [uid, …] }。勾选排除的条目
   // 拼聊天提示词时跳过，不发给 AI（shape 与 SoulLink 的 worldInfo.excluded 一致）。
   worldInfo: { excluded: {} },
+  // 第三方注入捕获（v0.26.0）：别的扩展经 setExtensionPrompt 注入酒馆主提示词的
+  // 内容（万华镜的 <Values> 变量、SoulLink 的 NPC 推理、World 的世界状态、脚本
+  // 注入等），本插件在宿主「提示词就绪」事件里抓快照，拼进自己的子请求，让手机上
+  // 的模型与主线剧情保持一致。false = 不附带（手机请求回到「只看自己拼的段」）。
+  injectCaptureEnabled: true,
   // 提示词预设：各聊天场景的提示词组合（「设置 · 私聊提示词」/「群聊提示词」/
-  // 「动态提示词」/「朋友圈提示词」里编辑）。qqChat = QQ 联系人聊天；groupChat =
-  // QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；wechatChat /
-  // wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）。
+  // 「动态提示词」/「朋友圈提示词」/「小红书提示词」里编辑）。qqChat = QQ 联系人
+  // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；
+  // wechatChat / wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）；
+  // xhsNotes = 小红书笔记生成与评论回复（v0.26.0 起）。
   promptPresets: {
     qqChat: { ...IPHONE_QQ_CHAT_PRESET_DEFAULT },
     groupChat: { ...IPHONE_QQ_GROUP_PRESET_DEFAULT },
@@ -556,6 +733,7 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
     wechatChat: { ...IPHONE_WECHAT_CHAT_PRESET_DEFAULT },
     wechatGroup: { ...IPHONE_WECHAT_GROUP_PRESET_DEFAULT },
     wechatMoments: { ...IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT },
+    xhsNotes: { ...IPHONE_XHS_PRESET_DEFAULT },
   },
 });
 // 思考强度选项：reasoning_effort 是 OpenAI 兼容标准参数（Ollama /v1/chat/completions
@@ -582,10 +760,11 @@ const IPHONE_CHAT_TIMEOUT_MS = 120000;
 const IPHONE_FLOOR_TAG_NAME = 'iPhone_Message';
 const IPHONE_FLOOR_TAG_OPEN = `<${IPHONE_FLOOR_TAG_NAME}>`;
 const IPHONE_FLOOR_TAG_CLOSE = `</${IPHONE_FLOOR_TAG_NAME}>`;
-// 记录楼层的段头识别（v0.18.0 起 QQ 与微信共用同一楼层，按段头切分）：
-// QQ 私聊/群聊/空间动态 + 微信私聊/群聊/朋友圈动态，六种段头并列，互不干扰。
-// 用整行做段键（match[0]），分组只用于兼容旧写法，取用时不看分组。
-const IPHONE_FLOOR_SECTION_RE = /^(?:与?「(.+)」的QQ聊天记录|群「(.+)」的QQ群聊记录|QQ空间动态|与?「(.+)」的微信聊天记录|群「(.+)」的微信群聊记录|朋友圈动态)：$/;
+// 记录楼层的段头识别（v0.18.0 起 QQ 与微信共用同一楼层，按段头切分；v0.26.0 加
+// 小红书）：QQ 私聊/群聊/空间动态 + 微信私聊/群聊/朋友圈动态 + 小红书笔记，
+// 七种段头并列，互不干扰。用整行做段键（match[0]），分组只用于兼容旧写法，
+// 取用时不看分组。
+const IPHONE_FLOOR_SECTION_RE = /^(?:与?「(.+)」的QQ聊天记录|群「(.+)」的QQ群聊记录|QQ空间动态|与?「(.+)」的微信聊天记录|群「(.+)」的微信群聊记录|朋友圈动态|小红书笔记)：$/;
 // 记录段的标签（v0.21.0 起）：外层仍是 <iPhone_Message>，标签内每个记录段
 // 各自再套一层自己的标签；段标签自 v0.23.0 起改用方括号包（只有最外层
 // iPhone_Message 保留尖括号），形如
@@ -609,9 +788,10 @@ const IPHONE_FLOOR_SECTION_TAG_HEADS = Object.freeze({
   wechatChat: '微信_私聊_{name}',
   wechatGroup: '微信_群聊_{name}',
   wechatMoments: '朋友圈动态',
+  xhsNotes: '小红书笔记',
 });
 // 段标签名本体：不含外侧定界符与开标签前的 /（两种定界符由解析函数剥离）。
-const IPHONE_FLOOR_SECTION_TAG_NAME_RE = /^(?:(?:QQ|微信)_(?:私聊|群聊)_[^\s[\]<>/]+|QQ空间动态|朋友圈动态)$/;
+const IPHONE_FLOOR_SECTION_TAG_NAME_RE = /^(?:(?:QQ|微信)_(?:私聊|群聊)_[^\s[\]<>/]+|QQ空间动态|朋友圈动态|小红书笔记)$/;
 
 // ---------- 悬浮球 ----------
 // 造型为 Apple LOGO（simple-icons「Apple」，MIT 图标集，白色填充 + 投影）。

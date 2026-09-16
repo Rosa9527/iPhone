@@ -1,11 +1,11 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-15 11:59:14 · 文件数: 9 · 指纹: 2a720b46
+// 构建时间: 2026-09-16 08:55:16 · 文件数: 11 · 指纹: f51c890d
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.25.0';
+const IPHONE_MODULE_VERSION = '0.26.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -84,6 +84,11 @@ const IPHONE_APPS = Object.freeze([
     // 矢量图标直接内联 SVG（buildIphoneAppIcon 支持）：白描线翻开的书，
     // 底色由 .iphone-app-icon--worldbook 的渐变给出（Apple Books 观感）。
     iconSvg: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.8 5 9 4.4 6.6 4.4c-.9 0-1.7.1-2.4.3v13.6c.7-.2 1.5-.3 2.4-.3 2.4 0 4.2.6 5.4 1.8 1.2-1.2 3-1.8 5.4-1.8.9 0 1.7.1 2.4.3V4.7c-.7-.2-1.5-.3-2.4-.3-2.4 0-4.2.6-5.4 1.8z"/><path d="M12 6.2v13.6"/></g></svg>',
+  },
+  {
+    id: 'xhs',
+    name: '小红书',
+    iconClass: 'iphone-app-icon--xhs',
   },
   {
     id: 'settings',
@@ -399,6 +404,172 @@ const IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT = Object.freeze({
   replyGuidance: IPHONE_WECHAT_MOMENTS_REPLY_GUIDANCE,
   replyFormat: IPHONE_WECHAT_MOMENTS_REPLY_FORMAT,
 });
+
+// ---------- 小红书（v0.26.0） ----------
+// 与微信朋友圈最本质的差别：朋友圈是「联系人发帖」（名单固定、都是剧情里的人），
+// 小红书是「网友发帖」——发布者是一群与玩家素不相识的互联网陌生人。网友由 AI
+// 现场发明（昵称 / IP 属地 / 简介 / 人设），发过一次就进「网友池」沉淀下来，之后
+// 复用同一个身份继续发帖、互相评论，像真实社区那样有熟面孔。因此小红书的生成
+// 提示词里没有联系人名单，改为「已有网友名单 + 允许新造网友」。
+//
+// 小红书笔记生成（下拉刷新）：一次生成 1~3 篇网友笔记，每篇自带封面主题、标题、
+// 正文、话题、位置与互动（点赞数 / 收藏数 / 评论区）。封面主题是给插件用的——
+// 模型不能选图，改为报一个题材，插件从内置图库里挑一张同题材的封面，保证图文相符。
+const IPHONE_XHS_NOTE_GUIDANCE = `# 任务
+- 你要为「小红书」首页生成新的网友笔记：每次写 1~3 篇，像真实社区的信息流那样题材各异、长短不一。
+- 网友是互联网上素不相识的陌生人：发布者不是「{{user}}」的联系人，也不要把主线剧情里的人物直接搬进来当网友（除非设定上他们真的会发小红书）。
+- 发布者可以是已有网友名单里的人（熟面孔回归，延续 TA 一贯的人设与内容方向），也可以新造一位网友——新网友要有辨识度高的昵称、合理的小红书号和 IP 属地。
+- 题材要贴合小红书真实生态：美食探店、减脂餐、穿搭、美妆、家居收纳、租房、宠物、旅行攻略、数码测评、职场吐槽、情感困惑、学习方法、追星、手工、健身、吐槽避雷……一次刷新里不要两三篇都挤在同一题材。
+- 内容可以与当前剧情、世界书有一点点若有若无的呼应（比如同一座城市、同一个行业、正在流行的话题），但不要写成剧情的复述，更不要出现「{{user}}」的名字。
+- 每篇笔记都要有互动：点赞数、收藏数与评论区（1~3 条评论），像真实小红书那样有人捧场、有人追问、有人杠。评论区里其他网友可以互相接话，也可以由作者本人回复。
+- 数据要真实可信：普通网友的笔记点赞几十到几千，只有内容特别抓人的才上万；收藏数一般少于点赞数；评论数远少于点赞数。不要每篇都写爆款。
+
+# 笔记写法
+- 标题是小红书的灵魂：口语化、有信息量、带一点钩子（数字、对比、悬念、情绪），20 字以内，可以带 emoji。
+- 正文像真人在分享：第一人称，讲自己的经历与感受，可以有具体的细节（价格、地点、时间、品牌），分成两三句自然的短句。
+- 话题标签紧贴内容，2~4 个，用 # 开头。
+- 先是人，后是设定：不同网友的语气、关注点与生活方式要有明显差异——精致的人、糙快的人、抠门的人、爱较真的人，写出来的东西不该是一个味道。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区块。每个区块按下面的字段逐行书写，完整示例（昵称、内容与数据仅示意，必须换成贴合当前剧情的真实内容）：\n\n'
+  + '昵称：小鹿今天吃什么\n'
+  + '小红书号：lulu_eats\n'
+  + 'IP：上海\n'
+  + '简介：一人食便当日记｜省钱也要吃好\n'
+  + '封面：美食\n'
+  + '标题：一周不重样的减脂便当，成本不到15块🍱\n'
+  + '正文：最近在控制体重，外卖实在吃不起也不健康，索性自己带饭。周一到周五的搭配都写在图里了，鸡胸肉用空气炸锅烤的，嫩得不像话。最贵的一餐是周三的牛肉，也就 22 块。\n'
+  + '话题：#减脂餐 #便当 #上班带饭 #省钱\n'
+  + '位置：上海\n'
+  + '点赞：1286\n'
+  + '收藏：734\n'
+  + '评论：\n'
+  + '汤圆不圆：周三那个牛肉看着好嫩，求做法！\n'
+  + '小鹿今天吃什么 回复 汤圆不圆：牛里脊切薄片，黑胡椒海盐抓一下，热锅三十秒就好～\n'
+  + '打工人小张：15块？我楼下盖饭都22了[捂脸]\n\n'
+  + '格式说明：\n'
+  + '- 「昵称」是发布者：写已有网友名单里的名字，或新造一位网友。\n'
+  + '- 「小红书号」「IP」「简介」只有新造网友时才有意义（已有网友沿用 TA 原来的资料），写不写都行。\n'
+  + '- 「封面」从这些题材里挑一个最贴合的（只能填题材名）｜'
+  + '美食、宠物、旅行、家居、数码、穿搭、探店。\n'
+  + '- 「标题」一行写完，不要换行；「正文」一行写完，不要换行（可以用逗号分句）。\n'
+  + '- 「话题」用 # 开头，2~4 个，用空格分隔。\n'
+  + '- 「位置」写城市名（可省略）。\n'
+  + '- 「点赞」「收藏」写阿拉伯数字（可省略，省略时插件按 0 处理）。\n'
+  + '- 「评论：」单独占一行，下面每行一条评论，1~3 条，格式为「评论人：内容」，'
+  + '作者回复写作「作者昵称 回复 评论人：内容」。评论人可以是已有网友，也可以是新网友（会自动收进网友池）。\n'
+  + '只输出符合格式的笔记区块，不要输出任何解释、旁白或格式以外的文字。';
+// 小红书「评论/回复」：玩家在某篇笔记下留言后，调用一次对话 API 生成新的评论回复
+//（作者本人或路过的网友应声）。与朋友圈同一套「评论人：内容」行格式。
+const IPHONE_XHS_REPLY_GUIDANCE = `# 任务
+- 你正在小红书的一篇笔记下面：玩家「{{user}}」留下了新评论，请生成 1~3 条新的评论回复。
+- 谁来应声要合理：作者本人（笔记的发布者）看到评论多半会回；路过的网友也常常插话、追问、抖机灵、抬杠——真实小红书的评论区里，陌生网友之间的互动往往比作者还热闹。
+- 回复要顺着评论区已有的对话往下接，不复读别人说过的话；玩家点名回复了谁，优先让那个人应声。
+- 不要替玩家「{{user}}」发言：TA 的评论由玩家自己写。
+- 语气完全是小红书评论区的语气：短、口语、有网感，可以用 emoji 和网络用语，不要客气话套话。
+
+# 写法
+- 评论是一两句话，不是长文，也不是笔记正文。
+- 不同网友的语气要有差异；作者回复和路人评论要能分得出来。
+- 不出现编号、条目式播报或任何系统腔。`;
+const IPHONE_XHS_REPLY_FORMAT = '每条新评论占一行，输出 1~3 行。每行格式为「评论人：内容」，回复某人时写成「评论人 回复 被回复人：内容」。完整示例（人名与内容仅示意）：\n\n'
+  + '汤圆不圆：蹲一个空气炸锅型号🙏\n'
+  + '小鹿今天吃什么 回复 {{user}}：谢谢喜欢～下次做卤牛肉再发一篇\n\n'
+  + '格式说明：评论人必须是已有的网友昵称、这篇笔记的作者，或一位新造的网友昵称（会自动收进网友池）；不要替玩家说话。'
+  + '内容一行写完、不要换行；不要输出点赞行、笔记正文或任何解释、旁白。只输出符合格式的评论行。';
+// 「设置 · 小红书提示词」：小红书笔记生成与评论回复用的提示词组合，存
+// settings.promptPresets.xhsNotes。字段与 IPHONE_QZONE_PRESET_DEFAULT 同义，
+// 唯一差别是 guidance / format 面向「网友」而不是「联系人」。
+const IPHONE_XHS_PRESET_DEFAULT = Object.freeze({
+  persona: '你正在扮演小红书上的网友们——一群与「{{user}}」素不相识的互联网陌生人。'
+    + '他们的昵称、IP 属地、生活方式与说话方式都由你现场发明，可以呼应世界书与主线剧情里的时代背景、城市与流行话题，'
+    + '但不要直接把剧情人物写成网友。每位网友一旦出现就要保持人设一致，像一个真实的人那样持续发帖与评论。',
+  worldBook: true,
+  latestFloor: false, // 与另外两个动态页一致：默认不带记录楼层
+  historyFloors: 5,
+  npcLogic: IPHONE_QQ_NPC_LOGIC,
+  dialogueGuidance: IPHONE_QQ_DIALOGUE_GUIDANCE,
+  guidance: IPHONE_XHS_NOTE_GUIDANCE,
+  format: IPHONE_XHS_NOTE_FORMAT,
+  replyGuidance: IPHONE_XHS_REPLY_GUIDANCE,
+  replyFormat: IPHONE_XHS_REPLY_FORMAT,
+});
+// 小红书「我」的资料占位演示值（小红书号 / 属地）：昵称默认跟随酒馆 {{user}}，
+// 头像与简介由玩家在「编辑资料」里改。
+const IPHONE_XHS_ME = Object.freeze({
+  xhsId: '8823771906',
+  ip: '江苏',
+});
+// 小红书头像款式（assets/xhs-avatar-*.png，DiceBear 生成，见 README「素材来源」）：
+// me = 默认（纯 CSS 灰底人形占位，无覆盖类），其余 20 款为覆盖类。
+const IPHONE_XHS_ME_AVATAR_PRESETS = Object.freeze([
+  { id: 'me', label: '默认' },
+  { id: 'a1', label: '短发男生' },
+  { id: 'a2', label: '绿发' },
+  { id: 'a3', label: '橘发' },
+  { id: 'a4', label: '黑长直' },
+  { id: 'a5', label: '卷发' },
+  { id: 'a6', label: '刘海' },
+  { id: 'a7', label: '清爽' },
+  { id: 'a8', label: '波浪' },
+  { id: 'a9', label: '利落' },
+  { id: 'a10', label: '深肤色' },
+  { id: 'a11', label: '金发' },
+  { id: 'a12', label: '眼镜' },
+  { id: 'a13', label: '卫衣' },
+  { id: 'a14', label: '条纹' },
+  { id: 'a15', label: '碎花' },
+  { id: 'a16', label: '墨镜' },
+  { id: 'a17', label: '白发' },
+  { id: 'a18', label: '辫子' },
+  { id: 'a19', label: '笑脸' },
+  { id: 'a20', label: '蓝紫' },
+]);
+// 小红书笔记封面图库：模型在生成时报一个「题材」，插件从这里挑同题材的一张
+//（未命中题材就按哈希随便挑一张），保证图文题材相符。ratio = 宽/高，瀑布流的
+// 卡片高度按它算，长短交错才像真实信息流。文件见 assets/xhs-cover-*.jpg。
+const IPHONE_XHS_COVERS = Object.freeze([
+  { id: 'c01', topic: '美食', ratio: 0.75 },
+  { id: 'c02', topic: '美食', ratio: 1 },
+  { id: 'c03', topic: '美食', ratio: 0.8 },
+  { id: 'c04', topic: '美食', ratio: 1 },
+  { id: 'c05', topic: '宠物', ratio: 0.75 },
+  { id: 'c06', topic: '宠物', ratio: 0.8 },
+  { id: 'c07', topic: '旅行', ratio: 0.75 },
+  { id: 'c08', topic: '旅行', ratio: 0.8 },
+  { id: 'c09', topic: '旅行', ratio: 1 },
+  { id: 'c10', topic: '家居', ratio: 1 },
+  { id: 'c11', topic: '家居', ratio: 0.8 },
+  { id: 'c12', topic: '数码', ratio: 1 },
+  { id: 'c13', topic: '数码', ratio: 1.3333 },
+  { id: 'c14', topic: '穿搭', ratio: 0.75 },
+  { id: 'c15', topic: '探店', ratio: 1.3333 },
+  { id: 'c16', topic: '探店', ratio: 1 },
+]);
+// 首页顶部的主频道（关注 / 发现）与「发现」下的题材横滑条（对照真实小红书首屏）：
+// 推荐 = 全部笔记；其余按话题与标题关键词过滤（见 iphoneXhsNoteMatchesChannel）。
+const IPHONE_XHS_CHANNELS = Object.freeze(['推荐', 'RED', '热点', '直播', '短剧', '穿搭']);
+// 首页右上角切换的城市（仅作展示，对照真实小红书的定位入口）。
+const IPHONE_XHS_CITY_DEFAULT = '盐城';
+// 底部标签栏：首页 / 市集 / 发布 / 消息 / 我（中间是红色圆形「+」发布钮）。
+const IPHONE_XHS_TABS = Object.freeze(['首页', '市集', '发布', '消息', '我']);
+// 笔记详情的默认演示数据：小红书号、点赞/收藏/评论的初始计数量级。
+const IPHONE_XHS_NOTE_LIKES_BASE = 0;
+// 网友池上限与头像池大小：网友发帖 / 评论时自动注册，超过上限后不再新增
+//（旧的仍在，只是不再收新面孔），头像按序号循环取用。
+const IPHONE_XHS_NETIZEN_CAP = 60;
+const IPHONE_XHS_AVATAR_POOL = 20;
+// 一次下拉刷新生成的笔记条数上限（AI 通常写 1~3 篇）。
+const IPHONE_XHS_REFRESH_MAX_NOTES = 3;
+// 笔记正文与标题的长度上限（归一化时截断，防脏数据撑爆界面）。
+const IPHONE_XHS_TITLE_CAP = 60;
+const IPHONE_XHS_TEXT_CAP = 2000;
+const IPHONE_XHS_COMMENT_CAP = 300;
+// 「消息」页的三条聚合入口（赞和收藏 / 新增关注 / 评论和@，对照真实小红书）。
+const IPHONE_XHS_MSG_ENTRIES = Object.freeze([
+  { id: 'likes', label: '赞和收藏', tone: 'pink' },
+  { id: 'follows', label: '新增关注', tone: 'blue' },
+  { id: 'comments', label: '评论和@', tone: 'green' },
+]);
 // 「我」的微信资料占位演示值：微信号留空时回退这个；昵称默认跟随酒馆 {{user}}。
 const IPHONE_WECHAT_ME = Object.freeze({
   wxId: 'wxid_8f2k1m9v0q',
@@ -549,10 +720,16 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 世界书（条目排除）：excluded = { 世界书名: [uid, …] }。勾选排除的条目
   // 拼聊天提示词时跳过，不发给 AI（shape 与 SoulLink 的 worldInfo.excluded 一致）。
   worldInfo: { excluded: {} },
+  // 第三方注入捕获（v0.26.0）：别的扩展经 setExtensionPrompt 注入酒馆主提示词的
+  // 内容（万华镜的 <Values> 变量、SoulLink 的 NPC 推理、World 的世界状态、脚本
+  // 注入等），本插件在宿主「提示词就绪」事件里抓快照，拼进自己的子请求，让手机上
+  // 的模型与主线剧情保持一致。false = 不附带（手机请求回到「只看自己拼的段」）。
+  injectCaptureEnabled: true,
   // 提示词预设：各聊天场景的提示词组合（「设置 · 私聊提示词」/「群聊提示词」/
-  // 「动态提示词」/「朋友圈提示词」里编辑）。qqChat = QQ 联系人聊天；groupChat =
-  // QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；wechatChat /
-  // wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）。
+  // 「动态提示词」/「朋友圈提示词」/「小红书提示词」里编辑）。qqChat = QQ 联系人
+  // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；
+  // wechatChat / wechatGroup / wechatMoments = 微信的对应三组（v0.18.0 起）；
+  // xhsNotes = 小红书笔记生成与评论回复（v0.26.0 起）。
   promptPresets: {
     qqChat: { ...IPHONE_QQ_CHAT_PRESET_DEFAULT },
     groupChat: { ...IPHONE_QQ_GROUP_PRESET_DEFAULT },
@@ -560,6 +737,7 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
     wechatChat: { ...IPHONE_WECHAT_CHAT_PRESET_DEFAULT },
     wechatGroup: { ...IPHONE_WECHAT_GROUP_PRESET_DEFAULT },
     wechatMoments: { ...IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT },
+    xhsNotes: { ...IPHONE_XHS_PRESET_DEFAULT },
   },
 });
 // 思考强度选项：reasoning_effort 是 OpenAI 兼容标准参数（Ollama /v1/chat/completions
@@ -586,10 +764,11 @@ const IPHONE_CHAT_TIMEOUT_MS = 120000;
 const IPHONE_FLOOR_TAG_NAME = 'iPhone_Message';
 const IPHONE_FLOOR_TAG_OPEN = `<${IPHONE_FLOOR_TAG_NAME}>`;
 const IPHONE_FLOOR_TAG_CLOSE = `</${IPHONE_FLOOR_TAG_NAME}>`;
-// 记录楼层的段头识别（v0.18.0 起 QQ 与微信共用同一楼层，按段头切分）：
-// QQ 私聊/群聊/空间动态 + 微信私聊/群聊/朋友圈动态，六种段头并列，互不干扰。
-// 用整行做段键（match[0]），分组只用于兼容旧写法，取用时不看分组。
-const IPHONE_FLOOR_SECTION_RE = /^(?:与?「(.+)」的QQ聊天记录|群「(.+)」的QQ群聊记录|QQ空间动态|与?「(.+)」的微信聊天记录|群「(.+)」的微信群聊记录|朋友圈动态)：$/;
+// 记录楼层的段头识别（v0.18.0 起 QQ 与微信共用同一楼层，按段头切分；v0.26.0 加
+// 小红书）：QQ 私聊/群聊/空间动态 + 微信私聊/群聊/朋友圈动态 + 小红书笔记，
+// 七种段头并列，互不干扰。用整行做段键（match[0]），分组只用于兼容旧写法，
+// 取用时不看分组。
+const IPHONE_FLOOR_SECTION_RE = /^(?:与?「(.+)」的QQ聊天记录|群「(.+)」的QQ群聊记录|QQ空间动态|与?「(.+)」的微信聊天记录|群「(.+)」的微信群聊记录|朋友圈动态|小红书笔记)：$/;
 // 记录段的标签（v0.21.0 起）：外层仍是 <iPhone_Message>，标签内每个记录段
 // 各自再套一层自己的标签；段标签自 v0.23.0 起改用方括号包（只有最外层
 // iPhone_Message 保留尖括号），形如
@@ -613,9 +792,10 @@ const IPHONE_FLOOR_SECTION_TAG_HEADS = Object.freeze({
   wechatChat: '微信_私聊_{name}',
   wechatGroup: '微信_群聊_{name}',
   wechatMoments: '朋友圈动态',
+  xhsNotes: '小红书笔记',
 });
 // 段标签名本体：不含外侧定界符与开标签前的 /（两种定界符由解析函数剥离）。
-const IPHONE_FLOOR_SECTION_TAG_NAME_RE = /^(?:(?:QQ|微信)_(?:私聊|群聊)_[^\s[\]<>/]+|QQ空间动态|朋友圈动态)$/;
+const IPHONE_FLOOR_SECTION_TAG_NAME_RE = /^(?:(?:QQ|微信)_(?:私聊|群聊)_[^\s[\]<>/]+|QQ空间动态|朋友圈动态|小红书笔记)$/;
 
 // ---------- 悬浮球 ----------
 // 造型为 Apple LOGO（simple-icons「Apple」，MIT 图标集，白色填充 + 投影）。
@@ -1354,9 +1534,9 @@ function iphoneFloorParseTagLine(line) {
   return IPHONE_FLOOR_SECTION_TAG_NAME_RE.test(inner) ? { tag: inner, closing } : null;
 }
 
-// 由段头反推该段的标签名：段头是六种固定写法之一，名字从段头里剥出。旧格式
+// 由段头反推该段的标签名：段头是七种固定写法之一，名字从段头里剥出。旧格式
 // （裸段头、无标签）的段在同步时靠它补上标签，完成原地迁移；段头认不出来
-// （不属于六种）时返回 null，该段原样保留、不包标签。
+// （不属于七种）时返回 null，该段原样保留、不包标签。
 function iphoneFloorSectionTagFor(header) {
   const text = String(header ?? '').trim();
   let matched = text.match(/^与?「(.+)」的QQ聊天记录：$/);
@@ -1369,6 +1549,7 @@ function iphoneFloorSectionTagFor(header) {
   matched = text.match(/^群「(.+)」的微信群聊记录：$/);
   if (matched) return IPHONE_FLOOR_SECTION_TAG_HEADS.wechatGroup.replace('{name}', iphoneFloorSectionTagName(matched[1], '未知群聊'));
   if (text === '朋友圈动态：') return IPHONE_FLOOR_SECTION_TAG_HEADS.wechatMoments;
+  if (text === '小红书笔记：') return IPHONE_FLOOR_SECTION_TAG_HEADS.xhsNotes;
   return null;
 }
 
@@ -2501,6 +2682,338 @@ try {
 }
 
 
+// ===== js/inject.js =====
+// ===== iPhone 第三方注入捕获：把别的扩展注入酒馆提示词的内容带进本插件的提示词 =====
+//
+// 背景：本插件的子请求（QQ / 微信 / 朋友圈 / 小红书）不经过酒馆生成管线（自己拼
+// messages 直连 API），因此别的扩展（万华镜的 <Values> 变量、SoulLink 的 NPC 推理、
+// World 的世界状态、生物追踪等）经 setExtensionPrompt 注册进酒馆主提示词的内容，
+// 本插件的请求一律看不到——手机上聊天的模型于是不知道当前变量状态，与主线剧情脱节。
+//
+// 机制：SillyTavern / TauriTavern 的 setExtensionPrompt(key, value, position, depth,
+// scan, role) 只是往宿主内部的 extension_prompts 注册表里写一条记录，
+// getContext() 把这个注册表按 extensionPrompts 暴露出来（同一份活对象）。本模块
+// 读它、按 position 过滤出「会进提示词正文」的条目，拼进本插件各请求的 system。
+// 完全不认识任何具体扩展，也不需要对方配合——谁写的都读得到。
+//
+// 时机（关键）：万华镜这类扩展在 generationEnded 后会把注入清空，下一轮发送前才
+// 重新注入。也就是说注册表里平时没有它那条，只有在「宿主正在组装主请求」的那一
+// 刻才有内容。因此快照不能等用户点开手机时再取，而是在宿主事件里抓：
+//   - chat_completion_prompt_ready（对话补全，eventData.chat 是最终消息数组）
+//   - generate_after_combine_prompts（文本补全，eventData.prompt 是最终整串）
+// 这两个事件在宿主拼完提示词、即将发请求时触发，此刻注册表里正是本轮注入。
+// 抓到的快照留在内存（最近一次），手机发子请求时读它拼段。
+//
+// 第二条取材路径（实时读）：只在手机里聊天、从不往酒馆发消息时，宿主永远不组装主
+// 提示词，上面两个事件永远不触发，快照就一直是空的。这类插件（常驻型：生物追踪、
+// 世界引擎等）的特点是把注入长期留在注册表里，所以直接读当前注册表即可——不需要
+// 认识任何具体插件，也不需要对方配合。
+//
+// 合并规则（iphoneInjectEffectiveEntries）：实时读到的条目打底，快照里的条目按
+// 键补齐。即「同一键以实时值为准」——实时非空就是插件此刻要注入的版本；实时为空
+// 或键已消失时保留快照里的上一份，好让只在手机里聊天的用户也能看到上一轮酒馆组装
+// 时的注入（发送期注入只在「点发送 → 生成结束」之间存在，之后被扩展清空，不在快照
+// 里留一份就永远看不到）。代价：插件关掉注入后，旧值会留到下一次酒馆组装为止——
+// 这是通用机制下无法区分的（清空与关闭在注册表里都表现为空值），可接受。
+//
+// 不做什么：不去调其他插件的内部函数、不读它们的存储、不替它们跑发送前任务。
+// 宿主以 <script type="module"> 加载扩展，顶层函数本来也拿不到（不挂 globalThis），
+// 而各家私有接口/存储格式各不相同——按插件逐个适配既做不完也一改就坏。
+//
+// 过滤：只收「进正文」的位置（IN_PROMPT=0 / IN_CHAT=1），BEFORE_PROMPT=2 与
+// NONE=-1 不算；空值与 filter() 返回 false 的条目跳过（与宿主的判定一致，见
+// script.js 的 getAllExtensionPrompts / getExtensionPrompt）。
+//
+// 排除宿主的核心注入：世界书（并进作者注槽 2_floating_prompt 的条目、深度条目
+// customDepthWI_*）、记忆 / 向量库 / 数据银行、DEPTH_PROMPT 系列等是酒馆自己每轮
+// 注册的，不是「别的扩展」。世界书本插件已按自己的方式发（<world_info> 段），
+// 再抄一遍只会重复占上下文、把真正想看的第三方内容（万华镜变量表）挤下去。
+//
+// 排除自身：本插件也会往注册表写东西（楼层同步等），用 IPHONE_INJECT_SELF_KEYS
+// 里的键前缀挡掉，避免自己抄自己。
+//
+// 降级：宿主不暴露 extensionPrompts（本地 test.html 预览、或将来版本换了形状）时
+// 静默跳过——快照为空，各请求与从前完全一样。
+
+// 最近一次快照：{ ts, reason, entries: [{ key, value, position, depth }] }。
+// 只在内存，不落盘（注入内容每轮都在变，存下来只会误导）。
+let iphoneInjectSnapshot = null;
+
+// 本插件自己注册进宿主的键（前缀）：捕获时跳过，别把自己的注入抄回来。
+const IPHONE_INJECT_SELF_KEYS = Object.freeze(['iPhone_']);
+
+// 宿主（酒馆本体）自己注册的注入键，不算「第三方」：
+//   - 2_floating_prompt：作者注槽。世界书勾了「并进作者注」时，酒馆把
+//     WI 条目拼进这个槽（见 world-info.js 的 shouldWIAddPrompt 分支），
+//     所以它常常是一整块世界书内容，而非扩展注入。
+//   - customDepthWI_<depth>_<role>：深度世界书条目（script.js 的 flushWIInjections）。
+//   - customWIOutlet_*：世界书的 outlet 条目（走 NONE 位置，本就收不到，一并挡）。
+//   - 1_memory / 3_vectors / 4_vectors_data_bank / DEPTH_PROMPT*：记忆、向量库、
+//     数据银行、深度提示词槽，也都是核心功能而非第三方扩展。
+// 这些内容要么本插件已按自己的方式发送（世界书 → <world_info> 段），要么属于
+// 酒馆主请求的固有部分，抄进来只会重复占上下文。
+const IPHONE_INJECT_HOST_KEYS = Object.freeze([
+  '2_floating_prompt',
+  '1_memory',
+  '3_vectors',
+  '4_vectors_data_bank',
+  'chromadb',
+  'PERSONA_DESCRIPTION',
+  'QUIET_PROMPT',
+]);
+// 前缀式宿主键（带动态后缀）：自定义深度世界书 / 深度提示词槽 / outlet。
+const IPHONE_INJECT_HOST_KEY_PREFIXES = Object.freeze([
+  'customDepthWI',
+  'customWIOutlet',
+  'DEPTH_PROMPT',
+]);
+
+// 单条注入的保留上限：变量表这类内容通常几 KB，给足余量；离谱的大块（整本世界书
+// 误注册成注入）截断，免得一条就吃掉整个上下文。
+const IPHONE_INJECT_ENTRY_CAP = 20000;
+// 拼进请求的总上限：多条注入合计截断，保证手机请求的 system 不至于爆掉。
+const IPHONE_INJECT_TOTAL_CAP = 40000;
+
+// ---------- 读取宿主注册表 ----------
+
+// 取宿主的 extension_prompts 活对象；不暴露或形状不对时返回 null。
+function iphoneInjectRegistry() {
+  try {
+    const ctx = iphoneGetContextSafe();
+    const registry = ctx?.extensionPrompts;
+    return registry && typeof registry === 'object' && !Array.isArray(registry) ? registry : null;
+  } catch {
+    return null;
+  }
+}
+
+// 条目是否「会进提示词正文」：宿主只把 IN_PROMPT(0) / IN_CHAT(1) 两种位置拼进
+// 提示词，BEFORE_PROMPT(2) 走别的通路、NONE(-1) 是清除标记，都不收。
+function iphoneInjectIsInjectable(entry) {
+  const position = Number(entry?.position);
+  return position === 0 || position === 1;
+}
+
+// 本插件自己写的键（楼层同步 / 预设等）不捕获。
+function iphoneInjectIsSelfKey(key) {
+  return IPHONE_INJECT_SELF_KEYS.some((prefix) => String(key).startsWith(prefix));
+}
+
+// 宿主核心注入（世界书 / 作者注槽、记忆、向量库、深度提示词等）不捕获：
+// 它们不是「别的扩展」，且世界书本插件已自带 <world_info> 段。
+function iphoneInjectIsHostKey(key) {
+  const name = String(key);
+  if (IPHONE_INJECT_HOST_KEYS.includes(name)) return true;
+  return IPHONE_INJECT_HOST_KEY_PREFIXES.some((prefix) => name.startsWith(prefix));
+}
+
+// 宿主对 filter() 的判定是「有 filter 且返回 false 才跳过」，可能是同步或异步。
+// 捕获时同步取；返回 Promise 的（异步 filter）按 true 处理，宁可留着也别误删。
+function iphoneInjectFilterPasses(entry) {
+  const filter = entry?.filter;
+  if (typeof filter !== 'function') return true;
+  try {
+    const result = filter();
+    if (result && typeof result.then === 'function') return true;
+    return !!result;
+  } catch {
+    return true;
+  }
+}
+
+// 宿主在把注入拼进提示词前会做一次宏替换（openai.js 的 getPromptAssemblyExtensionPrompt
+// 末尾调 substitutePromptParams），快照跟着替换，手机看到的才是主线模型真正看到的
+// 那一份（{{user}} / {{char}} / 变量等已展开）。宿主不提供该 API 时原样保留。
+function iphoneInjectSubstitute(text) {
+  const raw = String(text ?? '');
+  if (!raw) return '';
+  try {
+    const ctx = iphoneGetContextSafe();
+    const substitute = typeof ctx?.substituteParams === 'function' ? ctx.substituteParams : null;
+    if (!substitute) return raw;
+    const result = substitute.call(ctx, raw);
+    return typeof result === 'string' && result ? result : raw;
+  } catch {
+    return raw;
+  }
+}
+
+// 从注册表按当前状态收集可注入条目（快照用）。返回按宿主拼装顺序（键名排序，
+// 与 script.js 的 getExtensionPrompt sort() 一致）排列的数组。
+function iphoneInjectCollectEntries() {
+  const registry = iphoneInjectRegistry();
+  if (!registry) return [];
+  const entries = [];
+  for (const key of Object.keys(registry).sort()) {
+    if (iphoneInjectIsSelfKey(key)) continue;
+    if (iphoneInjectIsHostKey(key)) continue;
+    const entry = registry[key];
+    if (!entry || typeof entry !== 'object') continue;
+    const value = String(entry.value ?? '').trim();
+    if (!value) continue;
+    if (!iphoneInjectIsInjectable(entry)) continue;
+    if (!iphoneInjectFilterPasses(entry)) continue;
+    const resolved = iphoneInjectSubstitute(value);
+    entries.push({
+      key: String(key),
+      value: resolved.length > IPHONE_INJECT_ENTRY_CAP ? `${resolved.slice(0, IPHONE_INJECT_ENTRY_CAP)}…（已截断）` : resolved,
+      position: Number(entry.position),
+      depth: Number(entry.depth) || 0,
+    });
+  }
+  return entries;
+}
+
+// ---------- 快照 ----------
+
+// 抓一份快照（宿主组装主提示词时调用）。返回是否抓到内容。
+// dryRun（提示词管理器预览 / 干跑）不算：那种组装拿不到真实的本轮注入，抓到空会
+// 把上一份有效快照冲掉——只更新，不清空。
+function iphoneInjectCapture(reason, dryRun) {
+  try {
+    const entries = iphoneInjectCollectEntries();
+    if (!entries.length) {
+      if (dryRun) return false;
+      // 本轮没有任何第三方注入：保留上一份也没意义（变量会变），清掉更干净，
+      // 避免把上一轮的状态当成这一轮的。
+      iphoneInjectSnapshot = null;
+      return false;
+    }
+    iphoneInjectSnapshot = { ts: Date.now(), reason: String(reason || ''), entries };
+    iphoneLog('debug', `捕获第三方注入 ${entries.length} 条（${entries.map((e) => e.key).join(', ')}）`);
+    return true;
+  } catch (error) {
+    iphoneLog('warn', '捕获第三方注入失败', error);
+    return false;
+  }
+}
+
+function iphoneInjectGetSnapshot() {
+  return iphoneInjectSnapshot;
+}
+
+// ---------- 实时读：当前注册表里有什么 ----------
+//
+// 与快照同源（iphoneInjectCollectEntries），区别只在时机：快照抓的是「宿主正在组装
+// 主提示词」那一刻的注册表，这里读的是「手机要发请求」这一刻的注册表。常驻型扩展
+// （注入长期留在注册表里）两条路都能看到；发送期扩展（发送前写入、生成结束清空）
+// 只有快照那条能看到。
+//
+// 内容与格式完全由对方决定，本插件只负责搬运，不解析也不重写。
+
+// 合并：实时读到的打底（同一键以它为准），快照里的按键补齐。
+// 排序按 key，与宿主拼装顺序（script.js 的 getExtensionPrompt sort()）一致。
+// 条目带 live 标记：true = 此刻注册表里的实时值，false = 上一轮快照里带过来的
+// （发送期注入在被清空后只能这样取到），设置页据此标注新鲜度。
+function iphoneInjectEffectiveEntries() {
+  const live = iphoneInjectCollectEntries().map((entry) => ({ ...entry, live: true }));
+  const liveKeys = new Set(live.map((entry) => entry.key));
+  const snapshot = iphoneInjectSnapshot;
+  const snapshotEntries = snapshot && Array.isArray(snapshot.entries) ? snapshot.entries : [];
+  const carried = snapshotEntries
+    .filter((entry) => !liveKeys.has(String(entry?.key ?? '')))
+    .map((entry) => ({ ...entry, live: false }));
+  const merged = live.concat(carried);
+  merged.sort((a, b) => String(a?.key ?? '').localeCompare(String(b?.key ?? '')));
+  return merged;
+}
+
+// 切换聊天 / 开新对话时清掉：快照里的变量状态属于上一个聊天，带进新聊天只会
+// 让手机上聊天的模型看到别人的状态；新聊天首次发送前会有自己的捕获。
+function iphoneInjectClearSnapshot() {
+  iphoneInjectSnapshot = null;
+}
+
+// ---------- 拼段 ----------
+
+// 取「本次请求要附带」的注入段文本；未开启 / 无内容时返回 ''。
+// settings.injectCapture 为「设置 · 第三方注入」里的开关（默认开启：捕获的内容
+// 本身就来自玩家已启用的扩展，本插件只是把它带给手机上的对话）。
+function iphoneInjectBuildSection() {
+  if (!iphoneInjectCaptureEnabled()) return '';
+  const entries = iphoneInjectEffectiveEntries();
+  if (!entries.length) return '';
+  const lines = [];
+  let total = 0;
+  for (const entry of entries) {
+    const text = String(entry?.value ?? '').trim();
+    if (!text) continue;
+    if (total + text.length > IPHONE_INJECT_TOTAL_CAP) break;
+    total += text.length;
+    lines.push(text);
+  }
+  return lines.join('\n\n');
+}
+
+// 拼成 system 里的一段（带标签与介绍行），无内容返回 ''。
+// 标签用 <context_injection>：内容来自别的扩展、格式由对方决定（万华镜是 YAML、
+// SoulLink 是推理文本），本插件不解析、不裁剪，原样带给模型。
+function iphoneInjectSystemPart(body) {
+  const text = String(body ?? '');
+  if (!text) return '';
+  return '以下是酒馆主提示词里由其他扩展注入的上下文（如变量状态、剧情事件等，'
+    + '格式由各扩展自行决定，原样带给你；请让接下来的内容与之一致）：\n'
+    + `<context_injection>\n${text}\n</context_injection>`;
+}
+
+// 结构说明行（拼进【提示词结构说明】的条目列表），无内容返回 ''。
+function iphoneInjectOutlineItem(body) {
+  if (!String(body ?? '')) return '';
+  return '<context_injection>…</context_injection>：酒馆主提示词里由其他扩展注入的上下文（如变量状态、剧情事件），与主线剧情保持一致；';
+}
+
+// 各提示词组装点用这一个入口：一次算出「system 段 + 结构说明行」，没有内容时
+// 返回 null（调用方据此跳过）。body 只算一次，避免两次拼接开销。
+function iphoneInjectPromptParts() {
+  const body = iphoneInjectBuildSection();
+  if (!body) return null;
+  return {
+    system: iphoneInjectSystemPart(body),
+    outline: iphoneInjectOutlineItem(body),
+  };
+}
+
+// ---------- 设置 ----------
+
+function iphoneInjectCaptureEnabled() {
+  const value = iphoneGetSettings().injectCaptureEnabled;
+  return value === undefined ? true : !!value;
+}
+
+// ---------- 宿主事件订阅 ----------
+
+// 两个「提示词就绪」事件：对话补全（chat 数组）与文本补全（整串）。事件在本轮
+// 拼接完成后、发请求前触发，此刻注册表里正是本轮注入。
+// 宿主事件源可能晚于装配就绪，按 main.js 的惯例重试订阅。
+function iphoneInjectEnsureSubscriptions(retries = 10) {
+  const ctx = iphoneGetContextSafe();
+  if (!ctx?.eventSource) {
+    if (retries > 0) {
+      setTimeout(() => iphoneInjectEnsureSubscriptions(retries - 1), 1000);
+    }
+    return;
+  }
+  const chatReady = iphoneOnHostEvent(ctx, 'CHAT_COMPLETION_PROMPT_READY', (eventData) => {
+    iphoneInjectCapture('chat_completion_prompt_ready', eventData?.dryRun);
+  }, 'inject_chat_ready');
+  const textReady = iphoneOnHostEvent(ctx, 'GENERATE_AFTER_COMBINE_PROMPTS', (eventData) => {
+    iphoneInjectCapture('generate_after_combine_prompts', eventData?.dryRun);
+  }, 'inject_text_ready');
+  if (chatReady || textReady) {
+    iphoneLog('info', '已订阅提示词就绪事件（捕获第三方扩展的提示词注入）');
+    // 切聊天 / 开新对话：快照属于上一个聊天，清掉（见 iphoneInjectClearSnapshot）。
+    iphoneOnHostEvent(ctx, 'CHAT_CHANGED', () => iphoneInjectClearSnapshot(), 'inject_chat_changed');
+    return;
+  }
+  if (retries > 0) setTimeout(() => iphoneInjectEnsureSubscriptions(retries - 1), 1000);
+  else iphoneLog('warn', '未能订阅提示词就绪事件：手机请求不带第三方扩展的注入内容');
+}
+
+// 本轮的注入内容在生成结束后会被各扩展自行清空，快照留到下一次捕获即可——
+// 手机子请求大多发生在主生成之后，正好用得上上一轮的注入；新一轮捕获会覆盖。
+iphoneInjectEnsureSubscriptions();
+
+
 // ===== js/apps.js =====
 // ===== iPhone（悬浮球手机）应用注册表：图标渲染 + 应用内页 =====
 // 应用内页目前全部是占位演示；后续把某个应用做成真功能时，替换对应
@@ -3216,6 +3729,8 @@ async function iphoneGenerateQqDynamics(ownerId) {
   const format = String(preset.format ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -3230,6 +3745,7 @@ async function iphoneGenerateQqDynamics(ownerId) {
     : '<contacts>…</contacts>：QQ联系人名单——动态的发布者只能从名单中挑选；');
   if (owner) outlineItems.push('<contacts_all>…</contacts_all>：QQ全部联系人名单——点赞与评论只认这份名单里的人；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<qq_chat_log>…</qq_chat_log>：最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   if (guidance) outlineItems.push('<dynamics_guidance>…</dynamics_guidance>：QQ空间动态的写作指导；');
@@ -3243,6 +3759,7 @@ async function iphoneGenerateQqDynamics(ownerId) {
     : `以下是QQ联系人名单（动态的发布者只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (owner) sysParts.push(`以下是QQ全部联系人名单（点赞与评论只认这份名单里的人）：\n<contacts_all>\n${allNamesRosterText}\n</contacts_all>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<qq_chat_log>\n${floorLogText}\n</qq_chat_log>`);
   if (guidance) sysParts.push(`以下是QQ空间动态的写作指导：\n<dynamics_guidance>\n${resolve(guidance)}\n</dynamics_guidance>`);
@@ -3417,6 +3934,8 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   const replyFormat = String(preset.replyFormat ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -3426,6 +3945,7 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：表达规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   outlineItems.push('<contacts>…</contacts>：QQ联系人名单——评论人只能从名单中挑选；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<qq_chat_log>…</qq_chat_log>：最近一次同步到酒馆楼层的QQ聊天记录，供你了解最近的聊天情况；');
   outlineItems.push('<dynamic_post>…</dynamic_post>：玩家正在回复的那条动态——发布者、正文、点赞名单与评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
@@ -3437,6 +3957,7 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   if (dialogueGuidance) sysParts.push(`以下是表达规范（决定你如何说话与写内容）：\n<dialogue_guidance>\n${fillGuide(dialogueGuidance)}\n</dialogue_guidance>`);
   sysParts.push(`以下是QQ联系人名单（评论人只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<qq_chat_log>\n${floorLogText}\n</qq_chat_log>`);
   const identityNote = customNick && customNick !== playerName
@@ -3662,6 +4183,9 @@ async function iphoneBuildQqChatRequestMessages(entity, conversation) {
   // 由介绍行 + XML 标签承担，剥掉避免重复。
   const format = preset.format.trim().replace(/^【输出格式】\s*/, '');
 
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
+
   const sysParts = [];
   if (persona) {
     sysParts.push(`<roleplay_instructions>\n${fill(persona)}\n</roleplay_instructions>`);
@@ -3675,6 +4199,7 @@ async function iphoneBuildQqChatRequestMessages(entity, conversation) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：对白规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   if (membersText) outlineItems.push(`<group_members>…</group_members>：本群成员列表——除玩家（${userName}）外的每位成员都由你扮演，输出时用行首名字区分发言人；`);
   if (worldText) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景；');
   if (floorLogText) outlineItems.push('<qq_chat_log>…</qq_chat_log>：最近一次同步到酒馆楼层的QQ聊天记录，可能包含多个联系人/群聊的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   if (format) outlineItems.push('<output_format>…</output_format>：回复格式要求，位于提示词末尾，必须严格遵守；');
@@ -3703,6 +4228,9 @@ async function iphoneBuildQqChatRequestMessages(entity, conversation) {
 
   if (worldText) {
     sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldText}\n</world_info>`);
+  }
+  if (injectParts) {
+    sysParts.push(injectParts.system);
   }
   if (tavernText) {
     sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
@@ -6604,6 +7132,8 @@ function iphoneSettingsIcons() {
     friendGroup: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8.8" r="3.1"/><circle cx="16.2" cy="9.8" r="2.4"/><path d="M3.8 18.8c0-2.9 2.3-4.7 5.2-4.7s5.2 1.8 5.2 4.7"/><path d="M16.6 14.6c2.1.3 3.6 1.8 3.6 4"/></g></svg>',
     // 「动态提示词」行图标（缺口圆环 + 四角星，与 QQ 图标集的 feed 同款）
     feed: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M19.5 9.9A8 8 0 1 1 13.4 4.7"/><path fill="currentColor" d="M17.6 1.3c.36 1.83 1.34 2.8 3.17 3.17-1.83.36-2.8 1.34-3.17 3.17-.36-1.83-1.34-2.8-3.17-3.17 1.83-.36 2.8-1.34 3.17-3.17z"/></svg>',
+    // 「第三方注入」行图标（↓ 落入托盘：捕获别的扩展注入的内容）
+    inject: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v9.4"/><path d="m8.3 9.5 3.7 3.7 3.7-3.7"/><path d="M4.7 15.2v2.8c0 1 .8 1.8 1.8 1.8h11c1 0 1.8-.8 1.8-1.8v-2.8"/></g></svg>',
   };
 }
 
@@ -7157,6 +7687,40 @@ function buildSettingsAppScreen() {
     action: () => screen.classList.add('is-wechatmomentspreset-open'),
   });
 
+  // 「小红书提示词」入口（v0.26.0）：编辑网友笔记生成与评论回复的提示词组合。
+  const xhsPresetRow = makeRow({
+    icon: 'feed',
+    tone: '#ff2442',
+    label: '小红书提示词',
+    action: () => screen.classList.add('is-xhspreset-open'),
+  });
+
+  // 「第三方注入」入口（v0.26.0）：开关 + 将要附带的内容预览（别的扩展注入酒馆
+  // 主提示词、被本插件顺带带进手机请求的那些段）。
+  const injectDetail = document.createElement('span');
+  const refreshInjectDetail = () => {
+    // 与请求实际附带的内容同源：实时读当前注册表 + 快照补齐，见 inject.js。
+    const count = iphoneInjectEffectiveEntries().length;
+    if (!iphoneInjectCaptureEnabled()) {
+      injectDetail.textContent = '已关闭';
+    } else if (count) {
+      injectDetail.textContent = `${count} 条`;
+    } else {
+      injectDetail.textContent = '未捕获到';
+    }
+  };
+  const injectRow = makeRow({
+    icon: 'inject',
+    tone: '#8e8e93',
+    label: '第三方注入',
+    detailNode: injectDetail,
+    action: () => {
+      refreshInjectDetail();
+      renderInjectPreview();
+      screen.classList.add('is-inject-open');
+    },
+  });
+
   // 组装主页：大标题 → 搜索框（布局缓冲）→ 账户卡（昵称 = 酒馆 {{user}}）→
   // 「API 连接」/提示词入口
   const accountGroup = makeGroup();
@@ -7171,6 +7735,10 @@ function buildSettingsAppScreen() {
   wechatPresetGroup.appendChild(wechatChatRow);
   wechatPresetGroup.appendChild(wechatGroupRow);
   wechatPresetGroup.appendChild(wechatMomentsRow);
+  const xhsPresetGroup = makeGroup();
+  xhsPresetGroup.appendChild(xhsPresetRow);
+  const injectGroup = makeGroup();
+  injectGroup.appendChild(injectRow);
   const searchBox = document.createElement('div');
   searchBox.className = 'iphone-st__search';
   searchBox.innerHTML = `
@@ -7183,6 +7751,8 @@ function buildSettingsAppScreen() {
   mainScroll.appendChild(apiGroup);
   mainScroll.appendChild(presetGroup);
   mainScroll.appendChild(wechatPresetGroup);
+  mainScroll.appendChild(xhsPresetGroup);
+  mainScroll.appendChild(injectGroup);
   mainPage.appendChild(mainNav);
   mainPage.appendChild(mainScroll);
 
@@ -7608,6 +8178,7 @@ function buildSettingsAppScreen() {
   const saveWechatChatPreset = (patch) => savePromptPreset('wechatChat', IPHONE_WECHAT_CHAT_PRESET_DEFAULT, patch);
   const saveWechatGroupPreset = (patch) => savePromptPreset('wechatGroup', IPHONE_WECHAT_GROUP_PRESET_DEFAULT, patch);
   const saveWechatMomentsPreset = (patch) => savePromptPreset('wechatMoments', IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT, patch);
+  const saveXhsNotesPreset = (patch) => savePromptPreset('xhsNotes', IPHONE_XHS_PRESET_DEFAULT, patch);
 
   // 预设编辑器（v0.12.0 从私聊子页抽取成工厂，私聊/群聊/动态三页共用；v0.18.0
   // 起微信的三组提示词页也复用，经 floorLog 换成微信的楼层段称谓）：导航 +
@@ -7978,6 +8549,151 @@ function buildSettingsAppScreen() {
     floorLogLabels: wxFloorLogLabels,
   });
 
+  const xhsNotesPresetPage = buildPresetPage({
+    pageClass: 'iphone-st__page--xhspreset',
+    openClass: 'is-xhspreset-open',
+    navTitle: '小红书提示词',
+    sectionPrefix: '小红书笔记',
+    guidanceSection: {
+      title: '笔记写作指导',
+      footText: '包在 <xhs_guidance> 里随 system 发送的写作指导：发明网友、挑题材、标题与正文的写法、互动数据要真实等；改写后即时生效，留空则整段不发送（输出格式里仍有基本的区块示例可依）。',
+    },
+    replySection: {
+      title: '回复写作指导',
+      guidanceFootText: '包在 <reply_guidance> 里随 system 发送：玩家在笔记下留言后，由 AI 生成新的评论回复（作者本人 / 路过的网友应声）。改写后即时生效，留空则整段不发送。',
+      formatFootText: 'AI 回复按每行「评论人：内容」解析成新评论（回复某人写作「评论人 回复 被回复人：内容」）；这段包在 <output_format> 里随 system 发送，模型没按格式输出时整段兜底成作者的一条回复。',
+    },
+    formatFootText: 'AI 回复按「昵称：发布者」开头的笔记区块解析（小红书号 / IP / 简介 / 封面 / 标题 / 正文 / 话题 / 位置 / 点赞 / 收藏 / 评论区）；封面只填题材（美食 / 宠物 / 旅行 / 家居 / 数码 / 穿搭 / 探店），插件据此挑同题材的内置封面；模型没按格式输出时整次刷新作废并提示重试。',
+    footText: '可用占位符：{{user}} = 你的名字。与朋友圈不同，这里没有联系人名单——发布者是一群「网友」：'
+      + '已有网友名单随请求附上（熟面孔回归），模型也可以现场发明新网友，新面孔会自动收进网友池并在之后复用。'
+      + '世界书与酒馆剧情上下文自动附带，无需配置。修改即时保存。',
+    resetLabel: '恢复小红书默认预设',
+    save: saveXhsNotesPreset,
+    getPreset: () => iphoneGetXhsPreset(),
+    defaults: IPHONE_XHS_PRESET_DEFAULT,
+    floorLogLabels: {
+      on: '附带最新手机记录楼层',
+      off: '不附带手机记录楼层',
+      footText: '把酒馆里最新一楼的 iPhone_Message 聊天记录（每段各自用方括号标签包裹，可能含多个联系人/群聊的记录段，含 QQ 与微信的记录，超长截尾保留最近记录）包进 <xhs_chat_log> 随 system 发送；清空聊天后它就是仅存的历史。',
+    },
+  });
+
+  /* ============ 第三方注入子页（v0.26.0） ============ */
+  // 开关 + 将要附带的内容预览：别的扩展经 setExtensionPrompt 注入酒馆主提示词的
+  // 内容（万华镜的变量表等），本插件实时读宿主注册表 + 上轮快照补齐，随手机各请求
+  // 的 system 一起发给模型（见 js/inject.js）。
+  const injectPage = document.createElement('div');
+  injectPage.className = 'iphone-st__page iphone-st__page--inject';
+
+  const injectNav = document.createElement('header');
+  injectNav.className = 'iphone-st__nav';
+  injectNav.innerHTML = `
+    <button type="button" class="iphone-st__back">
+      <span class="iphone-st__back-chev" aria-hidden="true">${icons.back}</span>设置
+    </button>
+    <p class="iphone-st__nav-title">第三方注入</p>
+    <span class="iphone-st__nav-spacer" aria-hidden="true"></span>
+  `;
+  injectNav.querySelector('.iphone-st__back').addEventListener('click', () => {
+    screen.classList.remove('is-inject-open');
+    // 主页行尾灰字（条数 / 已关闭 / 未捕获到）跟着最新状态刷新——子页里按过开关
+    // 或期间宿主又跑了一轮生成，回到主页就该看到新值。
+    refreshInjectDetail();
+  });
+
+  const injectScroll = document.createElement('div');
+  injectScroll.className = 'iphone-st__scroll iphone-st__form';
+
+  // 预览列表：将要附带的每一条一段，点标题展开原文。
+  // 每条标注新鲜度：实时（此刻注册表里的值）/ 上一轮（快照带来的，扩展已清空）。
+  const injectList = document.createElement('div');
+  injectList.className = 'iphone-st__inject-list';
+
+  const renderInjectPreview = () => {
+    injectList.innerHTML = '';
+    const entries = iphoneInjectCaptureEnabled() ? iphoneInjectEffectiveEntries() : [];
+    if (!entries.length) {
+      const empty = document.createElement('p');
+      empty.className = 'iphone-st__empty';
+      empty.textContent = iphoneInjectCaptureEnabled()
+        ? '还没有可附带的注入内容。装了往酒馆提示词里注入内容的插件（万华镜的变量表、生物追踪、世界引擎等），并让它在酒馆里跑过一轮或处于开启状态后，这里就有内容了。'
+        : '已关闭：手机请求不会附带任何第三方注入内容。要启用请点上面的「附带第三方注入内容」。';
+      injectList.appendChild(empty);
+      return;
+    }
+    for (const entry of entries) {
+      const text = String(entry?.value ?? '');
+      const block = document.createElement('section');
+      block.className = 'iphone-st__inject';
+      const head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'iphone-st__inject-head';
+      const name = document.createElement('span');
+      name.className = 'iphone-st__inject-key';
+      name.textContent = String(entry?.key || '（未命名）');
+      const meta = document.createElement('span');
+      meta.className = 'iphone-st__inject-meta';
+      meta.textContent = `${text.length} 字 · ${entry?.live ? '实时' : '上一轮'}`;
+      head.append(name, meta);
+      const body = document.createElement('pre');
+      body.className = 'iphone-st__inject-body';
+      body.textContent = text;
+      head.addEventListener('click', () => block.classList.toggle('is-open'));
+      block.append(head, body);
+      injectList.appendChild(block);
+    }
+  };
+
+  /* -- 开关（附带 / 不附带） -- */
+  injectScroll.appendChild(sectionTitle('第三方注入 · 附带'));
+  const injectToggleGroup = formGroup();
+  const injectEnabledNow = iphoneInjectCaptureEnabled();
+  [
+    { value: true, label: '附带第三方注入内容' },
+    { value: false, label: '不附带（只用本插件自己拼的段）' },
+  ].forEach((opt, index) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = `iphone-st__option${index === 0 ? ' no-sep' : ''}${injectEnabledNow === opt.value ? ' is-selected' : ''}`;
+    row.innerHTML = `
+      <span class="iphone-st__option-name">${opt.label}</span>
+      <span class="iphone-st__option-check" aria-hidden="true">${icons.check}</span>
+    `;
+    row.addEventListener('click', () => {
+      settings.injectCaptureEnabled = opt.value;
+      iphoneSaveSettings(settings);
+      injectToggleGroup.querySelectorAll('.iphone-st__option')
+        .forEach((el) => el.classList.toggle('is-selected', el === row));
+      refreshInjectDetail();
+      renderInjectPreview();
+    });
+    injectToggleGroup.appendChild(row);
+  });
+  injectScroll.appendChild(injectToggleGroup);
+  const injectFoot = document.createElement('p');
+  injectFoot.className = 'iphone-st__foot';
+  injectFoot.textContent = '别的扩展（万华镜的变量表、生物追踪、世界引擎、SoulLink 的 NPC 推理等）经 '
+    + 'setExtensionPrompt 写进酒馆主提示词的内容，本插件会把它拼成 <context_injection> 段随手机各请求的 '
+    + 'system 发送——手机上的模型据此与主线剧情保持一致。内容原样转发（格式由对方决定），单条超过 2 万字'
+    + '截断。不需要任何插件配合：本插件直接读酒馆自己的注入注册表，装了就能看到。两类内容都带：'
+    + '常驻型插件（注入长期留在注册表里）取此刻的实时值；只在发送瞬间注入、生成结束就清空的插件，'
+    + '用酒馆上一轮组装提示词时抓下的那一份（标注「上一轮」）。世界书等酒馆自带内容不算第三方、'
+    + '不在此列（本插件另有 <world_info> 段）。';
+  injectScroll.appendChild(injectFoot);
+
+  /* -- 将要附带的内容预览 -- */
+  injectScroll.appendChild(sectionTitle('第三方注入 · 将要附带的内容'));
+  injectScroll.appendChild(injectList);
+  const injectListFoot = document.createElement('p');
+  injectListFoot.className = 'iphone-st__foot';
+  injectListFoot.textContent = '点条目展开原文。变量状态这类内容每轮都在变：标「实时」的是插件此刻要注入的值，'
+    + '标「上一轮」的是扩展已清空、用酒馆上一轮组装时的快照补上的（要让这类内容变新，去酒馆里点一次发送即可）。'
+    + '切换聊天会清空快照。';
+  injectScroll.appendChild(injectListFoot);
+
+  injectPage.appendChild(injectNav);
+  injectPage.appendChild(injectScroll);
+
   screen.appendChild(mainPage);
   screen.appendChild(apiPage);
   screen.appendChild(modelsPage);
@@ -7989,7 +8705,10 @@ function buildSettingsAppScreen() {
   screen.appendChild(wechatPresetPage);
   screen.appendChild(wechatGroupPresetPage);
   screen.appendChild(wechatMomentsPresetPage);
+  screen.appendChild(xhsNotesPresetPage);
+  screen.appendChild(injectPage);
   refreshMainDetail();
+  refreshInjectDetail();
   refreshModelUi();
   refreshRequestUi();
   // 账户行昵称跟随酒馆 {{user}}（构建后统一填 data-me-name 节点）
@@ -8002,10 +8721,12 @@ function buildSettingsAppScreen() {
 }
 
 // 应用 id → 内页构建器；注册表里没有内页的应用点击后回落到通用占位页。
-// buildLogsAppScreen 定义在 js/logs.js（拼接后同一作用域，函数声明提升可引用）。
+// buildLogsAppScreen 定义在 js/logs.js、buildXhsAppScreen 在 js/xhs.js
+//（拼接后同一作用域，函数声明提升可引用）。
 const IPHONE_APP_SCREEN_BUILDERS = Object.freeze({
   qq: buildQqAppScreen,
   wechat: buildWechatAppScreen,
+  xhs: buildXhsAppScreen,
   worldbook: iphoneBuildWorldBookScreen,
   settings: buildSettingsAppScreen,
   logs: iphoneBuildLogsAppScreen,
@@ -8977,6 +9698,8 @@ async function iphoneBuildWechatChatRequestMessages(entity, conversation) {
   }
 
   const format = preset.format.trim().replace(/^【输出格式】\s*/, '');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) {
@@ -8988,6 +9711,7 @@ async function iphoneBuildWechatChatRequestMessages(entity, conversation) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：对白规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   if (membersText) outlineItems.push(`<group_members>…</group_members>：本群成员列表——除玩家（${userName}）外的每位成员都由你扮演，输出时用行首名字区分发言人；`);
   if (worldText) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景；');
   if (floorLogText) outlineItems.push('<wechat_chat_log>…</wechat_chat_log>：最近一次同步到酒馆楼层的微信聊天记录，可能包含多个联系人/群聊的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   outlineItems.push('<transfer_guidance>…</transfer_guidance>：转账与收款的写法约定——按 `[转账]金额` / `[收款]金额` 标记钱款往来，标记必须单独成条（挂在叙述句尾会认不出来），`[已收款]金额` 是界面写的记账行、不用自己写；');
@@ -9010,6 +9734,9 @@ async function iphoneBuildWechatChatRequestMessages(entity, conversation) {
   }
   if (worldText) {
     sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldText}\n</world_info>`);
+  }
+  if (injectParts) {
+    sysParts.push(injectParts.system);
   }
   if (tavernText) {
     sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
@@ -9103,6 +9830,8 @@ async function iphoneGenerateWechatMoments(ownerId) {
   const format = String(preset.format ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -9115,6 +9844,7 @@ async function iphoneGenerateWechatMoments(ownerId) {
     : '<contacts>…</contacts>：微信联系人名单——动态的发布者只能从名单中挑选；');
   if (owner) outlineItems.push('<contacts_all>…</contacts_all>：微信全部联系人名单——点赞与评论只认这份名单里的人；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<wechat_chat_log>…</wechat_chat_log>：最近一次同步到酒馆楼层的微信记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]），供你了解最近的聊天情况；');
   if (guidance) outlineItems.push('<moments_guidance>…</moments_guidance>：朋友圈动态的写作指导；');
@@ -9128,6 +9858,7 @@ async function iphoneGenerateWechatMoments(ownerId) {
     : `以下是微信联系人名单（动态的发布者只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (owner) sysParts.push(`以下是微信全部联系人名单（点赞与评论只认这份名单里的人）：\n<contacts_all>\n${allNamesRosterText}\n</contacts_all>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的微信记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<wechat_chat_log>\n${floorLogText}\n</wechat_chat_log>`);
   if (guidance) sysParts.push(`以下是朋友圈动态的写作指导：\n<moments_guidance>\n${resolve(guidance)}\n</moments_guidance>`);
@@ -9282,6 +10013,8 @@ async function iphoneGenerateWechatMomentReply(moment) {
   const replyFormat = String(preset.replyFormat ?? '').trim();
   const worldTextTrimmed = worldText.trim();
   const tavernText = historyLines.join('\n');
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
 
   const sysParts = [];
   if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
@@ -9291,6 +10024,7 @@ async function iphoneGenerateWechatMomentReply(moment) {
   if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：表达规范——口语化、生活化、带情绪与立场，禁止播报腔；');
   outlineItems.push('<contacts>…</contacts>：微信联系人名单——评论人只能从名单中挑选；');
   if (worldTextTrimmed) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<wechat_chat_log>…</wechat_chat_log>：最近一次同步到酒馆楼层的微信记录，供你了解最近的聊天情况；');
   outlineItems.push('<dynamic_post>…</dynamic_post>：玩家正在回复的那条朋友圈——发布者、正文、点赞名单与评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
@@ -9302,6 +10036,7 @@ async function iphoneGenerateWechatMomentReply(moment) {
   if (dialogueGuidance) sysParts.push(`以下是表达规范（决定你如何说话与写内容）：\n<dialogue_guidance>\n${fillGuide(dialogueGuidance)}\n</dialogue_guidance>`);
   sysParts.push(`以下是微信联系人名单（评论人只能从中挑选）：\n<contacts>\n${rosterText}\n</contacts>`);
   if (worldTextTrimmed) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldTextTrimmed}\n</world_info>`);
+  if (injectParts) sysParts.push(injectParts.system);
   if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
   if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的微信记录，可能包含多个联系人的记录段（每段各自用方括号标签包裹，如 [QQ_私聊_名字] / [微信_群聊_群名] / [朋友圈动态]）：\n<wechat_chat_log>\n${floorLogText}\n</wechat_chat_log>`);
   const identityNote = customNick && customNick !== playerName
@@ -12128,6 +12863,2323 @@ function buildWechatAppScreen() {
   return screen;
 }
 
+
+
+// ===== js/xhs.js =====
+// ===== 小红书应用（v0.26.0） =====
+// 与微信朋友圈最本质的差别：朋友圈是「联系人发帖」（发布者都在剧情名单里），
+// 小红书是「网友发帖」——发布者是一群与玩家素不相识的互联网陌生人，由 AI 现场
+// 发明，发过一次就沉淀进「网友池」，之后复用同一个身份继续发帖、互相评论。
+// 封面由模型报一个题材、插件从内置图库挑同题材的一张（模型选不了图），保证图文
+// 相符；网友头像按加入网友池的顺序从 20 款内置头像里循环取用。
+// 数据独立：chatMetadata.IPhone 的 xhsData / xhsProfile（与 qqData / wechatData
+// 并列），换聊天自动切换。楼层段头 `小红书笔记：`（段标签 [小红书笔记]）。
+// 复用已建好的基础设施：host.js 的上下文 / 存储 / 对话 API / 楼层读写、apps.js 的
+// 头像选择器与预设编辑器、世界书引擎与宏解析。
+
+// ---------- 小红书图形（手绘 SVG，24×24 viewBox） ----------
+function iphoneXhsIcons() {
+  return {
+    // 底部标签栏：首页 / 市集 / 消息 / 我（中间的红色圆形「+」由 CSS 画）
+    home: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.4 12 4l8 6.4V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19z"/><path d="M9.6 20.6v-6h4.8v6"/></g></svg>',
+    market: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4.6 8h14.8l-1.2 11.2a1.8 1.8 0 0 1-1.8 1.6H7.6a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.6 10.4V6.6a3.4 3.4 0 0 1 6.8 0v3.8"/></g></svg>',
+    message: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6c-4.8 0-8.4 2.9-8.4 6.7 0 2.2 1.2 4.1 3.1 5.3l-.7 3.2c-.1.5.4.9.8.6l3.4-1.9c.6.1 1.2.2 1.8.2 4.8 0 8.4-2.9 8.4-6.9S16.8 3.6 12 3.6z"/></g></svg>',
+    me: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="7.8" r="3.8"/><path d="M4.4 20c0-3.9 3.4-6.1 7.6-6.1s7.6 2.2 7.6 6.1"/></g></svg>',
+    // 通用：搜索 / 返回 / 右箭头 / 更多 / 关闭 / 加号
+    search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="5.6" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M15.1 15.1l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
+    back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4.6 7.6 12l7.4 7.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    chevronRight: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 5.5 6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    chevronDown: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5.5 9.5 6.5 6.5 6.5-6.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    more: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="5.2" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.8" cy="12" r="1.6"/></g></svg>',
+    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.8v14.4M4.8 12h14.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
+    // 笔记互动：心形（赞）/ 星形（收藏）/ 气泡（评论）/ 分享 / 不喜欢
+    heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2S3.4 15.4 3.4 9.4a4.7 4.7 0 0 1 8.6-2.7 4.7 4.7 0 0 1 8.6 2.7c0 6-8.6 10.8-8.6 10.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    heartFill: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2S3.4 15.4 3.4 9.4a4.7 4.7 0 0 1 8.6-2.7 4.7 4.7 0 0 1 8.6 2.7c0 6-8.6 10.8-8.6 10.8z" fill="currentColor"/></svg>',
+    star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.2l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    starFill: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.2l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z" fill="currentColor"/></svg>',
+    comment: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.6c-4.8 0-8.2 3-8.2 7 0 2.2 1.1 4.1 2.9 5.3l-.7 3c-.1.5.4.9.8.6l3.3-1.8c.6.1 1.2.2 1.9.2 4.8 0 8.2-3 8.2-7.3s-3.4-7-8.2-7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
+    share: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6v11.2"/><path d="m8.2 7.2 3.8-3.6 3.8 3.6"/><path d="M5.4 13.4v5.4a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8v-5.4"/></g></svg>',
+    dislike: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M8.6 8.6l6.8 6.8M15.4 8.6l-6.8 6.8"/></g></svg>',
+    // 消息页三条聚合入口：赞和收藏（心）/ 新增关注（人+）/ 评论和@（气泡）
+    heartSquare: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2S3.4 15.4 3.4 9.4a4.7 4.7 0 0 1 8.6-2.7 4.7 4.7 0 0 1 8.6 2.7c0 6-8.6 10.8-8.6 10.8z" fill="currentColor"/></svg>',
+    followSquare: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="9.4" cy="8" r="3.6"/><path d="M2.8 19.4c0-3.6 2.9-5.6 6.6-5.6s6.6 2 6.6 5.6z"/><path d="M18.4 7.6v6.4M15.2 10.8h6.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></g></svg>',
+    atSquare: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a2.6 2.6 0 0 0 5.2 0V12a9.2 9.2 0 1 0-3.6 7.3"/></g></svg>',
+    // 笔记详情 / 发布页：编辑 / 相机 / 定位 / 私密
+    edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.6 4.6l3.8 3.8L9 18.8l-4.6.8.8-4.6z"/><path d="M13.4 6.8l3.8 3.8"/></g></svg>',
+    camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.7 6.8 10 4.6h4l1.3 2.2"/><rect x="3.4" y="6.8" width="17.2" height="13" rx="3"/><circle cx="12" cy="13" r="3.3"/></g></svg>',
+    location: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21s-6.4-5.3-6.4-10.4a6.4 6.4 0 0 1 12.8 0C18.4 15.7 12 21 12 21z"/><circle cx="12" cy="10.4" r="2.4"/></g></svg>',
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="5.2" y="10.4" width="13.6" height="9.4" rx="2.4"/><path d="M8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6"/></g></svg>',
+    // 「我」页面右上角：菜单 / 二维码
+    menu: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.4 7.2h15.2M4.4 12h15.2M4.4 16.8h15.2"/></g></svg>',
+    qr: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.6" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="14" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="3.6" y="14" width="6.4" height="6.4" rx="1.2"/><path d="M14 14h2.8v2.8H14zM17.6 17.6h2.8v2.8h-2.8zM14 20.4h1.2M20.4 14h-1.2"/></g></svg>',
+    // 占位图标：市集页
+    bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4.6 8h14.8l-1.2 11.2a1.8 1.8 0 0 1-1.8 1.6H7.6a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.6 10.4V6.6a3.4 3.4 0 0 1 6.8 0v3.8"/></g></svg>',
+  };
+}
+
+// ---------- 小红书数据（我的资料 / 网友池 / 笔记） ----------
+const IPHONE_XHS_USER_MACRO = IPHONE_QQ_USER_MACRO;
+
+function iphoneXhsGenId(prefix) {
+  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// 归一化头像：null = 默认（灰底人形占位）；{ preset } 只认内置款式
+//（a1~a20，me 等价于默认）；{ url } 只认 http(s) 与 data:image 并限长。
+function iphoneNormalizeXhsAvatar(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const preset = String(raw.preset || '').trim();
+  if (preset && preset !== 'me' && IPHONE_XHS_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
+    return { preset };
+  }
+  const url = String(raw.url || '').trim();
+  if (/^(https?:\/\/|data:image\/)/i.test(url) && url.length <= 400000) return { url };
+  return null;
+}
+
+function iphoneNormalizeXhsProfile(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return {
+    name: String(source.name || '').trim().slice(0, 24),
+    xhsId: String(source.xhsId || '').replace(/[^\w.-]/g, '').slice(0, 32),
+    ip: String(source.ip || '').trim().slice(0, 16),
+    bio: String(source.bio || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120),
+    avatar: iphoneNormalizeXhsAvatar(source.avatar),
+  };
+}
+
+// 网友：昵称是身份主键（评论里只存名字，与 QQ 的点赞 / 评论同规则），xhsId / ip /
+// bio 是 AI 发帖时顺手写的资料，缺了就不显示；avatar 是内置头像款式 id
+//（加入网友池时按序号循环分配）。
+function iphoneNormalizeXhsNetizen(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const name = String(source.name || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 24);
+  if (!name) return null;
+  const preset = String(source.avatar || '').trim();
+  return {
+    id: String(source.id || '').trim() || iphoneXhsGenId('xn'),
+    name,
+    xhsId: String(source.xhsId || '').replace(/[^\w.-]/g, '').slice(0, 32),
+    ip: String(source.ip || '').trim().slice(0, 16),
+    bio: String(source.bio || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120),
+    avatar: IPHONE_XHS_ME_AVATAR_PRESETS.some((p) => p.id === preset && p.id !== 'me') ? preset : '',
+  };
+}
+
+// 评论：{ name, text, replyName?, ts? }，名字是署名本体（玩家写 {{user}} 宏或自定义
+// 昵称，展示时再解析）。自己回复自己无意义，直接丢掉 replyName。
+function iphoneNormalizeXhsComment(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const name = String(raw.name || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 24);
+  const text = String(raw.text || '').replace(/[\r\n]+/g, ' ').trim().slice(0, IPHONE_XHS_COMMENT_CAP);
+  if (!name || !text) return null;
+  const out = { name, text };
+  const replyName = String(raw.replyName ?? raw.reply ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 24);
+  if (replyName && replyName !== name) out.replyName = replyName;
+  const ts = Math.max(0, Math.floor(Number(raw.ts) || 0));
+  if (ts) out.ts = ts;
+  return out;
+}
+
+// 点赞数 / 收藏数：整数（AI 写「1.2万」也认），上限 9999 万。
+function iphoneXhsParseCount(raw) {
+  const text = String(raw ?? '').trim().toLowerCase();
+  if (!text) return 0;
+  const matched = text.match(/([0-9]+(?:\.[0-9]+)?)\s*(万|w|k|千)?/);
+  if (!matched) return 0;
+  const base = Number(matched[1]);
+  if (!Number.isFinite(base)) return 0;
+  const unit = matched[2];
+  const scale = unit === '万' || unit === 'w' ? 10000 : (unit === 'k' || unit === '千' ? 1000 : 1);
+  return Math.max(0, Math.min(99999999, Math.round(base * scale)));
+}
+
+// 话题：# 开头、空格 / 顿号分隔，最多 4 个（去重、去空）。
+function iphoneXhsTopicList(raw) {
+  const text = Array.isArray(raw) ? raw.join(' ') : String(raw ?? '');
+  const topics = [];
+  for (const part of text.split(/[\s、,，]+/)) {
+    const name = part.trim().replace(/^#+/, '').replace(/[#\s]+$/, '');
+    if (!name || name.length > 20) continue;
+    if (!topics.includes(name)) topics.push(name);
+    if (topics.length >= 4) break;
+  }
+  return topics;
+}
+
+// 笔记：作者是 '__me__'（玩家自己发的）或网友池里的 id；作者名另存一份，网友池
+// 满了被裁掉时笔记照常显示。封面存图库 id（c01~c16），展示时算回题材与宽高比。
+function iphoneNormalizeXhsNote(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const authorId = String(source.authorId || '').trim();
+  if (!authorId) return null;
+  const authorName = String(source.authorName || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 24);
+  if (authorId !== '__me__' && !authorName) return null;
+  const title = String(source.title || '').replace(/[\r\n]+/g, ' ').trim().slice(0, IPHONE_XHS_TITLE_CAP);
+  const text = String(source.text || '').trim().slice(0, IPHONE_XHS_TEXT_CAP);
+  if (!title && !text) return null;
+  const coverId = IPHONE_XHS_COVERS.some((c) => c.id === source.coverId) ? source.coverId : '';
+  const comments = (Array.isArray(source.comments) ? source.comments : [])
+    .map(iphoneNormalizeXhsComment)
+    .filter(Boolean)
+    .slice(-40);
+  return {
+    id: String(source.id || '').trim() || iphoneXhsGenId('n'),
+    authorId,
+    authorName,
+    ts: Math.max(0, Math.floor(Number(source.ts) || Date.now())),
+    coverId,
+    title,
+    text,
+    topics: iphoneXhsTopicList(source.topics),
+    location: String(source.location || '').trim().slice(0, 24),
+    ip: String(source.ip || '').trim().slice(0, 16),
+    likes: iphoneXhsParseCount(source.likes),
+    collects: iphoneXhsParseCount(source.collects),
+    comments,
+    likeMine: Boolean(source.likeMine),
+    collectMine: Boolean(source.collectMine),
+    private: Boolean(source.private),
+  };
+}
+
+// 好友池裁剪：网友池超过上限时，先保住笔记作者（笔记要能显示头像与资料），
+// 其余按「后加入的优先」保留；顺序不变。
+function iphoneXhsPruneNetizens(netizens, notes) {
+  if (netizens.length <= IPHONE_XHS_NETIZEN_CAP) return netizens;
+  const referenced = new Set(notes.map((n) => n.authorId));
+  const keep = new Set();
+  for (const netizen of netizens) {
+    if (referenced.has(netizen.id)) keep.add(netizen.id);
+  }
+  const budget = Math.max(0, IPHONE_XHS_NETIZEN_CAP - keep.size);
+  let taken = 0;
+  for (let i = netizens.length - 1; i >= 0 && taken < budget; i -= 1) {
+    if (keep.has(netizens[i].id)) continue;
+    keep.add(netizens[i].id);
+    taken += 1;
+  }
+  return netizens.filter((netizen) => keep.has(netizen.id));
+}
+
+function iphoneNormalizeXhsData(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const netizens = (Array.isArray(source.netizens) ? source.netizens : [])
+    .map(iphoneNormalizeXhsNetizen)
+    .filter(Boolean);
+  const notes = (Array.isArray(source.notes) ? source.notes : [])
+    .map(iphoneNormalizeXhsNote)
+    .filter(Boolean)
+    .slice(-200);
+  const following = [...new Set((Array.isArray(source.following) ? source.following : [])
+    .map((id) => String(id || '').trim())
+    .filter(Boolean))];
+  return {
+    netizens: iphoneXhsPruneNetizens(netizens, notes),
+    notes,
+    following,
+    notesFloorSynced: Math.max(0, Math.floor(Number(source.notesFloorSynced) || 0)),
+  };
+}
+
+function iphoneGetXhsData() {
+  return iphoneNormalizeXhsData(iphoneGetQqStorage().xhsData);
+}
+
+function iphoneSetXhsData(xhsScreen, next) {
+  iphoneGetQqStorage().xhsData = iphoneNormalizeXhsData(next);
+  iphoneSaveQqStorage();
+  if (xhsScreen) xhsScreen._renderXhs?.();
+}
+
+// 取「我」的小红书资料（随聊天文件存取）：昵称默认跟随酒馆 {{user}}，小红书号与
+// IP 属地留空回退占位演示值；顺手把脏数据写回聊天文件。
+function iphoneGetXhsProfile() {
+  const storage = iphoneGetQqStorage();
+  const normalized = iphoneNormalizeXhsProfile(storage.xhsProfile);
+  const raw = storage.xhsProfile && typeof storage.xhsProfile === 'object' ? storage.xhsProfile : {};
+  if (JSON.stringify(normalized) !== JSON.stringify(iphoneNormalizeXhsProfile(raw))) {
+    storage.xhsProfile = normalized;
+    iphoneSaveQqStorage();
+  }
+  return {
+    name: normalized.name || iphoneGetTavernUserName() || IPHONE_QQ_ME_FALLBACK_NAME,
+    xhsId: normalized.xhsId || IPHONE_XHS_ME.xhsId,
+    ip: normalized.ip || IPHONE_XHS_ME.ip,
+    bio: normalized.bio,
+    avatar: normalized.avatar,
+  };
+}
+
+function iphoneGetXhsCustomNick() {
+  return iphoneNormalizeXhsProfile(iphoneGetQqStorage().xhsProfile).name;
+}
+
+// 玩家在小红书数据（评论署名 / 被回复人）里的本体：填过昵称用昵称，否则写
+// {{user}} 宏本体，楼层与提示词组装时才解析成人设名（与 QQ / 微信同一套规则）。
+function iphoneGetXhsPlayerAuthor() {
+  return iphoneGetXhsCustomNick() || IPHONE_XHS_USER_MACRO;
+}
+
+function iphoneResolveXhsPlayerAuthor(name) {
+  const value = String(name || '').trim();
+  if (!value) return '';
+  if (/\{\{user\}\}/i.test(value) || iphoneIsQqLegacyPlayerName(value)) {
+    return iphoneGetTavernUserName() || IPHONE_QQ_ME_FALLBACK_NAME;
+  }
+  return value;
+}
+
+function iphoneIsXhsPlayerAuthor(name) {
+  const value = String(name || '').trim();
+  if (!value) return false;
+  if (/\{\{user\}\}/i.test(value) || iphoneIsQqLegacyPlayerName(value)) return true;
+  const aliases = new Set([iphoneGetTavernUserName(), iphoneGetXhsProfile().name].filter(Boolean));
+  return aliases.has(value);
+}
+
+function iphoneUpdateXhsProfile(xhsScreen, patch) {
+  const storage = iphoneGetQqStorage();
+  storage.xhsProfile = iphoneNormalizeXhsProfile({
+    ...iphoneNormalizeXhsProfile(storage.xhsProfile),
+    ...patch,
+  });
+  iphoneSaveQqStorage();
+  iphoneRefreshXhsMeIdentity(xhsScreen);
+}
+
+// 把「我的头像」应用到节点：内置款式换 CSS 覆盖类，自定义图走内联 background-image，
+// 默认清掉两者（回落到 CSS 里的灰底人形占位）。
+function iphoneApplyXhsMeAvatarToEl(el, profile) {
+  if (!el) return;
+  if (el._xhsAvatarCls) {
+    el.classList.remove(el._xhsAvatarCls);
+    el._xhsAvatarCls = null;
+  }
+  el.style.backgroundImage = '';
+  const avatar = profile.avatar;
+  if (avatar && avatar.preset) {
+    const cls = `iphone-xhs__avatar--${avatar.preset}`;
+    el.classList.add(cls);
+    el._xhsAvatarCls = cls;
+  } else if (avatar && avatar.url) {
+    el.style.backgroundImage = `url("${avatar.url.replace(/"/g, '%22')}")`;
+  }
+}
+
+function iphoneRefreshXhsMeIdentity(root) {
+  if (!root) return;
+  const profile = iphoneGetXhsProfile();
+  root.querySelectorAll('[data-xhs-me-name]').forEach((el) => { el.textContent = profile.name; });
+  root.querySelectorAll('[data-xhs-me-avatar]').forEach((el) => iphoneApplyXhsMeAvatarToEl(el, profile));
+  root.querySelectorAll('[data-xhs-me-id]').forEach((el) => { el.textContent = `小红书号：${profile.xhsId}`; });
+  root.querySelectorAll('[data-xhs-me-ip]').forEach((el) => { el.textContent = `IP属地：${profile.ip}`; });
+}
+
+// ---------- 网友池 ----------
+// 按名字查网友（昵称是身份主键：AI 复用同名网友时就接上 TA 原来的资料与头像）。
+function iphoneXhsFindNetizen(data, name) {
+  const target = String(name || '').trim();
+  if (!target) return null;
+  return data.netizens.find((netizen) => netizen.name === target) || null;
+}
+
+// 注册网友（AI 新造的发布者 / 评论人）：同名沿用旧身份，只补空缺字段；新面孔按
+// 加入顺序循环分配内置头像。返回归一化后的网友对象。
+function iphoneXhsEnsureNetizen(data, name, info) {
+  const clean = String(name || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 24);
+  if (!clean) return null;
+  const patch = info && typeof info === 'object' ? info : {};
+  const existing = iphoneXhsFindNetizen(data, clean);
+  if (existing) {
+    if (!existing.xhsId && patch.xhsId) existing.xhsId = String(patch.xhsId).replace(/[^\w.-]/g, '').slice(0, 32);
+    if (!existing.ip && patch.ip) existing.ip = String(patch.ip).trim().slice(0, 16);
+    if (!existing.bio && patch.bio) existing.bio = String(patch.bio).replace(/[\r\n]+/g, ' ').trim().slice(0, 120);
+    return existing;
+  }
+  const netizen = iphoneNormalizeXhsNetizen({
+    ...patch,
+    name: clean,
+    id: iphoneXhsGenId('xn'),
+    avatar: `a${(data.netizens.length % IPHONE_XHS_AVATAR_POOL) + 1}`,
+  });
+  if (!netizen) return null;
+  data.netizens.push(netizen);
+  return netizen;
+}
+
+// 网友头像节点：池里有就用 TA 的款式；池里没有（旧数据 / 被裁掉的网友）就按名字
+// 哈希落到某一款，保证同一个人每次渲染都是同一张头像。
+function iphoneXhsBuildNetizenAvatar(data, name) {
+  const el = document.createElement('span');
+  el.className = 'iphone-xhs__avatar';
+  const netizen = iphoneXhsFindNetizen(data, name);
+  let preset = netizen?.avatar || '';
+  if (!preset) {
+    const text = String(name || '');
+    let hash = 0;
+    for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) % 100000;
+    preset = `a${(hash % IPHONE_XHS_AVATAR_POOL) + 1}`;
+  }
+  el.classList.add(`iphone-xhs__avatar--${preset}`);
+  return el;
+}
+
+// 玩家自己的头像节点（灰底人形占位 + 款式覆盖类）。
+function iphoneXhsBuildMeAvatar(profile) {
+  const el = document.createElement('span');
+  el.className = 'iphone-xhs__avatar iphone-xhs__me-avatar';
+  iphoneApplyXhsMeAvatarToEl(el, profile);
+  return el;
+}
+
+// ---------- 封面 ----------
+function iphoneXhsCoverById(id) {
+  return IPHONE_XHS_COVERS.find((cover) => cover.id === id) || null;
+}
+
+// 按题材挑封面：同题材里按种子（笔记 id / 标题）哈希稳定选一张；题材没命中就
+// 从整个图库挑——保证任何情况下都有图，且同一条笔记每次渲染都是同一张。
+function iphoneXhsPickCover(topic, seed) {
+  const want = String(topic || '').trim();
+  let pool = IPHONE_XHS_COVERS.filter((cover) => cover.topic === want);
+  if (!pool.length) pool = IPHONE_XHS_COVERS.slice();
+  const text = String(seed || '');
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) hash = (hash * 131 + text.charCodeAt(i)) % 1000033;
+  return pool[hash % pool.length];
+}
+
+// 笔记封面（含宽高比）：没存封面时按标题哈希现挑一张，展示永远有图。
+function iphoneXhsCoverFor(note) {
+  const saved = note && note.coverId ? iphoneXhsCoverById(note.coverId) : null;
+  return saved || iphoneXhsPickCover('', `${note?.id || ''}${note?.title || ''}`);
+}
+
+function iphoneXhsCoverClass(cover) {
+  return `iphone-xhs__cover--${cover.id}`;
+}
+
+// 纯文字笔记（对照真实小红书的文字卡）：按 id 哈希稳定决定，约四成笔记不配图，
+// 首页瀑布流才有真实的长短错落。玩家自己发的总是带图（封面是手选的）。
+function iphoneXhsIsTextNote(note) {
+  if (!note) return false;
+  if (note.authorId === '__me__') return false;
+  const text = String(note.id || '');
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) hash = (hash * 37 + text.charCodeAt(i)) % 100000;
+  return hash % 10 < 4;
+}
+
+// 信息流列高估算（两列平衡用）：有图按封面宽高比折算，文字卡按字数折行。
+function iphoneXhsCardEstimate(note) {
+  if (iphoneXhsIsTextNote(note)) {
+    const lines = Math.min(8, Math.max(3, Math.ceil(String(note.text || '').length / 17)));
+    return lines * 0.27 + 0.86;
+  }
+  return 1 / iphoneXhsCoverFor(note).ratio + 0.62;
+}
+
+const IPHONE_XHS_COVER_TOPIC_LABEL = Object.freeze({
+  美食: '美食', 宠物: '萌宠', 旅行: '旅行', 家居: '家居', 数码: '数码', 穿搭: '穿搭', 探店: '探店',
+});
+
+function iphoneXhsCoverTopicLabel(cover) {
+  return IPHONE_XHS_COVER_TOPIC_LABEL[cover?.topic] || cover?.topic || '日常';
+}
+
+// ---------- 展示辅助 ----------
+// 计数缩写：1286 / 1.3万（小红书同款，1 万以上保留一位小数）。
+function iphoneXhsFormatCount(value) {
+  const num = Math.max(0, Math.floor(Number(value) || 0));
+  if (num < 10000) return String(num);
+  const wan = num / 10000;
+  return `${(wan >= 100 ? Math.round(wan) : Math.round(wan * 10) / 10)}万`;
+}
+
+// 笔记展示时间：与 QQ空间 / 朋友圈同款相对时间（刚刚 / N分钟前 / …）。
+function iphoneXhsTimeLabel(ts) {
+  return iphoneQqDynamicsTimeLabel({ ts });
+}
+
+// 评论的小心心数：评论本身不存点赞数（AI 也不写），按内容哈希稳定生成一个演示值，
+// 同一条评论每次渲染都一样。
+function iphoneXhsCommentLikes(comment) {
+  const text = `${comment?.name || ''}${comment?.text || ''}`;
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) hash = (hash * 37 + text.charCodeAt(i)) % 100000;
+  return hash % 268 + 1;
+}
+
+// 评论的 IP 属地：网友池里有就用 TA 的，玩家评论用「我」的，都取不到就借笔记的。
+function iphoneXhsCommentIp(data, comment, note) {
+  if (iphoneIsXhsPlayerAuthor(comment?.name)) return iphoneGetXhsProfile().ip;
+  const netizen = iphoneXhsFindNetizen(data, comment?.name);
+  return netizen?.ip || note?.ip || '江苏';
+}
+
+// 笔记作者展示信息：网友池优先，玩家自己的笔记走「我」的资料。
+function iphoneXhsAuthorOf(data, note) {
+  if (note.authorId === '__me__') {
+    const profile = iphoneGetXhsProfile();
+    return { id: '__me__', name: profile.name, xhsId: profile.xhsId, ip: note.ip || profile.ip, bio: profile.bio, mine: true };
+  }
+  const netizen = data.netizens.find((n) => n.id === note.authorId) || null;
+  return {
+    id: note.authorId,
+    name: netizen?.name || note.authorName || '小红书用户',
+    xhsId: netizen?.xhsId || '',
+    ip: netizen?.ip || note.ip || '',
+    bio: netizen?.bio || '',
+    mine: false,
+  };
+}
+
+function iphoneXhsIsFollowing(data, authorId) {
+  return authorId === '__me__' || data.following.includes(authorId);
+}
+
+// 笔记点赞 / 收藏数：玩家自己点过的在原数上 +1（数据里的数是「别人」的）。
+function iphoneXhsLikeCount(note) {
+  return (Number(note?.likes) || 0) + (note?.likeMine ? 1 : 0);
+}
+
+function iphoneXhsCollectCount(note) {
+  return (Number(note?.collects) || 0) + (note?.collectMine ? 1 : 0);
+}
+
+// ---------- 首页频道筛选 ----------
+// 「推荐」= 全部；其余频道按标题、正文与话题里的关键词过滤（对照真实小红书的
+// 发现页横滑条，是题材聚合而不是独立数据源）。
+const IPHONE_XHS_CHANNEL_KEYS = Object.freeze({
+  推荐: [],
+  RED: ['red', '好物', '测评', '开箱', '数码', '美妆', '口红'],
+  热点: ['热点', '热搜', '刷屏', '新闻', '爆火', '全网'],
+  直播: ['直播', '开播', '预告'],
+  短剧: ['短剧', '追剧', '剧情', '演员'],
+  穿搭: ['穿搭', '搭配', '显瘦', '外套', '裙', '鞋', '包'],
+});
+
+function iphoneXhsNoteMatchesChannel(note, channel) {
+  const keys = IPHONE_XHS_CHANNEL_KEYS[channel] || [];
+  if (!keys.length) return true;
+  const haystack = `${note.title} ${note.text} ${note.topics.join(' ')}`.toLowerCase();
+  return keys.some((key) => haystack.includes(key));
+}
+
+// ---------- 小红书提示词预设（存 settings.promptPresets.xhsNotes） ----------
+function iphoneGetXhsPreset() {
+  const defaults = IPHONE_XHS_PRESET_DEFAULT;
+  const raw = iphoneGetSettings().promptPresets?.xhsNotes || {};
+  const persona = typeof raw.persona === 'string' ? raw.persona : defaults.persona;
+  const worldBook = typeof raw.worldBook === 'boolean' ? raw.worldBook : defaults.worldBook;
+  const latestFloor = typeof raw.latestFloor === 'boolean' ? raw.latestFloor : defaults.latestFloor;
+  const npcLogic = typeof raw.npcLogic === 'string' ? raw.npcLogic : IPHONE_QQ_NPC_LOGIC;
+  const dialogueGuidance = typeof raw.dialogueGuidance === 'string' ? raw.dialogueGuidance : IPHONE_QQ_DIALOGUE_GUIDANCE;
+  let historyFloors = Math.round(Number(raw.historyFloors));
+  if (!Number.isFinite(historyFloors)) historyFloors = defaults.historyFloors;
+  historyFloors = Math.min(50, Math.max(0, historyFloors));
+  const format = typeof raw.format === 'string' ? raw.format : defaults.format;
+  const guidance = typeof raw.guidance === 'string' ? raw.guidance : defaults.guidance;
+  const replyGuidance = typeof raw.replyGuidance === 'string' ? raw.replyGuidance : defaults.replyGuidance;
+  const replyFormat = typeof raw.replyFormat === 'string' ? raw.replyFormat : defaults.replyFormat;
+  return { persona, worldBook, latestFloor, historyFloors, format, npcLogic, dialogueGuidance, guidance, replyGuidance, replyFormat };
+}
+
+// 生成请求的公共部分：世界书 / 酒馆最近楼层 / 记录楼层（与两个动态页同一套开关）。
+// 返回 { worldText, tavernText, floorLogText, resolve }。
+async function iphoneXhsCollectContext(preset) {
+  const ctx = iphoneGetContextSafe();
+  const resolve = (text) => iphoneResolveTavernMacros(text, ctx);
+  let worldText = '';
+  if (preset.worldBook) {
+    try {
+      worldText = resolve(iphoneWbBuildPromptText(await iphoneWbCollectState()) || '');
+    } catch (error) {
+      iphoneLog('warn', '世界书内容注入失败，本次请求不带世界书', error);
+    }
+  }
+  const historyFloors = Math.max(0, Math.round(Number(preset.historyFloors) || 0));
+  const historyLines = historyFloors > 0
+    ? (Array.isArray(ctx?.chat) ? ctx.chat : [])
+      .filter((mes) => mes && !mes.is_system
+        && iphoneExtractMessageFloorInner(mes.mes) == null
+        && String(mes.mes ?? '').trim())
+      .slice(-historyFloors)
+      .map((mes) => `${String(mes.name || '').trim() || '旁白'}：${resolve(String(mes.mes).trim())}`)
+    : [];
+  let floorLogText = '';
+  if (preset.latestFloor) {
+    const chatFloors = Array.isArray(ctx?.chat) ? ctx.chat : [];
+    for (let i = chatFloors.length - 1; i >= 0; i -= 1) {
+      const inner = iphoneExtractMessageFloorInner(chatFloors[i]?.mes);
+      if (inner == null) continue;
+      const text = resolve(String(inner).trim());
+      if (!text) break;
+      if (text.length > IPHONE_QQ_FLOOR_LOG_CAP) {
+        let cut = text.slice(-IPHONE_QQ_FLOOR_LOG_CAP);
+        const newlineAt = cut.indexOf('\n');
+        if (newlineAt >= 0) cut = cut.slice(newlineAt + 1);
+        floorLogText = `……（更早的记录已略）\n${cut}`;
+      } else {
+        floorLogText = text;
+      }
+      break;
+    }
+  }
+  return { worldText: worldText.trim(), tavernText: historyLines.join('\n'), floorLogText, resolve };
+}
+
+// ---------- 小红书笔记生成（下拉刷新调用一次对话 API） ----------
+// system 依次装：角色扮演指令 + 提示词结构说明 + 扮演逻辑与对白规范 + 已有网友
+// 名单 + 世界书 + 酒馆最近楼层（均可由「设置 · 小红书提示词」预设控制）+ 笔记写作
+// 指导与输出格式（预设里可改写、清空即不附带）；user 下达生成指令。与朋友圈最大的
+// 差别：名单里给的是「已有网友」，模型可以复用熟面孔，也可以现场发明新网友。
+// 返回新建的笔记数组（已写回数据）。
+async function iphoneGenerateXhsNotes(xhsScreen) {
+  const data = iphoneGetXhsData();
+  const settings = iphoneGetSettings();
+  const preset = iphoneGetXhsPreset();
+  const { worldText, tavernText, floorLogText, resolve } = await iphoneXhsCollectContext(preset);
+
+  // 已有网友名单：昵称 + TA 一贯的人设（简介 / 属地 / 小红书号），让熟面孔回归时
+  // 能延续同样的内容方向；池子空了就写「暂无」，全靠模型新造。
+  const rosterText = data.netizens.length
+    ? data.netizens.map((n) => {
+      const extras = [n.xhsId ? `小红书号 ${n.xhsId}` : '', n.ip ? `IP ${n.ip}` : '', n.bio ? `简介：${n.bio}` : '']
+        .filter(Boolean).join('｜');
+      return `- ${n.name}${extras ? `（${extras}）` : ''}`;
+    }).join('\n')
+    : '（暂无，可以全部新造）';
+
+  const persona = preset.persona.trim();
+  const npcLogic = preset.npcLogic.trim();
+  const dialogueGuidance = preset.dialogueGuidance.trim();
+  const guidance = String(preset.guidance ?? '').trim();
+  const format = String(preset.format ?? '').trim();
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
+
+  const sysParts = [];
+  if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
+  const outlineItems = [];
+  if (persona) outlineItems.push('<roleplay_instructions>…</roleplay_instructions>：角色扮演指令，约束人物设定与世界观基线；');
+  if (npcLogic) outlineItems.push('<npc_logic>…</npc_logic>：扮演逻辑——「先是人，后是设定」，按自身立场与动机行事；');
+  if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：表达规范——口语化、生活化、带情绪与立场，禁止播报腔；');
+  outlineItems.push('<netizens>…</netizens>：小红书里已经出现过的网友名单——可以复用（熟面孔回归，延续其人设），也可以新造网友；');
+  if (worldText) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
+  if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
+  if (floorLogText) outlineItems.push('<xhs_chat_log>…</xhs_chat_log>：最近一次同步到酒馆楼层的手机记录，可能包含多个记录段（每段各自用方括号标签包裹，如 [微信_私聊_名字] / [朋友圈动态] / [小红书笔记]），供你了解最近的动态；');
+  if (guidance) outlineItems.push('<xhs_guidance>…</xhs_guidance>：小红书笔记的写作指导；');
+  if (format) outlineItems.push('<output_format>…</output_format>：回复格式要求，位于提示词末尾，必须严格遵守；');
+  sysParts.push('【提示词结构说明】本次请求的提示词由以下部分组成，均已用 XML 标签包裹并附介绍：\n'
+    + outlineItems.map((item) => `- ${item}`).join('\n'));
+  if (npcLogic) sysParts.push(`以下是扮演逻辑指导（决定你如何理解与演绎角色）：\n<npc_logic>\n${resolve(npcLogic)}\n</npc_logic>`);
+  if (dialogueGuidance) sysParts.push(`以下是表达规范（决定你如何说话与写内容）：\n<dialogue_guidance>\n${resolve(dialogueGuidance)}\n</dialogue_guidance>`);
+  sysParts.push(`以下是小红书里已经出现过的网友名单（可以复用其中的熟面孔，也可以新造网友）：\n<netizens>\n${rosterText}\n</netizens>`);
+  if (worldText) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldText}\n</world_info>`);
+  if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
+  if (injectParts) sysParts.push(injectParts.system);
+  if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的手机记录，可能包含多个记录段（每段各自用方括号标签包裹，如 [微信_私聊_名字] / [朋友圈动态] / [小红书笔记]）：\n<xhs_chat_log>\n${floorLogText}\n</xhs_chat_log>`);
+  if (guidance) sysParts.push(`以下是小红书笔记的写作指导：\n<xhs_guidance>\n${resolve(guidance)}\n</xhs_guidance>`);
+  if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
+
+  const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const reply = await iphoneRequestChatCompletion(settings, [
+    { role: 'system', content: sysParts.join('\n\n') },
+    { role: 'user', content: userContent },
+  ]);
+
+  const parsed = iphoneParseXhsNotesReply(reply);
+  if (!parsed.length) {
+    throw new Error('AI 没有返回有效笔记（需要「昵称：发布者」开头的笔记区块，含标题与正文）。');
+  }
+  const now = Date.now();
+  const fresh = iphoneGetXhsData();
+  const created = [];
+  const usedNames = new Set();
+  for (const item of parsed.slice(0, IPHONE_XHS_REFRESH_MAX_NOTES)) {
+    const name = String(item.name || '').trim();
+    if (!name || usedNames.has(name)) continue;
+    const title = String(item.title || '').replace(/[\r\n]+/g, ' ').trim().slice(0, IPHONE_XHS_TITLE_CAP);
+    const text = String(item.text || '').trim().slice(0, IPHONE_XHS_TEXT_CAP);
+    if (!title && !text) continue;
+    usedNames.add(name);
+    // 发布者：玩家自己的昵称一律让位（网友不是玩家），其余进网友池
+    if (iphoneIsXhsPlayerAuthor(name)) continue;
+    const netizen = iphoneXhsEnsureNetizen(fresh, name, {
+      xhsId: item.xhsId, ip: item.ip, bio: item.bio,
+    });
+    if (!netizen) continue;
+    const cover = iphoneXhsPickCover(item.topic, `${item.title || ''}${netizen.id}`);
+    const note = iphoneNormalizeXhsNote({
+      id: iphoneXhsGenId('n'),
+      authorId: netizen.id,
+      authorName: netizen.name,
+      ts: now,
+      coverId: cover.id,
+      title,
+      text,
+      topics: item.topics,
+      location: item.location,
+      ip: item.ip || netizen.ip,
+      likes: item.likes,
+      collects: item.collects,
+      comments: [],
+    });
+    // 评论区：评论人可以是已有网友 / 新网友 / 作者本人（都会自动进网友池）
+    const comments = [];
+    for (const rawComment of item.comments || []) {
+      const cname = String(rawComment.name || '').trim();
+      if (!cname || iphoneIsXhsPlayerAuthor(cname)) continue;
+      if (cname !== netizen.name) iphoneXhsEnsureNetizen(fresh, cname, {});
+      const rawReply = String(rawComment.replyName || '').trim();
+      let replyName = '';
+      if (rawReply && rawReply !== cname && !iphoneIsXhsPlayerAuthor(rawReply)) {
+        if (rawReply !== netizen.name) iphoneXhsEnsureNetizen(fresh, rawReply, {});
+        replyName = rawReply;
+      }
+      const comment = iphoneNormalizeXhsComment({
+        name: cname,
+        text: rawComment.text,
+        replyName: replyName || undefined,
+        ts: now,
+      });
+      if (comment) comments.push(comment);
+    }
+    note.comments = comments.slice(-40);
+    fresh.notes.push(note);
+    created.push(note);
+  }
+  if (!created.length) {
+    throw new Error('AI 没有返回有效笔记（发布者昵称或标题正文为空）。');
+  }
+  iphoneSetXhsData(xhsScreen, fresh);
+  iphoneLog('info', `小红书刷新成功：生成 ${created.length} 篇新笔记`);
+  return created;
+}
+
+// ---------- 小红书笔记回复（玩家留言后调用一次对话 API） ----------
+// 与朋友圈回复同一套范式：`<dynamic_post>` 换成 `<xhs_note>`（含封面题材、标题、
+// 正文、话题、完整评论区），评论人可以是已有网友、新网友或笔记作者本人。
+async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
+  const settings = iphoneGetSettings();
+  const data = iphoneGetXhsData();
+  const post = data.notes.find((n) => n.id === note?.id) || note;
+  if (!post) throw new Error('这篇笔记已经不在了');
+  const author = iphoneXhsAuthorOf(data, post);
+  const preset = iphoneGetXhsPreset();
+  const { worldText, tavernText, floorLogText, resolve } = await iphoneXhsCollectContext(preset);
+
+  const playerName = iphoneGetTavernUserName() || IPHONE_QQ_ME_FALLBACK_NAME;
+  const playerAuthor = iphoneGetXhsPlayerAuthor();
+  const customNick = iphoneGetXhsCustomNick();
+  const playerAliases = new Set([playerName, customNick].filter(Boolean));
+  const playerDesc = customNick && customNick !== playerName
+    ? `玩家「${playerName}」（TA 的小红书昵称是「${customNick}」，评论区里署「${customNick}」的就是 TA）`
+    : `玩家「${playerName}」`;
+
+  const rosterText = data.netizens.length
+    ? data.netizens.map((n) => `- ${n.name}`).join('\n')
+    : '（暂无，可以新造）';
+  const inline = (value) => String(value || '').replace(/[\r\n]+/g, ' ').trim();
+  const cover = iphoneXhsCoverFor(post);
+  const postLines = [
+    `作者：${inline(author.name)}${author.xhsId ? `（小红书号 ${inline(author.xhsId)}）` : ''}`,
+    `封面题材：${cover.topic}`,
+    `标题：${inline(post.title)}`,
+    `正文：${inline(post.text)}`,
+  ];
+  if (post.topics.length) postLines.push(`话题：${post.topics.map((t) => `#${t}`).join(' ')}`);
+  postLines.push(`点赞：${iphoneXhsLikeCount(post)}｜收藏：${iphoneXhsCollectCount(post)}`);
+  postLines.push('评论区（时间旧→新）：');
+  if (!post.comments.length) {
+    postLines.push('（暂无评论）');
+  } else {
+    for (const c of post.comments) {
+      const name = iphoneResolveXhsPlayerAuthor(c.name);
+      postLines.push(c.replyName
+        ? `- ${inline(name)} 回复 ${inline(iphoneResolveXhsPlayerAuthor(c.replyName))}：${inline(c.text)}`
+        : `- ${inline(name)}：${inline(c.text)}`);
+    }
+  }
+  const postText = postLines.join('\n');
+
+  const persona = preset.persona.trim();
+  const npcLogic = preset.npcLogic.trim();
+  const dialogueGuidance = preset.dialogueGuidance.trim();
+  const replyGuidance = String(preset.replyGuidance ?? '').trim();
+  const replyFormat = String(preset.replyFormat ?? '').trim();
+  // 第三方扩展注入酒馆提示词的内容（万华镜的变量状态等）：随 system 附带。
+  const injectParts = iphoneInjectPromptParts();
+
+  const sysParts = [];
+  if (persona) sysParts.push(`<roleplay_instructions>\n${resolve(persona)}\n</roleplay_instructions>`);
+  const outlineItems = [];
+  if (persona) outlineItems.push('<roleplay_instructions>…</roleplay_instructions>：角色扮演指令，约束人物设定与世界观基线；');
+  if (npcLogic) outlineItems.push('<npc_logic>…</npc_logic>：扮演逻辑——「先是人，后是设定」，按自身立场与动机行事；');
+  if (dialogueGuidance) outlineItems.push('<dialogue_guidance>…</dialogue_guidance>：表达规范——口语化、生活化、带情绪与立场，禁止播报腔；');
+  outlineItems.push('<netizens>…</netizens>：小红书里已经出现过的网友名单——评论人可以从中挑选，也可以新造网友；');
+  if (worldText) outlineItems.push('<world_info>…</world_info>：当前场景的世界书设定，包含世界观与相关人物的资料；');
+  if (injectParts) outlineItems.push(injectParts.outline);
+  if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
+  if (floorLogText) outlineItems.push('<xhs_chat_log>…</xhs_chat_log>：最近一次同步到酒馆楼层的手机记录，供你了解最近的动态；');
+  outlineItems.push('<xhs_note>…</xhs_note>：玩家正在评论的那篇笔记——作者、封面题材、标题、正文、话题与完整评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
+  if (replyGuidance) outlineItems.push('<reply_guidance>…</reply_guidance>：评论回复的写作指导；');
+  if (replyFormat) outlineItems.push('<output_format>…</output_format>：回复格式要求，位于提示词末尾，必须严格遵守；');
+  sysParts.push('【提示词结构说明】本次请求的提示词由以下部分组成，均已用 XML 标签包裹并附介绍：\n'
+    + outlineItems.map((item) => `- ${item}`).join('\n'));
+  if (npcLogic) sysParts.push(`以下是扮演逻辑指导（决定你如何理解与演绎角色）：\n<npc_logic>\n${resolve(npcLogic)}\n</npc_logic>`);
+  if (dialogueGuidance) sysParts.push(`以下是表达规范（决定你如何说话与写内容）：\n<dialogue_guidance>\n${resolve(dialogueGuidance)}\n</dialogue_guidance>`);
+  sysParts.push(`以下是小红书里已经出现过的网友名单（评论人可以从中挑选，也可以新造网友）：\n<netizens>\n${rosterText}\n</netizens>`);
+  if (worldText) sysParts.push(`以下是当前场景的世界书设定（世界观与人物资料）：\n<world_info>\n${worldText}\n</world_info>`);
+  if (tavernText) sysParts.push(`以下是酒馆主线的最近对话（时间旧→新），是你当前所处的剧情背景：\n<tavern_context>\n${tavernText}\n</tavern_context>`);
+  if (injectParts) sysParts.push(injectParts.system);
+  if (floorLogText) sysParts.push(`以下是最近一次同步到酒馆楼层的手机记录：\n<xhs_chat_log>\n${floorLogText}\n</xhs_chat_log>`);
+  const identityNote = customNick && customNick !== playerName
+    ? `评论区里署名「${customNick}」的评论也是 TA 写的。`
+    : '评论区的署名用的就是 TA 的名字。';
+  sysParts.push(`以下是玩家身份说明：${playerDesc}。${identityNote}不要把 TA 当成网友或替 TA 发言。`);
+  sysParts.push(`以下是玩家正在评论的那篇笔记（含完整评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`);
+  if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
+  if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
+
+  const userContent = `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const reply = await iphoneRequestChatCompletion(settings, [
+    { role: 'system', content: sysParts.join('\n\n') },
+    { role: 'user', content: userContent },
+  ]);
+
+  const existingKeys = new Set();
+  for (const c of post.comments) {
+    const text = String(c.text || '').trim();
+    for (const name of [String(c.name || '').trim(), iphoneResolveXhsPlayerAuthor(c.name)]) {
+      if (name) existingKeys.add(`${name}|${text}`);
+    }
+  }
+  const fresh = iphoneGetXhsData();
+  const created = [];
+  const knownNames = new Set(fresh.netizens.map((n) => n.name));
+  for (const entry of iphoneParseQqDynamicReplyLines(reply)) {
+    const name = String(entry.name || '').trim();
+    const text = String(entry.text || '').trim();
+    if (!name || !text || playerAliases.has(name) || iphoneIsXhsPlayerAuthor(name)) continue;
+    const key = `${name}|${text}`;
+    if (existingKeys.has(key)) continue;
+    existingKeys.add(key);
+    // 名单外的新面孔（模型新造的网友）也收进网友池，之后就是熟面孔了
+    if (!knownNames.has(name)) {
+      if (!iphoneXhsEnsureNetizen(fresh, name, {})) continue;
+      knownNames.add(name);
+    }
+    const rawReply = String(entry.replyName || '').trim();
+    const replyName = (rawReply === playerName || iphoneIsXhsPlayerAuthor(rawReply)) ? playerAuthor : rawReply;
+    const knownReply = replyName && replyName !== name
+      && (iphoneIsXhsPlayerAuthor(replyName) || playerAliases.has(replyName)
+        || knownNames.has(replyName) || replyName === author.name);
+    created.push(knownReply
+      ? { name, text, replyName, ts: Date.now() }
+      : { name, text, ts: Date.now() });
+  }
+  let fallbackUsed = false;
+  if (!created.length) {
+    const whole = String(reply ?? '').replace(/\s+/g, ' ').trim()
+      .replace(/^[^：:\n]{1,30}?(?:\s+回复\s+[^：:\n]{1,30}?)?\s*[:：]\s*/, '')
+      .slice(0, IPHONE_XHS_COMMENT_CAP);
+    if (!whole) throw new Error('AI 没有返回有效回复内容。');
+    created.push({ name: author.name, text: whole, ts: Date.now() });
+    fallbackUsed = true;
+  }
+  iphoneSetXhsData(xhsScreen, fresh);
+  iphoneLog('info', `小红书回复成功：生成 ${created.length} 条新评论${fallbackUsed ? '（整段兜底为作者回复）' : ''}`);
+  return created;
+}
+
+// ---------- 笔记区块解析 ----------
+// 把模型回复按「笔记区块」拆成 { name, xhsId, ip, bio, topic, title, text, topics,
+// location, likes, collects, comments }。对格式抖动做容错：容忍代码围栏、行首序号
+// 与列表符号、「昵称 / 作者 / 博主」三种发布者字段名、封面题材的同义写法；
+// 评论区里每行一条「评论人：内容」（「评论人 回复 被回复人：内容」亦可）。
+function iphoneParseXhsNotesReply(text) {
+  const notes = [];
+  const lines = String(text ?? '').split(/\r?\n/)
+    .map((l) => l.trim().replace(/^(?:```+.*|[-•*◆]\s+|\d{1,2}[.、)]\s+)/, '').trim())
+    .filter((l) => l && !l.startsWith('```'));
+  let cur = null;
+  let inComments = false;
+  const flush = () => {
+    if (cur && (cur.title || cur.text)) notes.push(cur);
+    cur = null;
+  };
+  const fieldOf = (line) => {
+    const matched = line.match(/^(昵称|作者|博主|小红书号|小红书ID|小红书id|IP属地|IP|属地|简介|介绍|封面|题材|图片|配图|标题|正文|内容|话题|标签|位置|定位|点赞|赞|收藏|评论)[:：]\s*(.*)$/);
+    return matched ? { key: matched[1], value: matched[2].trim() } : null;
+  };
+  for (const line of lines) {
+    // 「评论：」之后的「名字：内容」全部按评论收（评论区里不会再有别的字段）
+    const field = fieldOf(line);
+    if (field) {
+      const isAuthor = /^(昵称|作者|博主)$/.test(field.key);
+      if (isAuthor) {
+        flush();
+        cur = {
+          name: field.value, xhsId: '', ip: '', bio: '', topic: '',
+          title: '', text: '', topics: [], location: '', likes: 0, collects: 0, comments: [],
+        };
+        inComments = false;
+        continue;
+      }
+      if (!cur) continue;
+      if (/^评论$/.test(field.key)) {
+        inComments = true;
+        if (field.value) {
+          const inline = field.value.match(/^([^：:\n]{1,30}?)(?:\s+回复\s+([^：:\n]{1,30}?))?\s*[:：](.+)$/);
+          if (inline) cur.comments.push({ name: inline[1].trim(), replyName: (inline[2] || '').trim(), text: inline[3].trim() });
+        }
+        continue;
+      }
+      inComments = false;
+      if (/^小红书号|^小红书ID|^小红书id$/.test(field.key)) cur.xhsId = field.value;
+      else if (/^IP属地|^IP|^属地$/.test(field.key)) cur.ip = field.value.replace(/^属地[:：]?/, '').trim();
+      else if (/^简介|^介绍$/.test(field.key)) cur.bio = field.value;
+      else if (/^封面|^题材|^图片|^配图$/.test(field.key)) cur.topic = field.value;
+      else if (/^标题$/.test(field.key)) cur.title = field.value;
+      else if (/^正文|^内容$/.test(field.key)) cur.text = field.value;
+      else if (/^话题|^标签$/.test(field.key)) cur.topics = iphoneXhsTopicList(field.value);
+      else if (/^位置|^定位$/.test(field.key)) cur.location = field.value;
+      else if (/^点赞|^赞$/.test(field.key)) cur.likes = field.value;
+      else if (/^收藏$/.test(field.key)) cur.collects = field.value;
+      continue;
+    }
+    if (!cur) continue;
+    // 评论区内的自由行：`评论人：内容`（也容忍「评论人 回复 被回复人：内容」）
+    if (inComments) {
+      const matched = line.match(/^([^：:\n]{1,30}?)(?:\s+回复\s+([^：:\n]{1,30}?))?\s*[:：]\s*(.+)$/);
+      if (matched) {
+        cur.comments.push({ name: matched[1].trim(), replyName: (matched[2] || '').trim(), text: matched[3].trim() });
+        continue;
+      }
+      // 续行并进上一条评论
+      const last = cur.comments[cur.comments.length - 1];
+      if (last) last.text = `${last.text} ${line}`.trim();
+      continue;
+    }
+    // 没写字段名的正文行：并进正文（模型偶尔漏写「正文：」）
+    if (!cur.title && !cur.text && line.length <= IPHONE_XHS_TITLE_CAP && !/[。！？!?]$/.test(line)) {
+      cur.title = line;
+    } else {
+      cur.text = `${cur.text} ${line}`.trim();
+    }
+  }
+  flush();
+  return notes
+    .map((note) => ({
+      ...note,
+      comments: (note.comments || [])
+        .map((c) => ({ name: c.name, replyName: c.replyName, text: c.text }))
+        .filter((c) => c.name && c.text)
+        .slice(0, 3),
+    }))
+    .filter((note) => note.name && (note.title || note.text));
+}
+
+// ---------- 小红书记录楼层同步 ----------
+// 与两个动态页同一套「整段重写」（点赞 / 收藏 / 评论变化要如实反映），段头
+// `小红书笔记：`，段标签 [小红书笔记]（与 QQ / 微信的段并列互不干扰）：
+//   ◆ 昵称：标题
+//     正文：…
+//     话题：#a #b
+//     位置：上海
+//     点赞：1286
+//     收藏：734
+//     评论：
+//     - 名字：内容
+function iphoneSyncXhsNotesFloor() {
+  const run = async () => {
+    const ctx = iphoneGetFloorChatContext();
+    if (!ctx) return;
+    const data = iphoneGetXhsData();
+    if (!data.notes.length) return;
+    const sanitize = (value, fallback) => String(value || '').replace(/[\r\n:：]+/g, ' ').trim() || fallback;
+    const lines = [];
+    for (const note of data.notes) {
+      const author = iphoneXhsAuthorOf(data, note);
+      const name = sanitize(author.name, '小红书用户');
+      const title = String(note.title || '').replace(/[\r\n]+/g, ' ').trim();
+      lines.push(`◆ ${name}：${title || '（无标题）'}`);
+      if (note.text) lines.push(`  正文：${String(note.text).replace(/[\r\n]+/g, ' ').trim()}`);
+      if (note.topics.length) lines.push(`  话题：${note.topics.map((t) => `#${t}`).join(' ')}`);
+      if (note.location) lines.push(`  位置：${sanitize(note.location, '')}`);
+      lines.push(`  点赞：${iphoneXhsLikeCount(note)}｜收藏：${iphoneXhsCollectCount(note)}`);
+      if (note.comments.length) {
+        lines.push('  评论：');
+        const authorName = (value) => (
+          iphoneIsXhsPlayerAuthor(value) ? IPHONE_XHS_USER_MACRO : sanitize(value, '小红书用户')
+        );
+        for (const c of note.comments) {
+          const ctext = String(c.text || '').replace(/[\r\n]+/g, ' ').trim();
+          if (!ctext) continue;
+          lines.push(c.replyName
+            ? `  - ${authorName(c.name)} 回复 ${authorName(c.replyName)}：${ctext}`
+            : `  - ${authorName(c.name)}：${ctext}`);
+        }
+      }
+    }
+    const sectionHeader = '小红书笔记：';
+    const sectionTag = IPHONE_FLOOR_SECTION_TAG_HEADS.xhsNotes;
+    const chat = ctx.chat;
+    const last = chat[chat.length - 1];
+    const existingInner = last ? iphoneExtractMessageFloorInner(last.mes) : null;
+    if (existingInner == null) {
+      const sections = [{ tag: sectionTag, header: sectionHeader, lines }];
+      await iphoneAppendChatFloor(ctx, iphoneWrapMessageFloorInner(iphoneFloorBuildInner(sections)));
+      iphoneLog('info', `已同步 ${data.notes.length} 篇小红书笔记到 iPhone_Message 楼层`);
+      return;
+    }
+    const sections = iphoneFloorParseInner(existingInner);
+    const target = iphoneFloorFindSection(sections, sectionTag, sectionHeader);
+    if (target) {
+      target.tag = sectionTag;
+      target.header = sectionHeader;
+      target.lines = lines;
+      iphoneFloorDropDuplicates(sections, sectionTag, sectionHeader, target);
+    } else {
+      sections.push({ tag: sectionTag, header: sectionHeader, lines });
+    }
+    const next = iphoneFloorBuildInner(sections);
+    if (next === existingInner.trim()) return;
+    await iphoneUpdateChatFloor(ctx, chat.length - 1, iphoneWrapMessageFloorInner(next));
+    iphoneLog('info', `已更新小红书笔记段到 iPhone_Message 楼层（${data.notes.length} 篇笔记）`);
+  };
+  const guarded = async () => {
+    try {
+      await run();
+    } catch (error) {
+      iphoneLog('warn', '同步小红书笔记到 iPhone_Message 楼层失败', error);
+    }
+  };
+  iphoneQqFloorSyncChain = iphoneQqFloorSyncChain.then(guarded, guarded);
+  return iphoneQqFloorSyncChain;
+}
+
+// ---------- 头像选择浮层（小红书版） ----------
+function iphoneXhsBuildAvatarPicker(icons, { getCurrent, onPick, commit }) {
+  return iphoneQqBuildAvatarPicker(icons, {
+    getCurrent: () => iphoneNormalizeXhsAvatar(getCurrent()),
+    onPick: (avatar) => onPick(iphoneNormalizeXhsAvatar(avatar)),
+    commit: commit ? (avatar) => commit(iphoneNormalizeXhsAvatar(avatar)) : undefined,
+    presets: IPHONE_XHS_ME_AVATAR_PRESETS,
+    clsPrefix: 'iphone-xhs__avatar--',
+    meClass: 'iphone-xhs__me-avatar',
+  });
+}
+
+// ---------- 首页瀑布流 ----------
+// 卡片：封面图（或纯文字卡）+ 标题 + 作者行（头像 / 昵称 / 小心心数），两列高度用
+// 封面宽高比估算，逐张丢进当前更矮的一列——真实小红书的错落感就是这么来的。
+function iphoneXhsBuildNoteCard(data, note, icons, onOpen) {
+  const card = document.createElement('article');
+  card.className = 'iphone-xhs__card';
+  card.dataset.noteId = note.id;
+
+  const textOnly = iphoneXhsIsTextNote(note);
+  const cover = document.createElement('div');
+  if (textOnly) {
+    // 纯文字卡（对照真实小红书的文字笔记）：整张卡就是一段摘录，不带配图
+    cover.className = 'iphone-xhs__card-cover iphone-xhs__card-cover--text';
+    const quote = document.createElement('p');
+    quote.className = 'iphone-xhs__card-quote';
+    quote.textContent = note.text;
+    cover.appendChild(quote);
+  } else {
+    const coverInfo = iphoneXhsCoverFor(note);
+    cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(coverInfo)}`;
+    cover.style.aspectRatio = String(coverInfo.ratio);
+  }
+  card.appendChild(cover);
+
+  const title = document.createElement('p');
+  title.className = 'iphone-xhs__card-title';
+  title.textContent = note.title || note.text;
+  card.appendChild(title);
+
+  const foot = document.createElement('div');
+  foot.className = 'iphone-xhs__card-foot';
+  const author = iphoneXhsAuthorOf(data, note);
+  foot.appendChild(author.mine
+    ? iphoneXhsBuildMeAvatar(iphoneGetXhsProfile())
+    : iphoneXhsBuildNetizenAvatar(data, author.name));
+  const name = document.createElement('span');
+  name.className = 'iphone-xhs__card-name';
+  name.textContent = author.name;
+  foot.appendChild(name);
+  const like = document.createElement('span');
+  like.className = 'iphone-xhs__card-like';
+  like.innerHTML = `${note.likeMine ? icons.heartFill : icons.heart}<i>${iphoneXhsFormatCount(iphoneXhsLikeCount(note))}</i>`;
+  foot.appendChild(like);
+  card.appendChild(foot);
+
+  card.addEventListener('click', () => onOpen(note));
+  return card;
+}
+
+function iphoneXhsBuildHomePage({ icons, onOpenNote, screen }) {
+  const page = document.createElement('div');
+  page.className = 'iphone-xhs__tabpage iphone-xhs__home';
+
+  const scroll = document.createElement('div');
+  scroll.className = 'iphone-xhs__scroll';
+
+  // 下拉刷新指示器（与朋友圈同一套手势逻辑）
+  const indicator = document.createElement('div');
+  indicator.className = 'iphone-xhs__refresh';
+  indicator.innerHTML = '<span class="iphone-xhs__refresh-spin" aria-hidden="true"></span><span class="iphone-xhs__refresh-text">下拉刷新</span>';
+  const refreshText = indicator.querySelector('.iphone-xhs__refresh-text');
+  scroll.appendChild(indicator);
+
+  const feed = document.createElement('div');
+  feed.className = 'iphone-xhs__feed';
+  scroll.appendChild(feed);
+  page.appendChild(scroll);
+
+  const state = { channel: '推荐', tab: 'discover', following: false };
+
+  function visibleNotes(data) {
+    const base = data.notes.filter((note) => !note.private);
+    if (state.tab === 'follow') {
+      return base.filter((note) => iphoneXhsIsFollowing(data, note.authorId));
+    }
+    return base.filter((note) => iphoneXhsNoteMatchesChannel(note, state.channel));
+  }
+
+  function renderFeed() {
+    const data = iphoneGetXhsData();
+    const list = visibleNotes(data).slice(-60).reverse();
+    feed.innerHTML = '';
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.className = 'iphone-xhs__empty';
+      empty.textContent = state.tab === 'follow'
+        ? '还没有关注的博主，去笔记里点「关注」吧'
+        : (data.notes.length ? '这个频道暂时没有笔记，换个频道看看' : '还没有笔记，下拉刷新试试');
+      feed.appendChild(empty);
+      return;
+    }
+    const colLeft = document.createElement('div');
+    colLeft.className = 'iphone-xhs__col';
+    const colRight = document.createElement('div');
+    colRight.className = 'iphone-xhs__col';
+    let heightLeft = 0;
+    let heightRight = 0;
+    for (const note of list) {
+      const estimate = iphoneXhsCardEstimate(note);
+      const target = heightLeft <= heightRight ? colLeft : colRight;
+      if (target === colLeft) heightLeft += estimate;
+      else heightRight += estimate;
+      target.appendChild(iphoneXhsBuildNoteCard(data, note, icons, onOpenNote));
+    }
+    feed.appendChild(colLeft);
+    feed.appendChild(colRight);
+  }
+
+  // 下拉刷新：与朋友圈同一套手势（阈值 64px），松手调一次 API 生成 1~3 篇笔记
+  const PULL_THRESHOLD = 64;
+  let pulling = false;
+  let pullStartY = 0;
+  let pullDy = 0;
+  let refreshing = false;
+  const endPull = (trigger) => {
+    if (!pulling) return;
+    pulling = false;
+    page.classList.remove('is-pulling');
+    indicator.classList.add('is-anim');
+    if (trigger && !refreshing && pullDy >= PULL_THRESHOLD) {
+      refreshing = true;
+      indicator.style.height = '72px';
+      indicator.classList.add('is-refreshing');
+      refreshText.textContent = '正在生成新笔记…';
+      (async () => {
+        let failText = '';
+        try {
+          await iphoneGenerateXhsNotes(screen);
+          renderFeed();
+          void iphoneSyncXhsNotesFloor();
+        } catch (error) {
+          iphoneLog('warn', '小红书刷新笔记失败', error);
+          failText = '刷新失败';
+        }
+        if (failText) {
+          refreshText.textContent = failText;
+          await new Promise((resolve) => setTimeout(resolve, 1200));
+        }
+        indicator.classList.remove('is-refreshing');
+        indicator.style.height = '0px';
+        setTimeout(() => {
+          refreshing = false;
+          refreshText.textContent = '下拉刷新';
+        }, 280);
+      })();
+    } else {
+      indicator.style.height = '0px';
+    }
+    pullDy = 0;
+  };
+  scroll.addEventListener('pointerdown', (e) => {
+    if (refreshing || pulling || scroll.scrollTop > 0) return;
+    pulling = true;
+    pullStartY = e.clientY;
+    pullDy = 0;
+    indicator.classList.remove('is-anim');
+  });
+  scroll.addEventListener('pointermove', (e) => {
+    if (!pulling || refreshing) return;
+    pullDy = e.clientY - pullStartY;
+    if (pullDy <= 0) {
+      page.classList.remove('is-pulling');
+      indicator.style.height = '0px';
+      refreshText.textContent = '下拉刷新';
+      return;
+    }
+    if (pullDy > 8) page.classList.add('is-pulling');
+    indicator.style.height = `${Math.min(72, pullDy * 0.5)}px`;
+    refreshText.textContent = pullDy >= PULL_THRESHOLD ? '松开刷新' : '下拉刷新';
+  });
+  scroll.addEventListener('pointerup', () => endPull(true));
+  scroll.addEventListener('pointercancel', () => endPull(false));
+  scroll.addEventListener('pointerleave', () => endPull(false));
+  scroll.addEventListener('touchmove', (e) => {
+    if (pulling && pullDy > 0) e.preventDefault();
+  }, { passive: false });
+
+  page._setChannel = (channel) => {
+    state.channel = channel;
+    renderFeed();
+  };
+  page._setTab = (tab) => {
+    state.tab = tab;
+    renderFeed();
+  };
+  page._render = renderFeed;
+  return page;
+}
+
+// ---------- 笔记详情 ----------
+// 打开一篇笔记：封面大图 + 标题正文话题 + 时间与 IP +「不喜欢」+ 评论区 + 底部
+// 互动条（留言输入 / 赞 / 收藏 / 评论数）。作者的「关注」按钮就地切换关注状态。
+function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
+  const view = document.createElement('div');
+  view.className = 'iphone-xhs__noteview';
+
+  const nav = document.createElement('header');
+  nav.className = 'iphone-xhs__note-nav';
+  const scroll = document.createElement('div');
+  scroll.className = 'iphone-xhs__note-scroll';
+  const bar = document.createElement('div');
+  bar.className = 'iphone-xhs__note-bar';
+  bar.innerHTML = `
+    <input type="text" class="iphone-xhs__note-input" maxlength="${IPHONE_XHS_COMMENT_CAP}"
+      placeholder="说点什么..." aria-label="评论这篇笔记" autocomplete="off" spellcheck="false">
+    <button type="button" class="iphone-xhs__note-send">发送</button>
+    <span class="iphone-xhs__note-acts">
+      <button type="button" class="iphone-xhs__note-act iphone-xhs__note-like" aria-label="点赞"></button>
+      <button type="button" class="iphone-xhs__note-act iphone-xhs__note-collect" aria-label="收藏"></button>
+      <button type="button" class="iphone-xhs__note-act iphone-xhs__note-comment" aria-label="评论"></button>
+    </span>
+  `;
+  const input = bar.querySelector('.iphone-xhs__note-input');
+  const sendBtn = bar.querySelector('.iphone-xhs__note-send');
+  const likeBtn = bar.querySelector('.iphone-xhs__note-like');
+  const collectBtn = bar.querySelector('.iphone-xhs__note-collect');
+  const commentBtn = bar.querySelector('.iphone-xhs__note-comment');
+
+  const errRow = document.createElement('p');
+  errRow.className = 'iphone-xhs__note-err';
+  errRow.hidden = true;
+
+  view.appendChild(nav);
+  view.appendChild(scroll);
+  view.appendChild(errRow);
+  view.appendChild(bar);
+
+  let noteId = '';
+  let sending = false;
+
+  const currentNote = () => iphoneGetXhsData().notes.find((n) => n.id === noteId) || null;
+
+  function renderNav(note, data) {
+    const author = iphoneXhsAuthorOf(data, note);
+    const following = iphoneXhsIsFollowing(data, author.id);
+    nav.innerHTML = `
+      <button type="button" class="iphone-xhs__note-back" aria-label="返回">${icons.back}</button>
+      <span class="iphone-xhs__note-avatar" data-note-author-avatar></span>
+      <span class="iphone-xhs__note-author" data-note-author-name></span>
+      ${author.mine
+        ? '<span class="iphone-xhs__note-self">我</span>'
+        : `<button type="button" class="iphone-xhs__note-follow${following ? ' is-on' : ''}">${following ? '已关注' : '关注'}</button>`}
+      <button type="button" class="iphone-xhs__note-more" aria-label="更多">${icons.more}</button>
+    `;
+    const avatarEl = nav.querySelector('[data-note-author-avatar]');
+    if (avatarEl) avatarEl.replaceWith(author.mine
+      ? iphoneXhsBuildMeAvatar(iphoneGetXhsProfile())
+      : iphoneXhsBuildNetizenAvatar(data, author.name));
+    const nameEl = nav.querySelector('[data-note-author-name]');
+    if (nameEl) nameEl.textContent = author.name;
+    nav.querySelector('.iphone-xhs__note-back')?.addEventListener('click', () => onClose?.());
+    const followBtn = nav.querySelector('.iphone-xhs__note-follow');
+    if (followBtn) {
+      followBtn.addEventListener('click', () => {
+        const fresh = iphoneGetXhsData();
+        const has = fresh.following.includes(author.id);
+        fresh.following = has
+          ? fresh.following.filter((id) => id !== author.id)
+          : [...fresh.following, author.id];
+        iphoneSetXhsData(screen, fresh);
+        render();
+      });
+    }
+  }
+
+  function buildCommentRow(data, note, comment, index) {
+    const row = document.createElement('div');
+    row.className = 'iphone-xhs__c';
+    const isMe = iphoneIsXhsPlayerAuthor(comment.name);
+    row.appendChild(isMe
+      ? iphoneXhsBuildMeAvatar(iphoneGetXhsProfile())
+      : iphoneXhsBuildNetizenAvatar(data, comment.name));
+    const body = document.createElement('div');
+    body.className = 'iphone-xhs__c-body';
+    const head = document.createElement('p');
+    head.className = 'iphone-xhs__c-name';
+    head.textContent = isMe ? iphoneGetXhsProfile().name : comment.name;
+    if (index === 0) {
+      const badge = document.createElement('span');
+      badge.className = 'iphone-xhs__c-badge';
+      badge.textContent = '首评';
+      head.appendChild(badge);
+    }
+    body.appendChild(head);
+    const text = document.createElement('p');
+    text.className = 'iphone-xhs__c-text';
+    if (comment.replyName) {
+      const reply = document.createElement('span');
+      reply.className = 'iphone-xhs__c-replyto';
+      reply.textContent = `回复 ${iphoneResolveXhsPlayerAuthor(comment.replyName)}`;
+      text.appendChild(reply);
+      text.appendChild(document.createTextNode(' '));
+    }
+    text.appendChild(document.createTextNode(comment.text));
+    body.appendChild(text);
+    const meta = document.createElement('p');
+    meta.className = 'iphone-xhs__c-meta';
+    const when = document.createElement('span');
+    when.textContent = iphoneXhsTimeLabel(comment.ts || note.ts);
+    const where = document.createElement('span');
+    where.textContent = `IP属地：${iphoneXhsCommentIp(data, comment, note)}`;
+    const replyBtn = document.createElement('button');
+    replyBtn.type = 'button';
+    replyBtn.className = 'iphone-xhs__c-reply';
+    replyBtn.textContent = '回复';
+    replyBtn.addEventListener('click', () => {
+      input.value = `@${isMe ? iphoneGetXhsProfile().name : comment.name} `;
+      input.focus();
+    });
+    meta.append(when, where, replyBtn);
+    body.appendChild(meta);
+    row.appendChild(body);
+    const like = document.createElement('div');
+    like.className = 'iphone-xhs__c-like';
+    like.innerHTML = `${icons.heart}<i>${iphoneXhsFormatCount(iphoneXhsCommentLikes(comment))}</i>`;
+    row.appendChild(like);
+    return row;
+  }
+
+  function render() {
+    const note = currentNote();
+    if (!note) {
+      onClose?.();
+      return;
+    }
+    const data = iphoneGetXhsData();
+    const author = iphoneXhsAuthorOf(data, note);
+    const cover = iphoneXhsCoverFor(note);
+    renderNav(note, data);
+
+    scroll.innerHTML = '';
+    if (iphoneXhsIsTextNote(note)) {
+      // 文字笔记：详情页首屏就是摘录本身，不铺图（与首页文字卡一致）
+      const quote = document.createElement('div');
+      quote.className = 'iphone-xhs__note-image iphone-xhs__note-image--text';
+      const text = document.createElement('p');
+      text.className = 'iphone-xhs__note-quote';
+      text.textContent = note.text;
+      quote.appendChild(text);
+      scroll.appendChild(quote);
+    } else {
+      const image = document.createElement('div');
+      image.className = `iphone-xhs__note-image ${iphoneXhsCoverClass(cover)}`;
+      image.style.aspectRatio = String(cover.ratio);
+      scroll.appendChild(image);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'iphone-xhs__note-body';
+    if (note.title) {
+      const title = document.createElement('h1');
+      title.className = 'iphone-xhs__note-title';
+      title.textContent = note.title;
+      body.appendChild(title);
+    }
+    if (note.text && !iphoneXhsIsTextNote(note)) {
+      const text = document.createElement('p');
+      text.className = 'iphone-xhs__note-text';
+      text.textContent = note.text;
+      body.appendChild(text);
+    }
+    if (note.topics.length) {
+      const topics = document.createElement('p');
+      topics.className = 'iphone-xhs__note-topics';
+      for (const topic of note.topics) {
+        const chip = document.createElement('span');
+        chip.className = 'iphone-xhs__note-topic';
+        chip.textContent = `#${topic}`;
+        topics.appendChild(chip);
+      }
+      body.appendChild(topics);
+    }
+    const meta = document.createElement('p');
+    meta.className = 'iphone-xhs__note-meta';
+    meta.textContent = [
+      iphoneXhsTimeLabel(note.ts),
+      note.location ? note.location : '',
+      `IP属地：${note.ip || author.ip || '江苏'}`,
+      author.xhsId ? `小红书号：${author.xhsId}` : '',
+    ].filter(Boolean).join(' · ');
+    body.appendChild(meta);
+
+    const dislike = document.createElement('button');
+    dislike.type = 'button';
+    dislike.className = 'iphone-xhs__note-dislike';
+    dislike.innerHTML = `${icons.dislike}<span>不喜欢</span>`;
+    dislike.addEventListener('click', () => {
+      const fresh = iphoneGetXhsData();
+      fresh.notes = fresh.notes.filter((n) => n.id !== note.id);
+      iphoneSetXhsData(screen, fresh);
+      void iphoneSyncXhsNotesFloor();
+      onChanged?.();
+      onClose?.();
+    });
+    body.appendChild(dislike);
+    scroll.appendChild(body);
+
+    const commentsWrap = document.createElement('section');
+    commentsWrap.className = 'iphone-xhs__note-comments';
+    const head = document.createElement('p');
+    head.className = 'iphone-xhs__note-chead';
+    head.textContent = `共 ${note.comments.length} 条评论`;
+    commentsWrap.appendChild(head);
+    if (!note.comments.length) {
+      const empty = document.createElement('p');
+      empty.className = 'iphone-xhs__note-cempty';
+      empty.textContent = '还没有评论，快来抢首评';
+      commentsWrap.appendChild(empty);
+    } else {
+      note.comments.forEach((comment, index) => {
+        commentsWrap.appendChild(buildCommentRow(data, note, comment, index));
+      });
+    }
+    scroll.appendChild(commentsWrap);
+
+    // 底部互动条：赞 / 收藏可点（就地点亮并落盘），评论数随评论区更新
+    likeBtn.innerHTML = `${note.likeMine ? icons.heartFill : icons.heart}<i>${iphoneXhsFormatCount(iphoneXhsLikeCount(note))}</i>`;
+    likeBtn.classList.toggle('is-on', note.likeMine);
+    collectBtn.innerHTML = `${note.collectMine ? icons.starFill : icons.star}<i>${iphoneXhsFormatCount(iphoneXhsCollectCount(note))}</i>`;
+    collectBtn.classList.toggle('is-on', note.collectMine);
+    commentBtn.innerHTML = `${icons.comment}<i>${note.comments.length}</i>`;
+    refreshSend();
+  }
+
+  function refreshSend() {
+    sendBtn.classList.toggle('is-active', Boolean(input.value.trim()));
+  }
+  input.addEventListener('input', refreshSend);
+  commentBtn.addEventListener('click', () => input.focus());
+
+  likeBtn.addEventListener('click', () => {
+    const note = currentNote();
+    if (!note) return;
+    const fresh = iphoneGetXhsData();
+    const target = fresh.notes.find((n) => n.id === note.id);
+    if (!target) return;
+    target.likeMine = !target.likeMine;
+    iphoneSetXhsData(screen, fresh);
+    void iphoneSyncXhsNotesFloor();
+    render();
+    onChanged?.();
+  });
+  collectBtn.addEventListener('click', () => {
+    const note = currentNote();
+    if (!note) return;
+    const fresh = iphoneGetXhsData();
+    const target = fresh.notes.find((n) => n.id === note.id);
+    if (!target) return;
+    target.collectMine = !target.collectMine;
+    iphoneSetXhsData(screen, fresh);
+    void iphoneSyncXhsNotesFloor();
+    render();
+    onChanged?.();
+  });
+
+  const submit = async () => {
+    if (sending) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const note = currentNote();
+    if (!note) return;
+    sending = true;
+    errRow.hidden = true;
+    sendBtn.textContent = '发送中…';
+    sendBtn.disabled = true;
+    // 先落盘玩家的评论（楼层同步不等人设解析），再调 API 生成网友的回应
+    const playerAuthor = iphoneGetXhsPlayerAuthor();
+    const withPlayer = iphoneGetXhsData();
+    const target = withPlayer.notes.find((n) => n.id === note.id);
+    if (!target) {
+      sending = false;
+      sendBtn.textContent = '发送';
+      sendBtn.disabled = false;
+      return;
+    }
+    target.comments = [...target.comments, { name: playerAuthor, text, ts: Date.now() }].slice(-40);
+    iphoneSetXhsData(screen, withPlayer);
+    void iphoneSyncXhsNotesFloor();
+    input.value = '';
+    render();
+    onChanged?.();
+    try {
+      const created = await iphoneGenerateXhsNoteReply(target, screen);
+      const data = iphoneGetXhsData();
+      const t2 = data.notes.find((n) => n.id === note.id);
+      if (!t2) throw new Error('这篇笔记已经不在了');
+      t2.comments = [...t2.comments, ...created].slice(-40);
+      iphoneSetXhsData(screen, data);
+      void iphoneSyncXhsNotesFloor();
+      render();
+      onChanged?.();
+    } catch (error) {
+      iphoneLog('warn', '小红书评论回复失败', error);
+      errRow.hidden = false;
+      errRow.textContent = `回复失败：${String(error?.message || error)}`;
+    }
+    sending = false;
+    sendBtn.textContent = '发送';
+    sendBtn.disabled = false;
+    const stream = scroll;
+    stream.scrollTop = stream.scrollHeight;
+  };
+  sendBtn.addEventListener('click', submit);
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submit();
+    }
+  });
+
+  view._open = (note) => {
+    noteId = note.id;
+    render();
+    scroll.scrollTop = 0;
+  };
+  view._render = () => {
+    if (view.classList.contains('is-open') && noteId) render();
+  };
+  return view;
+}
+
+// ---------- 消息页 ----------
+// 三条聚合入口（赞和收藏 / 新增关注 / 评论和@）+ 消息列表。列表内容全部从真实
+// 数据派生：玩家点过的赞与收藏、关注过的博主、笔记下的评论往来——不编造数据。
+function iphoneXhsCollectNotifications(data) {
+  const likes = [];
+  const follows = [];
+  const comments = [];
+  for (const note of [...data.notes].reverse()) {
+    const author = iphoneXhsAuthorOf(data, note);
+    if (note.likeMine) {
+      likes.push({ id: `lk-${note.id}`, type: 'likes', name: author.name, noteId: note.id, ts: note.ts, text: `你赞了「${note.title || note.text}」` });
+    }
+    if (note.collectMine) {
+      likes.push({ id: `cl-${note.id}`, type: 'likes', name: author.name, noteId: note.id, ts: note.ts, text: `你收藏了「${note.title || note.text}」` });
+    }
+    for (const comment of note.comments) {
+      if (iphoneIsXhsPlayerAuthor(comment.name)) continue;
+      comments.push({
+        id: `cm-${note.id}-${comment.name}-${comment.text.slice(0, 8)}`,
+        type: 'comments',
+        name: comment.name,
+        noteId: note.id,
+        ts: comment.ts || note.ts,
+        text: comment.replyName && iphoneIsXhsPlayerAuthor(comment.replyName)
+          ? `回复了你的评论：${comment.text}`
+          : `评论了「${note.title || note.text}」：${comment.text}`,
+      });
+    }
+  }
+  for (const id of data.following) {
+    const netizen = data.netizens.find((n) => n.id === id);
+    if (!netizen) continue;
+    follows.push({ id: `fw-${id}`, type: 'follows', name: netizen.name, noteId: '', ts: 0, text: '你关注了 TA' });
+  }
+  const byTs = (a, b) => (b.ts || 0) - (a.ts || 0);
+  return {
+    likes: likes.sort(byTs).slice(0, 30),
+    follows: follows.slice(0, 30),
+    comments: comments.sort(byTs).slice(0, 30),
+  };
+}
+
+function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
+  const page = document.createElement('div');
+  // 初始 is-hidden：四个 Tab 页都是 inset:0 的绝对定位层，不藏起来会全部叠在首页上
+  page.className = 'iphone-xhs__tabpage iphone-xhs__msg is-hidden';
+
+  const scroll = document.createElement('div');
+  scroll.className = 'iphone-xhs__scroll';
+  const entries = document.createElement('div');
+  entries.className = 'iphone-xhs__msg-entries';
+  const list = document.createElement('div');
+  list.className = 'iphone-xhs__msg-list';
+  scroll.appendChild(entries);
+  scroll.appendChild(list);
+  page.appendChild(scroll);
+
+  const toneClass = { pink: 'is-pink', blue: 'is-blue', green: 'is-green' };
+  const entryIcon = { likes: icons.heartSquare, follows: icons.followSquare, comments: icons.atSquare };
+
+  function render() {
+    const data = iphoneGetXhsData();
+    const inbox = iphoneXhsCollectNotifications(data);
+    entries.innerHTML = '';
+    for (const entry of IPHONE_XHS_MSG_ENTRIES) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'iphone-xhs__msg-entry';
+      const count = inbox[entry.id]?.length || 0;
+      row.innerHTML = `
+        <span class="iphone-xhs__msg-ico ${toneClass[entry.tone] || ''}" aria-hidden="true">${entryIcon[entry.id] || ''}</span>
+        <span class="iphone-xhs__msg-label">${entry.label}</span>
+        <span class="iphone-xhs__msg-count">${count ? iphoneXhsFormatCount(count) : ''}</span>
+        <span class="iphone-xhs__msg-chev" aria-hidden="true">${icons.chevronRight}</span>
+      `;
+      row.addEventListener('click', () => onOpenInbox(entry.id, entry.label));
+      entries.appendChild(row);
+    }
+
+    // 消息列表：把三类通知按时序混排（真实小红书的消息页也是这个顺序）
+    const all = [...inbox.likes, ...inbox.follows, ...inbox.comments]
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+      .slice(0, 30);
+    list.innerHTML = '';
+    if (!all.length) {
+      const empty = document.createElement('div');
+      empty.className = 'iphone-xhs__empty';
+      empty.textContent = '暂无新消息';
+      list.appendChild(empty);
+      return;
+    }
+    for (const item of all) {
+      const row = document.createElement('div');
+      row.className = 'iphone-xhs__msg-row';
+      row.appendChild(iphoneXhsBuildNetizenAvatar(data, item.name));
+      const body = document.createElement('div');
+      body.className = 'iphone-xhs__msg-body';
+      const name = document.createElement('p');
+      name.className = 'iphone-xhs__msg-name';
+      name.textContent = item.name;
+      const text = document.createElement('p');
+      text.className = 'iphone-xhs__msg-text';
+      text.textContent = item.text;
+      body.append(name, text);
+      row.appendChild(body);
+      const time = document.createElement('span');
+      time.className = 'iphone-xhs__msg-time';
+      time.textContent = item.ts ? iphoneXhsTimeLabel(item.ts) : '';
+      row.appendChild(time);
+      if (item.noteId) {
+        row.addEventListener('click', () => {
+          const fresh = iphoneGetXhsData();
+          const note = fresh.notes.find((n) => n.id === item.noteId);
+          if (note) onOpenNote(note);
+        });
+      }
+      list.appendChild(row);
+    }
+  }
+
+  page._render = render;
+  return page;
+}
+
+// ---------- 我（个人主页） ----------
+function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
+  const page = document.createElement('div');
+  page.className = 'iphone-xhs__tabpage iphone-xhs__me is-hidden';
+
+  const scroll = document.createElement('div');
+  scroll.className = 'iphone-xhs__me-scroll';
+
+  const header = document.createElement('div');
+  header.className = 'iphone-xhs__me-header';
+  header.innerHTML = `
+    <div class="iphone-xhs__me-top">
+      <span class="iphone-xhs__me-avatar iphone-xhs__me-avatar--lg" data-xhs-me-avatar data-xhs-open-profile role="button" aria-label="编辑资料" tabindex="0"></span>
+      <div class="iphone-xhs__me-info">
+        <p class="iphone-xhs__me-name" data-xhs-me-name></p>
+        <p class="iphone-xhs__me-id" data-xhs-me-id></p>
+        <p class="iphone-xhs__me-ip" data-xhs-me-ip></p>
+      </div>
+      <button type="button" class="iphone-xhs__me-edit" aria-label="编辑资料">${icons.edit}</button>
+    </div>
+    <div class="iphone-xhs__me-stats">
+      <button type="button" class="iphone-xhs__me-stat" data-stat="follow"><b data-xhs-stat-follow>0</b><i>关注</i></button>
+      <button type="button" class="iphone-xhs__me-stat" data-stat="fans"><b data-xhs-stat-fans>0</b><i>粉丝</i></button>
+      <button type="button" class="iphone-xhs__me-stat" data-stat="likes"><b data-xhs-stat-likes>0</b><i>获赞与收藏</i></button>
+    </div>
+    <p class="iphone-xhs__me-bio" data-xhs-me-bio></p>
+    <div class="iphone-xhs__me-tags" data-xhs-me-tags></div>
+  `;
+  scroll.appendChild(header);
+
+  const tabs = document.createElement('nav');
+  tabs.className = 'iphone-xhs__me-tabs';
+  const tabDefs = [
+    { id: 'public', label: '公开' },
+    { id: 'private', label: '私密' },
+    { id: 'album', label: '合集' },
+  ];
+  const tabButtons = [];
+  for (const def of tabDefs) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `iphone-xhs__me-tab${def.id === 'public' ? ' is-active' : ''}`;
+    btn.textContent = def.label;
+    btn.addEventListener('click', () => {
+      tabButtons.forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      state.tab = def.id;
+      renderGrid();
+    });
+    tabButtons.push(btn);
+    tabs.appendChild(btn);
+  }
+  scroll.appendChild(tabs);
+
+  const grid = document.createElement('div');
+  grid.className = 'iphone-xhs__me-grid';
+  scroll.appendChild(grid);
+  page.appendChild(scroll);
+
+  const state = { tab: 'public' };
+
+  function renderHeader() {
+    const profile = iphoneGetXhsProfile();
+    const data = iphoneGetXhsData();
+    const mine = data.notes.filter((n) => n.authorId === '__me__');
+    iphoneRefreshXhsMeIdentity(page);
+    const bio = page.querySelector('[data-xhs-me-bio]');
+    if (bio) {
+      bio.textContent = profile.bio || '点击右上角编辑资料，写一句介绍自己吧～';
+      bio.classList.toggle('is-empty', !profile.bio);
+    }
+    const tags = page.querySelector('[data-xhs-me-tags]');
+    if (tags) {
+      tags.innerHTML = '';
+      for (const tag of [`♀ ${profile.ip}`, '小红书创作者', mine.length ? `笔记 ${mine.length}` : '还没发过笔记']) {
+        const chip = document.createElement('span');
+        chip.className = 'iphone-xhs__me-tag';
+        chip.textContent = tag;
+        tags.appendChild(chip);
+      }
+    }
+    // 粉丝数由「我」自己的笔记互动量派生（没人互动就没有粉丝），获赞与收藏是
+    // 全部笔记的点赞 + 收藏合计
+    const likes = mine.reduce((sum, n) => sum + iphoneXhsLikeCount(n) + iphoneXhsCollectCount(n), 0);
+    const fans = mine.reduce((sum, n) => sum + Math.floor((iphoneXhsLikeCount(n) + iphoneXhsCollectCount(n)) / 12), 0);
+    const set = (key, value) => {
+      const el = page.querySelector(`[data-xhs-stat-${key}]`);
+      if (el) el.textContent = iphoneXhsFormatCount(value);
+    };
+    set('follow', data.following.length);
+    set('fans', fans);
+    set('likes', likes);
+  }
+
+  function renderGrid() {
+    const data = iphoneGetXhsData();
+    const mine = data.notes.filter((n) => n.authorId === '__me__').reverse();
+    grid.innerHTML = '';
+    const list = state.tab === 'album' ? [] : mine.filter((n) => (state.tab === 'private' ? n.private : !n.private));
+    if (state.tab === 'album') {
+      const empty = document.createElement('div');
+      empty.className = 'iphone-xhs__empty iphone-xhs__empty--grid';
+      empty.textContent = '还没有创建合集';
+      grid.appendChild(empty);
+      return;
+    }
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.className = 'iphone-xhs__empty iphone-xhs__empty--grid';
+      empty.textContent = state.tab === 'private' ? '还没有私密笔记' : '还没有发布过笔记，点底部红「+」发一篇吧';
+      grid.appendChild(empty);
+      return;
+    }
+    for (const note of list) {
+      const card = document.createElement('article');
+      card.className = 'iphone-xhs__me-card';
+      const cover = document.createElement('div');
+      cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(iphoneXhsCoverFor(note))}`;
+      cover.style.aspectRatio = '0.78';
+      card.appendChild(cover);
+      const title = document.createElement('p');
+      title.className = 'iphone-xhs__card-title';
+      title.textContent = note.title || note.text;
+      card.appendChild(title);
+      const foot = document.createElement('div');
+      foot.className = 'iphone-xhs__card-foot';
+      foot.innerHTML = `<span class="iphone-xhs__card-like">${note.likeMine ? icons.heartFill : icons.heart}<i>${iphoneXhsFormatCount(iphoneXhsLikeCount(note))}</i></span>`;
+      card.appendChild(foot);
+      card.addEventListener('click', () => onOpenNote(note));
+      grid.appendChild(card);
+    }
+  }
+
+  header.querySelector('[data-xhs-open-profile]')?.addEventListener('click', () => onEditProfile?.());
+  header.querySelector('.iphone-xhs__me-edit')?.addEventListener('click', () => onEditProfile?.());
+  header.querySelector('[data-stat="follow"]')?.addEventListener('click', () => {
+    const data = iphoneGetXhsData();
+    if (!data.following.length) return;
+    const first = data.notes.find((n) => n.authorId === data.following[0]);
+    if (first) onOpenNote(first);
+  });
+
+  page._render = () => {
+    renderHeader();
+    renderGrid();
+  };
+  return page;
+}
+
+// ---------- 市集页（占位） ----------
+// 真实小红书的市集是电商频道，与本插件无关，这里只做与真机同构的占位页。
+function iphoneXhsBuildMarketPage(icons) {
+  const page = document.createElement('div');
+  page.className = 'iphone-xhs__tabpage iphone-xhs__market is-hidden';
+  page.innerHTML = `
+    <div class="iphone-xhs__market-search">
+      <span aria-hidden="true">${icons.search}</span>
+      <i>搜索商品</i>
+    </div>
+    <div class="iphone-xhs__market-empty">
+      <span aria-hidden="true">${icons.bag}</span>
+      <p>市集还在筹备中</p>
+      <i>去首页看看网友们的笔记吧</i>
+    </div>
+  `;
+  page._render = () => {};
+  return page;
+}
+
+// ---------- 编辑资料 ----------
+function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
+  const view = document.createElement('div');
+  view.className = 'iphone-xhs__prof';
+  view.innerHTML = `
+    <header class="iphone-xhs__prof-nav">
+      <button type="button" class="iphone-xhs__prof-back" aria-label="返回">${icons.back}</button>
+      <p class="iphone-xhs__prof-title">编辑资料</p>
+      <button type="button" class="iphone-xhs__prof-save">保存</button>
+    </header>
+    <div class="iphone-xhs__prof-body">
+      <button type="button" class="iphone-xhs__prof-row iphone-xhs__prof-row--avatar">
+        <span class="iphone-xhs__prof-label">头像</span>
+        <span class="iphone-xhs__me-avatar iphone-xhs__prof-avatar" data-xhs-me-avatar aria-hidden="true"></span>
+        <span class="iphone-xhs__prof-chev" aria-hidden="true">${icons.chevronRight}</span>
+      </button>
+      <label class="iphone-xhs__prof-row">
+        <span class="iphone-xhs__prof-label">昵称</span>
+        <input class="iphone-xhs__prof-input" type="text" data-field="name" maxlength="24" placeholder="填写昵称" autocomplete="off">
+      </label>
+      <label class="iphone-xhs__prof-row">
+        <span class="iphone-xhs__prof-label">小红书号</span>
+        <input class="iphone-xhs__prof-input" type="text" data-field="xhsId" maxlength="32" placeholder="字母 / 数字" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="iphone-xhs__prof-row">
+        <span class="iphone-xhs__prof-label">IP 属地</span>
+        <input class="iphone-xhs__prof-input" type="text" data-field="ip" maxlength="16" placeholder="如：江苏" autocomplete="off">
+      </label>
+      <label class="iphone-xhs__prof-row iphone-xhs__prof-row--bio">
+        <span class="iphone-xhs__prof-label">简介</span>
+        <textarea class="iphone-xhs__prof-input iphone-xhs__prof-bio" data-field="bio" maxlength="120" rows="3" placeholder="介绍一下自己"></textarea>
+      </label>
+      <p class="iphone-xhs__prof-foot">昵称留空时跟随酒馆当前人设名；小红书号与 IP 属地留空时用内置演示值。所有改动即时保存。</p>
+    </div>
+  `;
+
+  const inputs = {
+    name: view.querySelector('[data-field="name"]'),
+    xhsId: view.querySelector('[data-field="xhsId"]'),
+    ip: view.querySelector('[data-field="ip"]'),
+    bio: view.querySelector('[data-field="bio"]'),
+  };
+
+  // 头像选择浮层（小红书款式）：点保存才写回，返回丢弃
+  const avatarPicker = iphoneXhsBuildAvatarPicker(icons, {
+    getCurrent: () => iphoneGetXhsProfile().avatar,
+    onPick: () => {},
+    commit: (avatar) => {
+      iphoneUpdateXhsProfile(screen, { avatar });
+      refresh();
+    },
+  });
+  view.appendChild(avatarPicker.el);
+  view.querySelector('.iphone-xhs__prof-row--avatar').addEventListener('click', () => avatarPicker.open());
+
+  function refresh() {
+    const profile = iphoneGetXhsProfile();
+    iphoneRefreshXhsMeIdentity(view);
+    inputs.name.value = iphoneGetXhsCustomNick() || '';
+    inputs.name.placeholder = profile.name;
+    inputs.xhsId.value = iphoneNormalizeXhsProfile(iphoneGetQqStorage().xhsProfile).xhsId || '';
+    inputs.xhsId.placeholder = IPHONE_XHS_ME.xhsId;
+    inputs.ip.value = iphoneNormalizeXhsProfile(iphoneGetQqStorage().xhsProfile).ip || '';
+    inputs.ip.placeholder = IPHONE_XHS_ME.ip;
+    inputs.bio.value = profile.bio;
+  }
+
+  const save = () => {
+    iphoneUpdateXhsProfile(screen, {
+      name: inputs.name.value.trim(),
+      xhsId: inputs.xhsId.value.trim(),
+      ip: inputs.ip.value.trim(),
+      bio: inputs.bio.value.trim(),
+    });
+    iphoneLog('info', '已保存小红书资料');
+    onClose?.();
+  };
+  view.querySelector('.iphone-xhs__prof-back').addEventListener('click', () => onClose?.());
+  view.querySelector('.iphone-xhs__prof-save').addEventListener('click', save);
+  for (const input of Object.values(inputs)) {
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        save();
+      }
+    });
+  }
+
+  view._open = refresh;
+  return view;
+}
+
+// ---------- 发布笔记 ----------
+// 封面从内置图库挑（与生成笔记同一套素材，保证观感一致），标题 / 正文 / 话题 /
+// 位置手填；发布后进「我」的公开笔记，并同步进记录楼层，AI 在后续刷新里能看到它。
+function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
+  const view = document.createElement('div');
+  view.className = 'iphone-xhs__compose';
+  view.innerHTML = `
+    <header class="iphone-xhs__prof-nav">
+      <button type="button" class="iphone-xhs__prof-back" aria-label="取消">${icons.close}</button>
+      <p class="iphone-xhs__prof-title">发布笔记</p>
+      <button type="button" class="iphone-xhs__prof-save iphone-xhs__compose-pub">发布</button>
+    </header>
+    <div class="iphone-xhs__compose-body">
+      <div class="iphone-xhs__compose-covers" data-covers></div>
+      <div class="iphone-xhs__compose-fields">
+        <input class="iphone-xhs__compose-title" type="text" maxlength="${IPHONE_XHS_TITLE_CAP}" placeholder="填写标题会有更多赞哦～" autocomplete="off">
+        <textarea class="iphone-xhs__compose-text" maxlength="${IPHONE_XHS_TEXT_CAP}" rows="6" placeholder="分享此刻的想法…"></textarea>
+        <input class="iphone-xhs__compose-topics" type="text" maxlength="80" placeholder="添加话题（空格分隔，如：减脂餐 便当）" autocomplete="off">
+        <input class="iphone-xhs__compose-loc" type="text" maxlength="24" placeholder="添加地点" autocomplete="off">
+      </div>
+      <label class="iphone-xhs__compose-private">
+        <input type="checkbox">
+        <span>仅自己可见</span>
+        <i>${icons.lock}</i>
+      </label>
+      <p class="iphone-xhs__compose-foot">封面从内置图库挑选，与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。</p>
+    </div>
+  `;
+
+  const coversWrap = view.querySelector('[data-covers]');
+  let coverId = IPHONE_XHS_COVERS[0].id;
+  for (const cover of IPHONE_XHS_COVERS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `iphone-xhs__compose-cover ${iphoneXhsCoverClass(cover)}${cover.id === coverId ? ' is-active' : ''}`;
+    btn.dataset.coverId = cover.id;
+    btn.setAttribute('aria-label', `封面 ${cover.topic}`);
+    btn.addEventListener('click', () => {
+      coverId = cover.id;
+      coversWrap.querySelectorAll('.iphone-xhs__compose-cover').forEach((el) => {
+        el.classList.toggle('is-active', el.dataset.coverId === coverId);
+      });
+    });
+    coversWrap.appendChild(btn);
+  }
+
+  const titleInput = view.querySelector('.iphone-xhs__compose-title');
+  const textInput = view.querySelector('.iphone-xhs__compose-text');
+  const topicInput = view.querySelector('.iphone-xhs__compose-topics');
+  const locInput = view.querySelector('.iphone-xhs__compose-loc');
+  const privateBox = view.querySelector('.iphone-xhs__compose-private input');
+  const pubBtn = view.querySelector('.iphone-xhs__compose-pub');
+  const errRow = document.createElement('p');
+  errRow.className = 'iphone-xhs__note-err';
+  errRow.hidden = true;
+  view.querySelector('.iphone-xhs__compose-body').appendChild(errRow);
+
+  function refreshSend() {
+    pubBtn.classList.toggle('is-active', Boolean(titleInput.value.trim() || textInput.value.trim()));
+  }
+  titleInput.addEventListener('input', refreshSend);
+  textInput.addEventListener('input', refreshSend);
+
+  const publish = () => {
+    const title = titleInput.value.trim();
+    const text = textInput.value.trim();
+    if (!title && !text) {
+      errRow.hidden = false;
+      errRow.textContent = '标题或正文至少写一样。';
+      return;
+    }
+    const profile = iphoneGetXhsProfile();
+    const data = iphoneGetXhsData();
+    data.notes.push(iphoneNormalizeXhsNote({
+      id: iphoneXhsGenId('n'),
+      authorId: '__me__',
+      ts: Date.now(),
+      coverId,
+      title,
+      text,
+      topics: iphoneXhsTopicList(topicInput.value),
+      location: locInput.value.trim() || profile.ip,
+      ip: profile.ip,
+      likes: 0,
+      collects: 0,
+      comments: [],
+      private: Boolean(privateBox.checked),
+    }));
+    iphoneSetXhsData(screen, data);
+    void iphoneSyncXhsNotesFloor();
+    iphoneLog('info', '已发布一篇小红书笔记');
+    titleInput.value = '';
+    textInput.value = '';
+    topicInput.value = '';
+    locInput.value = '';
+    privateBox.checked = false;
+    refreshSend();
+    errRow.hidden = true;
+    onPublished?.();
+    onClose?.();
+  };
+  pubBtn.addEventListener('click', publish);
+  view.querySelector('.iphone-xhs__prof-back').addEventListener('click', () => onClose?.());
+
+  view._open = () => {
+    const profile = iphoneGetXhsProfile();
+    locInput.value = profile.ip;
+    titleInput.value = '';
+    textInput.value = '';
+    topicInput.value = '';
+    privateBox.checked = false;
+    errRow.hidden = true;
+    refreshSend();
+  };
+  return view;
+}
+
+// ---------- 消息聚合子页 ----------
+// 点「赞和收藏 / 新增关注 / 评论和@」进入的列表页：与消息页同一份派生数据，
+// 按类型过滤后逐条列出，点条目跳到对应笔记。
+function iphoneXhsBuildInboxView({ icons, onClose, onOpenNote }) {
+  const view = document.createElement('div');
+  view.className = 'iphone-xhs__inbox';
+  view.innerHTML = `
+    <header class="iphone-xhs__prof-nav">
+      <button type="button" class="iphone-xhs__prof-back" aria-label="返回">${icons.back}</button>
+      <p class="iphone-xhs__prof-title" data-inbox-title></p>
+    </header>
+    <div class="iphone-xhs__inbox-list"></div>
+  `;
+  const titleEl = view.querySelector('[data-inbox-title]');
+  const listEl = view.querySelector('.iphone-xhs__inbox-list');
+
+  view._open = (type, label) => {
+    titleEl.textContent = label || '消息';
+    const data = iphoneGetXhsData();
+    const inbox = iphoneXhsCollectNotifications(data);
+    const items = inbox[type] || [];
+    listEl.innerHTML = '';
+    if (!items.length) {
+      const empty = document.createElement('div');
+      empty.className = 'iphone-xhs__empty';
+      empty.textContent = '暂无这类消息';
+      listEl.appendChild(empty);
+      return;
+    }
+    for (const item of items) {
+      const row = document.createElement('div');
+      row.className = 'iphone-xhs__msg-row';
+      row.appendChild(iphoneXhsBuildNetizenAvatar(data, item.name));
+      const body = document.createElement('div');
+      body.className = 'iphone-xhs__msg-body';
+      const name = document.createElement('p');
+      name.className = 'iphone-xhs__msg-name';
+      name.textContent = item.name;
+      const text = document.createElement('p');
+      text.className = 'iphone-xhs__msg-text';
+      text.textContent = item.text;
+      body.append(name, text);
+      row.appendChild(body);
+      const time = document.createElement('span');
+      time.className = 'iphone-xhs__msg-time';
+      time.textContent = item.ts ? iphoneXhsTimeLabel(item.ts) : '';
+      row.appendChild(time);
+      if (item.noteId) {
+        row.addEventListener('click', () => {
+          const fresh = iphoneGetXhsData();
+          const note = fresh.notes.find((n) => n.id === item.noteId);
+          if (note) onOpenNote(note);
+        });
+      }
+      listEl.appendChild(row);
+    }
+  };
+  view.querySelector('.iphone-xhs__prof-back').addEventListener('click', () => onClose?.());
+  return view;
+}
+
+// ---------- 应用主界面 ----------
+// 骨架与微信同构：listView（头部 + 内容面板 + 标签栏）在下，笔记详情 / 编辑资料 /
+// 发布 / 消息子页都是压在它上面的覆盖层。头部随 Tab 变形：首页是顶部频道
+//（关注 / 发现 + 城市 + 搜索 + 题材横滑条），市集与消息是居中标题，「我」没有
+// 头部（个人主页自带深色头图，从状态栏下铺下来）。
+function buildXhsAppScreen() {
+  const icons = iphoneXhsIcons();
+  const screen = document.createElement('div');
+  screen.className = 'iphone-app iphone-xhs';
+
+  const listView = document.createElement('div');
+  listView.className = 'iphone-xhs__listview';
+
+  const header = document.createElement('header');
+  header.className = 'iphone-xhs__header';
+
+  const sheet = document.createElement('section');
+  sheet.className = 'iphone-xhs__sheet';
+
+  const noteView = iphoneXhsBuildNoteView({
+    icons,
+    screen,
+    onClose: () => {
+      noteView.classList.remove('is-open');
+      setOverlay(false);
+    },
+    onChanged: () => screen._renderXhs?.(),
+  });
+
+  const openNote = (note) => {
+    if (!note) return;
+    noteView._open(note);
+    noteView.classList.add('is-open');
+    setOverlay(true);
+  };
+
+  const setOverlay = (open) => {
+    screen.classList.toggle('is-xhs-overlay', Boolean(open));
+  };
+
+  const pageHome = iphoneXhsBuildHomePage({ icons, onOpenNote: openNote, screen });
+  const pageMarket = iphoneXhsBuildMarketPage(icons);
+  const pageMessages = iphoneXhsBuildMessagesPage({
+    icons,
+    onOpenNote: openNote,
+    onOpenInbox: (type, label) => {
+      inboxView._open(type, label);
+      inboxView.classList.add('is-open');
+      setOverlay(true);
+    },
+  });
+  const pageMe = iphoneXhsBuildMePage({
+    icons,
+    onOpenNote: openNote,
+    onEditProfile: () => {
+      profileView._open();
+      profileView.classList.add('is-open');
+      setOverlay(true);
+    },
+  });
+
+  const inboxView = iphoneXhsBuildInboxView({
+    icons,
+    onClose: () => {
+      inboxView.classList.remove('is-open');
+      setOverlay(false);
+    },
+    onOpenNote: openNote,
+  });
+  const profileView = iphoneXhsBuildProfileView({
+    icons,
+    screen,
+    onClose: () => {
+      profileView.classList.remove('is-open');
+      setOverlay(false);
+    },
+  });
+  const composeView = iphoneXhsBuildComposeView({
+    icons,
+    screen,
+    onClose: () => {
+      composeView.classList.remove('is-open');
+      setOverlay(false);
+    },
+    onPublished: () => {
+      switchXhsTab(3);
+      pageMe._render();
+    },
+  });
+
+  sheet.appendChild(pageHome);
+  sheet.appendChild(pageMarket);
+  sheet.appendChild(pageMessages);
+  sheet.appendChild(pageMe);
+
+  // 顶部频道条：关注 / 发现（点关注只显示已关注的博主）+ 城市 + 搜索 + 题材横滑条
+  function renderHeader(mode) {
+    if (header._mode === mode) return;
+    header._mode = mode;
+    if (mode === 'home') {
+      header.innerHTML = `
+        <div class="iphone-xhs__hdrow">
+          <button type="button" class="iphone-xhs__hdtab" data-htab="follow">关注</button>
+          <button type="button" class="iphone-xhs__hdtab is-active" data-htab="discover">发现</button>
+          <button type="button" class="iphone-xhs__hdcity">${IPHONE_XHS_CITY_DEFAULT}<span aria-hidden="true">${icons.chevronDown}</span></button>
+          <button type="button" class="iphone-xhs__hdsearch" aria-label="搜索">${icons.search}</button>
+        </div>
+        <nav class="iphone-xhs__channels">
+          ${IPHONE_XHS_CHANNELS.map((name, i) => `<button type="button" class="iphone-xhs__channel${i === 0 ? ' is-active' : ''}">${name}</button>`).join('')}
+        </nav>
+      `;
+      header.querySelectorAll('[data-htab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          header.querySelectorAll('[data-htab]').forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          header.classList.toggle('is-follow-tab', btn.dataset.htab === 'follow');
+          pageHome._setTab(btn.dataset.htab === 'follow' ? 'follow' : 'discover');
+        });
+      });
+      header.querySelectorAll('.iphone-xhs__channel').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          header.querySelectorAll('.iphone-xhs__channel').forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          pageHome._setChannel(btn.textContent.trim());
+        });
+      });
+      return;
+    }
+    header.innerHTML = `<p class="iphone-xhs__hdtitle">${mode === 'market' ? '市集' : '消息'}</p>`;
+  }
+
+  // 底部标签栏：首页 / 市集 / 发布（红色圆形 +）/ 消息 / 我
+  const tabs = [
+    { key: 'home', label: '首页', icon: icons.home, page: pageHome, head: 'home' },
+    { key: 'market', label: '市集', icon: icons.market, page: pageMarket, head: 'market' },
+    { key: 'compose', label: '发布', icon: icons.plus, page: null, head: '' },
+    { key: 'messages', label: '消息', icon: icons.message, page: pageMessages, head: 'messages' },
+    { key: 'me', label: '我', icon: icons.me, page: pageMe, head: 'me' },
+  ];
+  const tabbar = document.createElement('nav');
+  tabbar.className = 'iphone-xhs__tabbar';
+  const tabButtons = [];
+  tabs.forEach((tab, i) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = `iphone-xhs__tab${tab.key === 'compose' ? ' iphone-xhs__tab--compose' : ''}${i === 0 ? ' is-active' : ''}`;
+    el.innerHTML = `<span class="iphone-xhs__tab-ico" aria-hidden="true">${tab.icon}</span><i>${tab.label}</i>`;
+    el.addEventListener('click', () => {
+      if (tab.key === 'compose') {
+        composeView._open();
+        composeView.classList.add('is-open');
+        setOverlay(true);
+        return;
+      }
+      tabButtons.forEach((b) => b.classList.remove('is-active'));
+      el.classList.add('is-active');
+      tabs.forEach((t) => t.page?.classList.toggle('is-hidden', t.page !== tab.page));
+      renderHeader(tab.head);
+      header.classList.toggle('is-hidden', tab.head === 'me');
+      // 「我」是深色头图，状态栏文字要翻白（.iphone-screen:has(.is-me-active)）
+      screen.classList.toggle('is-me-active', tab.head === 'me');
+      tab.page?._render?.();
+    });
+    tabButtons.push(el);
+    tabbar.appendChild(el);
+  });
+
+  function switchXhsTab(index) {
+    if (tabButtons[index]) tabButtons[index].click();
+  }
+
+  listView.appendChild(header);
+  listView.appendChild(sheet);
+  listView.appendChild(tabbar);
+
+  screen.appendChild(listView);
+  screen.appendChild(noteView);
+  screen.appendChild(inboxView);
+  screen.appendChild(profileView);
+  screen.appendChild(composeView);
+
+  screen._renderXhs = () => {
+    pageHome._render();
+    pageMessages._render();
+    pageMe._render();
+    noteView._render();
+  };
+  // 给本地测试台（test.html）的深链用：切 Tab / 打开第 N 篇笔记 / 各覆盖层
+  screen._switchXhsTab = switchXhsTab;
+  screen._openXhsNote = (index) => {
+    const data = iphoneGetXhsData();
+    const list = data.notes.filter((n) => !n.private).slice(-60).reverse();
+    const note = list[Number(index) - 1];
+    if (note) openNote(note);
+    return Boolean(note);
+  };
+  screen._openXhsProfile = () => {
+    profileView._open();
+    profileView.classList.add('is-open');
+    setOverlay(true);
+  };
+  screen._openXhsCompose = () => {
+    composeView._open();
+    composeView.classList.add('is-open');
+    setOverlay(true);
+  };
+  screen._openXhsInbox = (type) => {
+    const entry = IPHONE_XHS_MSG_ENTRIES.find((e) => e.id === type) || IPHONE_XHS_MSG_ENTRIES[0];
+    inboxView._open(entry.id, entry.label);
+    inboxView.classList.add('is-open');
+    setOverlay(true);
+  };
+
+  renderHeader('home');
+  pageHome._render();
+  pageMessages._render();
+  pageMe._render();
+  iphoneRefreshXhsMeIdentity(screen);
+  return screen;
+}
 
 
 // ===== js/phone.js =====
