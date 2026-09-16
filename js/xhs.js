@@ -3,7 +3,7 @@
 // 小红书是「网友发帖」——发布者是一群与玩家素不相识的互联网陌生人，由 AI 现场
 // 发明，发过一次就沉淀进「网友池」，之后复用同一个身份继续发帖、互相评论。
 // 封面由模型报一个题材、插件从内置图库挑同题材的一张（模型选不了图），保证图文
-// 相符；网友头像按加入网友池的顺序从 20 款内置头像里循环取用。
+// 相符；网友头像按加入网友池的顺序从内置头像里循环取用（与 QQ / 微信同一份款式表）。
 // 数据独立：chatMetadata.IPhone 的 xhsData / xhsProfile（与 qqData / wechatData
 // 并列），换聊天自动切换。楼层段头 `小红书笔记：`（段标签 [小红书笔记]）。
 // 复用已建好的基础设施：host.js 的上下文 / 存储 / 对话 API / 楼层读写、apps.js 的
@@ -58,11 +58,12 @@ function iphoneXhsGenId(prefix) {
 }
 
 // 归一化头像：null = 默认（灰底人形占位）；{ preset } 只认内置款式
-//（a1~a20，me 等价于默认）；{ url } 只认 http(s) 与 data:image 并限长。
+//（a1~a21，与 QQ / 微信同一份 IPHONE_ME_AVATAR_PRESETS；me 等价于默认）；
+// { url } 只认 http(s) 与 data:image 并限长。
 function iphoneNormalizeXhsAvatar(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const preset = String(raw.preset || '').trim();
-  if (preset && preset !== 'me' && IPHONE_XHS_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
+  if (preset && preset !== 'me' && IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
     return { preset };
   }
   const url = String(raw.url || '').trim();
@@ -95,7 +96,7 @@ function iphoneNormalizeXhsNetizen(raw) {
     xhsId: String(source.xhsId || '').replace(/[^\w.-]/g, '').slice(0, 32),
     ip: String(source.ip || '').trim().slice(0, 16),
     bio: String(source.bio || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120),
-    avatar: IPHONE_XHS_ME_AVATAR_PRESETS.some((p) => p.id === preset && p.id !== 'me') ? preset : '',
+    avatar: IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset && p.id !== 'me') ? preset : '',
   };
 }
 
@@ -1002,7 +1003,7 @@ function iphoneXhsBuildAvatarPicker(icons, { getCurrent, onPick, commit }) {
     getCurrent: () => iphoneNormalizeXhsAvatar(getCurrent()),
     onPick: (avatar) => onPick(iphoneNormalizeXhsAvatar(avatar)),
     commit: commit ? (avatar) => commit(iphoneNormalizeXhsAvatar(avatar)) : undefined,
-    presets: IPHONE_XHS_ME_AVATAR_PRESETS,
+    presets: IPHONE_ME_AVATAR_PRESETS,
     clsPrefix: 'iphone-xhs__avatar--',
     meClass: 'iphone-xhs__me-avatar',
   });

@@ -80,6 +80,7 @@ function createIphoneUi() {
   document.body.appendChild(overlay);
 
   renderIphoneGrid();
+  renderIphoneDock();
   renderIphonePageDots();
   initIphoneClock();
   initIphoneBattery();
@@ -87,15 +88,33 @@ function createIphoneUi() {
   return overlay;
 }
 
-// 主屏图标网格：当前只有一页，后续应用多了再分页。
+// 主屏图标网格：注册表里 dock !== true 的应用（常用应用进停靠栏，见 renderIphoneDock）。
+// 当前只有一页，后续应用多了再分页。
 function renderIphoneGrid() {
   const grid = document.getElementById(IPHONE_GRID_ID);
   if (!grid) return;
   grid.innerHTML = '';
   for (const app of IPHONE_APPS) {
+    if (app.dock) continue;
     const cell = buildIphoneAppIcon(app);
     cell.addEventListener('click', () => openIphoneApp(app, cell));
     grid.appendChild(cell);
+  }
+}
+
+// 停靠栏（iOS 的常用应用区）：注册表里 dock === true 的应用渲染进屏幕下方的
+// 毛玻璃框，图标布局与网格一致但隐藏名称（真机 Dock 只有图标），打开动画的
+// transform-origin 仍按图标位置计算，两处入口共用 openIphoneApp。
+function renderIphoneDock() {
+  const dock = document.getElementById(IPHONE_DOCK_ID);
+  if (!dock) return;
+  dock.innerHTML = '';
+  for (const app of IPHONE_APPS) {
+    if (!app.dock) continue;
+    const cell = buildIphoneAppIcon(app);
+    cell.classList.add('iphone-app-cell--dock');
+    cell.addEventListener('click', () => openIphoneApp(app, cell));
+    dock.appendChild(cell);
   }
 }
 

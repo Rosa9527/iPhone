@@ -342,6 +342,9 @@
 }
 
 /* ---------- Dock ---------- */
+/* 屏幕下方的常用应用区：注册表里 dock === true 的应用（世界书 / 设置 / 日志）
+   渲染在这里，等距排布。真机 Dock 只有图标没有名称，故隐藏标签——无障碍名称
+   由 button 的 aria-label 提供，不受影响。布局按最多 4 个图标设计。 */
 .iphone-dock {
   position: absolute;
   left: 16px;
@@ -350,14 +353,22 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 26px;
+  justify-content: space-evenly;
   height: 96px;
-  padding: 0 22px;
+  padding: 0 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 38px;
   background: rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(26px) saturate(1.5);
   -webkit-backdrop-filter: blur(26px) saturate(1.5);
+}
+
+.iphone-app-cell--dock {
+  width: 72px;
+}
+
+.iphone-app-cell--dock .iphone-app-label {
+  display: none;
 }
 
 /* ---------- Home 指示条 ---------- */
@@ -469,7 +480,17 @@
   height: 40px;
   border: 2px solid #fff;
   border-radius: 50%;
-  background: url('assets/qq-avatar-me.png') center / cover no-repeat #dfe8ff;
+  /* v0.31.0 起默认款是纯 CSS 灰底人形占位（原 Fluent Emoji 小熊已随旧素材删除），
+     与微信 / 小红书的默认款同一画法。 */
+  background:
+    radial-gradient(circle at 50% 32%, #fff 0 17%, rgba(255, 255, 255, 0) 17.5%),
+    radial-gradient(ellipse 40% 26% at 50% 86%, #fff 0 86%, rgba(255, 255, 255, 0) 92%),
+    #d8d8d8;
+  /* 自定义 / 上传的「我」头像是内联 background-image（会盖掉上面的渐变底），尺寸
+     与平铺要显式收住，否则 256px 的图会按原始像素铺、圆里只露出左上角一块。 */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   box-shadow: 0 2px 6px rgba(46, 62, 96, 0.14);
 }
 
@@ -665,12 +686,6 @@
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-}
-
-/* 我方消息头像：默认占位与消息页头部同图（编辑资料里可换）。
-   必须放在下方 --f1/--f2/--f3 款式类之前，选中款式才能盖过默认底图。 */
-.iphone-qq__out-avatar {
-  background: url('assets/qq-avatar-me.png') center / cover no-repeat #dfe8ff;
 }
 
 .iphone-qq__chat-main {
@@ -1035,59 +1050,92 @@
   height: 24px;
 }
 
-/* ---------- 好友头像占位（DiceBear 生成的演示素材，CSS 背景图加载） ---------- */
-.iphone-qq__avatar--f1 {
-  background: url('assets/qq-avatar-f1.png') center / cover no-repeat #ffd5dc;
+/* 「我的头像」内置款式（编辑资料 · 选择头像用）：与微信 / 小红书同一批图
+   （assets/avatar-01~21.jpg，款式表见 IPHONE_ME_AVATAR_PRESETS）。三处只是
+   类名前缀不同、规则各自成组，指向同一批文件；规则须排在默认背景规则之后
+   才能覆盖。me = 默认款不在这里，走上面 .iphone-qq__me-avatar 的灰色占位。 */
+.iphone-qq__avatar--a1 {
+  background: url('assets/avatar-01.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--f2 {
-  background: url('assets/qq-avatar-f2.png') center / cover no-repeat #c0aede;
+.iphone-qq__avatar--a2 {
+  background: url('assets/avatar-02.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--f3 {
-  background: url('assets/qq-avatar-f3.png') center / cover no-repeat #ffd5dc;
+.iphone-qq__avatar--a3 {
+  background: url('assets/avatar-03.jpg') center / cover no-repeat #f0f0f2;
 }
 
-/* 「我的头像」可选拓展款：Fluent Emoji 3D 可爱小动物（编辑资料 · 选择头像用）。
-   素材为透明底，垫各色柔和底色；规则须排在默认背景规则之后才能覆盖。 */
-.iphone-qq__avatar--cat {
-  background: url('assets/qq-avatar-cat.png') center / cover no-repeat #e8eef5;
+.iphone-qq__avatar--a4 {
+  background: url('assets/avatar-04.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--dog {
-  background: url('assets/qq-avatar-dog.png') center / cover no-repeat #fdeedd;
+.iphone-qq__avatar--a5 {
+  background: url('assets/avatar-05.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--fox {
-  background: url('assets/qq-avatar-fox.png') center / cover no-repeat #ffe8d9;
+.iphone-qq__avatar--a6 {
+  background: url('assets/avatar-06.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--rabbit {
-  background: url('assets/qq-avatar-rabbit.png') center / cover no-repeat #ffe4ec;
+.iphone-qq__avatar--a7 {
+  background: url('assets/avatar-07.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--panda {
-  background: url('assets/qq-avatar-panda.png') center / cover no-repeat #e8e8ee;
+.iphone-qq__avatar--a8 {
+  background: url('assets/avatar-08.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--frog {
-  background: url('assets/qq-avatar-frog.png') center / cover no-repeat #e0f3dd;
+.iphone-qq__avatar--a9 {
+  background: url('assets/avatar-09.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--penguin {
-  background: url('assets/qq-avatar-penguin.png') center / cover no-repeat #dbe9f5;
+.iphone-qq__avatar--a10 {
+  background: url('assets/avatar-10.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--pig {
-  background: url('assets/qq-avatar-pig.png') center / cover no-repeat #ffe1e8;
+.iphone-qq__avatar--a11 {
+  background: url('assets/avatar-11.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--hamster {
-  background: url('assets/qq-avatar-hamster.png') center / cover no-repeat #f7ecd9;
+.iphone-qq__avatar--a12 {
+  background: url('assets/avatar-12.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-qq__avatar--chick {
-  background: url('assets/qq-avatar-chick.png') center / cover no-repeat #fff3c9;
+.iphone-qq__avatar--a13 {
+  background: url('assets/avatar-13.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a14 {
+  background: url('assets/avatar-14.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a15 {
+  background: url('assets/avatar-15.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a16 {
+  background: url('assets/avatar-16.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a17 {
+  background: url('assets/avatar-17.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a18 {
+  background: url('assets/avatar-18.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a19 {
+  background: url('assets/avatar-19.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a20 {
+  background: url('assets/avatar-20.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-qq__avatar--a21 {
+  background: url('assets/avatar-21.jpg') center / cover no-repeat #f0f0f2;
 }
 
 /* ---------- QQ 联系人页（按真实界面：搜索 + 新朋友/群通知 + 分组/好友/群聊子页签） ---------- */
@@ -2566,7 +2614,7 @@
 }
 
 /* 内置款式九宫格：注意 face 不写 background——各款式的背景由
-   --pic/--f1/--f2/--f3/--pk 与 me-avatar 默认类提供，这里只管尺寸形状 */
+   --<款式名> 类与 me-avatar 默认类提供，这里只管尺寸形状 */
 .iphone-qq__avpick-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -4342,8 +4390,9 @@
 }
 
 /* ---------- 微信头像（圆角方形，与 QQ 的圆形区分） ---------- */
-/* 内置款式：「我的头像」可选表情脸（Fluent Emoji 3D，MIT），透明底垫柔和底色；
-   规则排在默认背景规则之后才能覆盖。--g1/--g2 是群聊/联系人的首字渐变占位。 */
+/* 内置款式：与 QQ / 小红书同一批图（assets/avatar-01~21.jpg，款式表见
+   IPHONE_ME_AVATAR_PRESETS），规则排在默认背景规则之后才能覆盖。
+   --g1/--g2 是群聊/联系人的首字渐变占位。 */
 .iphone-wx__avatar {
   display: flex;
   align-items: center;
@@ -4390,44 +4439,88 @@
     #d8d8d8;
 }
 
-.iphone-wx__avatar--grin {
-  background: url('assets/wechat-avatar-grin.png') center / cover no-repeat #fdf3d8;
+.iphone-wx__avatar--a1 {
+  background: url('assets/avatar-01.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--joy {
-  background: url('assets/wechat-avatar-joy.png') center / cover no-repeat #fde8d8;
+.iphone-wx__avatar--a2 {
+  background: url('assets/avatar-02.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--cool {
-  background: url('assets/wechat-avatar-cool.png') center / cover no-repeat #e3ecf7;
+.iphone-wx__avatar--a3 {
+  background: url('assets/avatar-03.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--wink {
-  background: url('assets/wechat-avatar-wink.png') center / cover no-repeat #fde4ea;
+.iphone-wx__avatar--a4 {
+  background: url('assets/avatar-04.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--kiss {
-  background: url('assets/wechat-avatar-kiss.png') center / cover no-repeat #fde0e6;
+.iphone-wx__avatar--a5 {
+  background: url('assets/avatar-05.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--think {
-  background: url('assets/wechat-avatar-think.png') center / cover no-repeat #ece7f7;
+.iphone-wx__avatar--a6 {
+  background: url('assets/avatar-06.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--plead {
-  background: url('assets/wechat-avatar-plead.png') center / cover no-repeat #e2edf8;
+.iphone-wx__avatar--a7 {
+  background: url('assets/avatar-07.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--nerd {
-  background: url('assets/wechat-avatar-nerd.png') center / cover no-repeat #eef1dd;
+.iphone-wx__avatar--a8 {
+  background: url('assets/avatar-08.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--monocle {
-  background: url('assets/wechat-avatar-monocle.png') center / cover no-repeat #f2ead9;
+.iphone-wx__avatar--a9 {
+  background: url('assets/avatar-09.jpg') center / cover no-repeat #f0f0f2;
 }
 
-.iphone-wx__avatar--hug {
-  background: url('assets/wechat-avatar-hug.png') center / cover no-repeat #fce6e6;
+.iphone-wx__avatar--a10 {
+  background: url('assets/avatar-10.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a11 {
+  background: url('assets/avatar-11.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a12 {
+  background: url('assets/avatar-12.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a13 {
+  background: url('assets/avatar-13.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a14 {
+  background: url('assets/avatar-14.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a15 {
+  background: url('assets/avatar-15.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a16 {
+  background: url('assets/avatar-16.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a17 {
+  background: url('assets/avatar-17.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a18 {
+  background: url('assets/avatar-18.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a19 {
+  background: url('assets/avatar-19.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a20 {
+  background: url('assets/avatar-20.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-wx__avatar--a21 {
+  background: url('assets/avatar-21.jpg') center / cover no-repeat #f0f0f2;
 }
 
 /* 「我」的头像：默认灰底白色人形占位（背景见上方 .iphone-wx__me-avatar，
@@ -7512,7 +7605,8 @@
 
 /* ---------- 头像 ---------- */
 /* 默认背景（灰底白色人形占位，纯 CSS 画的头 + 肩）必须排在款式类之前：两者特异性
-   相同，靠后的一条才生效，排在后面会把款式图整个盖掉。 */
+   相同，靠后的一条才生效，排在后面会把款式图整个盖掉。
+   款式类（--a1~--a21）与 QQ / 微信指向同一批图 assets/avatar-01~21.jpg。 */
 .iphone-xhs__avatar {
   display: flex;
   align-items: center;
@@ -7543,83 +7637,87 @@
 }
 
 .iphone-xhs__avatar--a1 {
-  background: url('assets/xhs-avatar-01.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-01.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a2 {
-  background: url('assets/xhs-avatar-02.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-02.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a3 {
-  background: url('assets/xhs-avatar-03.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-03.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a4 {
-  background: url('assets/xhs-avatar-04.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-04.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a5 {
-  background: url('assets/xhs-avatar-05.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-05.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a6 {
-  background: url('assets/xhs-avatar-06.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-06.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a7 {
-  background: url('assets/xhs-avatar-07.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-07.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a8 {
-  background: url('assets/xhs-avatar-08.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-08.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a9 {
-  background: url('assets/xhs-avatar-09.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-09.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a10 {
-  background: url('assets/xhs-avatar-10.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-10.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a11 {
-  background: url('assets/xhs-avatar-11.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-11.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a12 {
-  background: url('assets/xhs-avatar-12.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-12.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a13 {
-  background: url('assets/xhs-avatar-13.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-13.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a14 {
-  background: url('assets/xhs-avatar-14.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-14.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a15 {
-  background: url('assets/xhs-avatar-15.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-15.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a16 {
-  background: url('assets/xhs-avatar-16.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-16.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a17 {
-  background: url('assets/xhs-avatar-17.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-17.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a18 {
-  background: url('assets/xhs-avatar-18.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-18.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a19 {
-  background: url('assets/xhs-avatar-19.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-19.jpg') center / cover no-repeat #f0f0f2;
 }
 
 .iphone-xhs__avatar--a20 {
-  background: url('assets/xhs-avatar-20.png') center / cover no-repeat #f0f0f2;
+  background: url('assets/avatar-20.jpg') center / cover no-repeat #f0f0f2;
+}
+
+.iphone-xhs__avatar--a21 {
+  background: url('assets/avatar-21.jpg') center / cover no-repeat #f0f0f2;
 }
 
 
@@ -8818,6 +8916,39 @@
 }
 
 .iphone-st.is-xhspreset-open .iphone-st__page--xhspreset {
+  transform: translateX(0);
+}
+
+/* ---------- 设置 · 淘宝提示词子页（v0.28.0 起，与其余提示词页同一套推入视差） ---------- */
+/* 缺了这段规则时子页不会被推出屏幕，而它在 DOM 里排在最后、又是不透明整屏，
+   会把设置主页整个盖住（点「设置」进来看到的就是淘宝提示词页）。 */
+.iphone-st.is-taobaopreset-open .iphone-st__page--taobaopreset {
+  box-shadow: -14px 0 34px rgba(0, 0, 0, 0.18);
+}
+
+.iphone-st__page--taobaopreset {
+  transform: translateX(100%);
+}
+
+.iphone-st__page--taobaopreset::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.34s ease;
+  pointer-events: none;
+}
+
+.iphone-st.is-taobaopreset-open .iphone-st__page--main {
+  transform: translateX(-26%);
+}
+
+.iphone-st.is-taobaopreset-open .iphone-st__page--main::after {
+  opacity: 0.14;
+}
+
+.iphone-st.is-taobaopreset-open .iphone-st__page--taobaopreset {
   transform: translateX(0);
 }
 

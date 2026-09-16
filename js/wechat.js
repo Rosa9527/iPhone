@@ -87,11 +87,11 @@ function iphoneWechatIcons() {
 // 归一化函数互不影响，共用 host.js 的存储与楼层机制。
 const IPHONE_WECHAT_USER_MACRO = IPHONE_QQ_USER_MACRO;
 
-// 归一化微信头像（内置款式见 IPHONE_WECHAT_ME_AVATAR_PRESETS；me 等价于默认）。
+// 归一化微信头像（内置款式见 IPHONE_ME_AVATAR_PRESETS，与 QQ / 小红书同一份；me 等价于默认）。
 function iphoneNormalizeWechatAvatar(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const preset = String(raw.preset || '').trim();
-  if (preset && preset !== 'me' && IPHONE_WECHAT_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
+  if (preset && preset !== 'me' && IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
     return { preset };
   }
   const url = String(raw.url || '').trim();
@@ -1593,9 +1593,9 @@ function iphoneWechatBuildEntityAvatar(entity, kind) {
   return el;
 }
 
-// 头像选择浮层（微信版）：复用 QQ 的通用组件，把内置款式、款式类前缀与默认
-// 头像类换成微信的（presets / clsPrefix / meClass），其余（上传、链接、选中逻辑）
-// 完全共用。
+// 头像选择浮层（微信版）：复用 QQ 的通用组件，把款式类前缀与默认头像类换成
+// 微信的（clsPrefix / meClass）；款式表自 v0.31.0 起三个应用是同一份，直接沿用
+// 组件默认的 IPHONE_ME_AVATAR_PRESETS，其余（上传、链接、选中逻辑）完全共用。
 // ---------- 微信回复解析 ----------
 // 回复格式与 QQ 完全同款：私聊每行 `联系人：「内容」`，群聊每行 `成员名：「内容」`。
 // 解析器直接复用 QQ 的实现（apps.js，定义在拼接后的同一作用域），这里保留
@@ -1608,7 +1608,7 @@ function iphoneWechatBuildAvatarPicker(icons, { getCurrent, onPick, commit }) {
     getCurrent: () => iphoneNormalizeWechatAvatar(getCurrent()),
     onPick: (avatar) => onPick(iphoneNormalizeWechatAvatar(avatar)),
     commit: commit ? (avatar) => commit(iphoneNormalizeWechatAvatar(avatar)) : undefined,
-    presets: IPHONE_WECHAT_ME_AVATAR_PRESETS,
+    presets: IPHONE_ME_AVATAR_PRESETS,
     clsPrefix: 'iphone-wx__avatar--',
     meClass: 'iphone-wx__me-avatar',
   });

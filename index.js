@@ -1,11 +1,11 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-16 19:46:15 · 文件数: 12 · 指纹: ad85d15f
+// 构建时间: 2026-09-16 22:46:43 · 文件数: 12 · 指纹: 2486813e
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.28.0';
+const IPHONE_MODULE_VERSION = '0.31.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -60,11 +60,15 @@ const IPHONE_ESC_KEY_HANDLER_KEY = '__iphone_esc_key_handler__';
 const IPHONE_CLOCK_TIMER_KEY = '__iphone_clock_timer__';
 
 // ---------- 应用注册表 ----------
-// 每个应用一条：id / 名称 / 图标样式类。图标一律走 CSS background-image 位图
-// （url 相对 style.css 解析到扩展目录内，DOM <img> 相对路径会被页面 URL 带偏）。
+// 每个应用一条：id / 名称 / 图标样式类 / 停靠栏标记。图标一律走 CSS
+// background-image 位图（url 相对 style.css 解析到扩展目录内，DOM <img>
+// 相对路径会被页面 URL 带偏）。
 // assets/qq-icon.jpg 取自 App Store 官方图标（iTunes Lookup API，640px 原图）；
 // assets/settings-icon.png 取 Wikimedia Commons「Settings (iOS).png」——苹果设置
 // 应用的经典真实图标（三齿轮银色凸版，1024px 原图缩至 256px）。
+//
+// dock: true 的应用进屏幕下方的毛玻璃停靠栏（iOS 的常用应用区），其余进主屏
+// 网格；两处都只渲染自己那份，应用总数与顺序由本表决定（renderIphoneDock）。
 
 const IPHONE_APPS = Object.freeze([
   {
@@ -84,6 +88,7 @@ const IPHONE_APPS = Object.freeze([
     // 矢量图标直接内联 SVG（buildIphoneAppIcon 支持）：白描线翻开的书，
     // 底色由 .iphone-app-icon--worldbook 的渐变给出（Apple Books 观感）。
     iconSvg: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.8 5 9 4.4 6.6 4.4c-.9 0-1.7.1-2.4.3v13.6c.7-.2 1.5-.3 2.4-.3 2.4 0 4.2.6 5.4 1.8 1.2-1.2 3-1.8 5.4-1.8.9 0 1.7.1 2.4.3V4.7c-.7-.2-1.5-.3-2.4-.3-2.4 0-4.2.6-5.4 1.8z"/><path d="M12 6.2v13.6"/></g></svg>',
+    dock: true,
   },
   {
     id: 'xhs',
@@ -102,6 +107,7 @@ const IPHONE_APPS = Object.freeze([
     id: 'settings',
     name: '设置',
     iconClass: 'iphone-app-icon--settings',
+    dock: true,
   },
   {
     id: 'logs',
@@ -110,6 +116,7 @@ const IPHONE_APPS = Object.freeze([
     // 矢量图标直接内联 SVG（buildIphoneAppIcon 支持）：白描线终端窗口 + 「>_」
     // 提示符，底色由 .iphone-app-icon--logs 的深色渐变给出（开发者控制台观感）。
     iconSvg: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4.4" width="17.6" height="15.2" rx="3.4"/><path d="m7 9.4 3.2 2.9L7 15.2"/><path d="M12.6 15.4h4.4"/></g></svg>',
+    dock: true,
   },
 ]);
 
@@ -413,6 +420,39 @@ const IPHONE_WECHAT_MOMENTS_PRESET_DEFAULT = Object.freeze({
   replyFormat: IPHONE_WECHAT_MOMENTS_REPLY_FORMAT,
 });
 
+// ---------- 内置头像款式（QQ / 微信 / 小红书共用，v0.31.0） ----------
+// 三个应用的「选择头像」浮层共用同一份款式表：assets/avatar-01~21.jpg（用户
+// 提供的动漫 / 插画头像，见 README「素材来源」），id a1~a21 与文件名一一对应。
+// me = 默认款：不挂覆盖类，由各应用自己的 me-avatar 默认背景给出灰底人形占位。
+// 各应用只是款式类前缀不同（iphone-qq__avatar-- / iphone-wx__avatar-- /
+// iphone-xhs__avatar--），CSS 里三组规则指向同一批图；小红书的网友随机头像
+// 也从这一份里取（IPHONE_XHS_AVATAR_POOL）。
+// 本表须声明在任何引用它的常量之前（小红书头像池按它的长度推导）。
+const IPHONE_ME_AVATAR_PRESETS = Object.freeze([
+  { id: 'me', label: '默认' },
+  { id: 'a1', label: '皮卡丘' },
+  { id: 'a2', label: '鸭鸭' },
+  { id: 'a3', label: '奶凶猫' },
+  { id: 'a4', label: '吃竹子' },
+  { id: 'a5', label: '打盹' },
+  { id: 'a6', label: '蓝眼猫' },
+  { id: 'a7', label: '贴贴' },
+  { id: 'a8', label: '双辫子' },
+  { id: 'a9', label: '白毛角' },
+  { id: 'a10', label: '粉双马尾' },
+  { id: 'a11', label: '史迪奇帽' },
+  { id: 'a12', label: '连帽衫' },
+  { id: 'a13', label: '黑长直' },
+  { id: 'a14', label: '喝奶茶' },
+  { id: 'a15', label: '蜡笔小新' },
+  { id: 'a16', label: '海边' },
+  { id: 'a17', label: '白熊抱鱼' },
+  { id: 'a18', label: '抱猫' },
+  { id: 'a19', label: '紫发' },
+  { id: 'a20', label: '黄T恤' },
+  { id: 'a21', label: '雨衣' },
+]);
+
 // ---------- 小红书（v0.26.0） ----------
 // 与微信朋友圈最本质的差别：朋友圈是「联系人发帖」（名单固定、都是剧情里的人），
 // 小红书是「网友发帖」——发布者是一群与玩家素不相识的互联网陌生人。网友由 AI
@@ -507,31 +547,8 @@ const IPHONE_XHS_ME = Object.freeze({
   xhsId: '8823771906',
   ip: '上海',
 });
-// 小红书头像款式（assets/xhs-avatar-*.png，DiceBear 生成，见 README「素材来源」）：
-// me = 默认（纯 CSS 灰底人形占位，无覆盖类），其余 20 款为覆盖类。
-const IPHONE_XHS_ME_AVATAR_PRESETS = Object.freeze([
-  { id: 'me', label: '默认' },
-  { id: 'a1', label: '短发男生' },
-  { id: 'a2', label: '绿发' },
-  { id: 'a3', label: '橘发' },
-  { id: 'a4', label: '黑长直' },
-  { id: 'a5', label: '卷发' },
-  { id: 'a6', label: '刘海' },
-  { id: 'a7', label: '清爽' },
-  { id: 'a8', label: '波浪' },
-  { id: 'a9', label: '利落' },
-  { id: 'a10', label: '深肤色' },
-  { id: 'a11', label: '金发' },
-  { id: 'a12', label: '眼镜' },
-  { id: 'a13', label: '卫衣' },
-  { id: 'a14', label: '条纹' },
-  { id: 'a15', label: '碎花' },
-  { id: 'a16', label: '墨镜' },
-  { id: 'a17', label: '白发' },
-  { id: 'a18', label: '辫子' },
-  { id: 'a19', label: '笑脸' },
-  { id: 'a20', label: '蓝紫' },
-]);
+// 小红书「我」的头像款式：v0.31.0 起与 QQ / 微信共用同一份款式表
+//（IPHONE_ME_AVATAR_PRESETS，见上方「内置头像款式」段），不再是独立的一套。
 // 小红书笔记封面图库：模型在生成时报一个「题材」，插件从这里挑同题材的一张
 //（未命中题材就按哈希随便挑一张），保证图文题材相符。ratio = 宽/高，瀑布流的
 // 卡片高度按它算，长短交错才像真实信息流。文件见 assets/xhs-cover-*.jpg。
@@ -565,7 +582,8 @@ const IPHONE_XHS_NOTE_LIKES_BASE = 0;
 // 网友池上限与头像池大小：网友发帖 / 评论时自动注册，超过上限后不再新增
 //（旧的仍在，只是不再收新面孔），头像按序号循环取用。
 const IPHONE_XHS_NETIZEN_CAP = 60;
-const IPHONE_XHS_AVATAR_POOL = 20;
+// 头像池大小 = 共享款式表去掉 me（默认款）之后的款数，跟着表走不用手改。
+const IPHONE_XHS_AVATAR_POOL = IPHONE_ME_AVATAR_PRESETS.length - 1;
 // 一次下拉刷新生成的笔记条数上限（AI 通常写 1~3 篇）。
 const IPHONE_XHS_REFRESH_MAX_NOTES = 3;
 // 笔记正文与标题的长度上限（归一化时截断，防脏数据撑爆界面）。
@@ -720,22 +738,9 @@ const IPHONE_AVATAR_CROP_SIZE = 256;
 const IPHONE_AVATAR_CROP_MIN_SCALE = 1;
 const IPHONE_AVATAR_CROP_MAX_SCALE = 4;
 const IPHONE_AVATAR_CROP_STEP = 0.01;
-// 「我的头像」内置可选款式（微信）：Fluent Emoji 3D 表情脸（MIT），经 CSS 背景类
-// 加载（assets/wechat-avatar-*.png，见 style.css 对应类）；me = 默认头像
-//（灰底人形占位，无覆盖类），与 QQ 的 presets 结构一致。
-const IPHONE_WECHAT_ME_AVATAR_PRESETS = Object.freeze([
-  { id: 'me', label: '默认' },
-  { id: 'grin', label: '呲牙' },
-  { id: 'joy', label: '破涕为笑' },
-  { id: 'cool', label: '墨镜' },
-  { id: 'wink', label: '眨眼' },
-  { id: 'kiss', label: '飞吻' },
-  { id: 'think', label: '思考' },
-  { id: 'plead', label: '委屈' },
-  { id: 'nerd', label: '学霸' },
-  { id: 'monocle', label: '单片镜' },
-  { id: 'hug', label: '拥抱' },
-]);
+// 微信「我」的头像款式：v0.31.0 起与 QQ / 小红书共用同一份款式表
+//（IPHONE_ME_AVATAR_PRESETS，见上方「内置头像款式」段），不再是独立的一套；
+// 款式类前缀仍为微信自己的 iphone-wx__avatar--（CSS 三组规则指向同一批图）。
 // 微信「服务 / 钱包」的占位演示数据（v0.22.1，纯前端）：存 chatMetadata.IPhone
 // 的 wechatWallet 字段，随聊天文件走；读取时按这套默认值归一化补齐（金额均为元）。
 // balance 自 v0.27.0 起默认 0：零钱不再是写死的演示值，改由「我 → 服务 → 钱包 →
@@ -3346,22 +3351,10 @@ const IPHONE_QQ_USER_MACRO = '{{user}}';
 // 无宿主上下文（本地 test.html 预览）时的兜底昵称：有酒馆时一律用 {{user}}。
 const IPHONE_QQ_ME_FALLBACK_NAME = '小橘子';
 
-// 「我的头像」内置可选款式：Microsoft Fluent Emoji 3D 可爱小动物（MIT 许可），
+// 「我的头像」内置可选款式：v0.31.0 起与微信 / 小红书共用同一份款式表
+//（IPHONE_ME_AVATAR_PRESETS，定义在 constants.js），不再是 QQ 专属的小动物。
 // 经 CSS 背景类加载（相对路径只能走 CSS，见 style.css 对应类）；me = 默认头像
-//（同为 Fluent Emoji 3D 小熊），无覆盖类。
-const IPHONE_QQ_ME_AVATAR_PRESETS = Object.freeze([
-  { id: 'me', label: '默认' },
-  { id: 'cat', label: '小猫' },
-  { id: 'dog', label: '小狗' },
-  { id: 'fox', label: '小狐狸' },
-  { id: 'rabbit', label: '小兔' },
-  { id: 'panda', label: '熊猫' },
-  { id: 'frog', label: '青蛙' },
-  { id: 'penguin', label: '企鹅' },
-  { id: 'pig', label: '小猪' },
-  { id: 'hamster', label: '仓鼠' },
-  { id: 'chick', label: '小鸡' },
-]);
+//（v0.31.0 起为纯 CSS 灰底人形占位，无位图），无覆盖类。
 
 // ---------- 我的资料（设置里的 qqProfile ↔ 界面显示值） ----------
 // 归一化头像：null = 默认；{ preset } 仅收内置款式（me 等价于默认，归一为 null）；
@@ -3369,7 +3362,7 @@ const IPHONE_QQ_ME_AVATAR_PRESETS = Object.freeze([
 function iphoneNormalizeQqAvatar(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const preset = String(raw.preset || '').trim();
-  if (preset && preset !== 'me' && IPHONE_QQ_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
+  if (preset && preset !== 'me' && IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
     return { preset };
   }
   const url = String(raw.url || '').trim();
@@ -5938,13 +5931,14 @@ function iphoneQqBuildAvatarCropper(icons, { onSave, onCancel }) {
 // ---------- 选择头像浮层（通用组件） ----------
 // 内置款式九宫格 + 上传（选图后进裁剪编辑器）+ 图片链接，多处复用（编辑资料 /
 // 好友资料 / 群聊资料 / 添加好友 / 创建群聊；v0.18.0 起微信的资料页与表单也复用，
-// 经 presets / clsPrefix / meClass 换成微信自己的款式与类名）。
+// v0.26.0 起小红书的编辑资料页同样复用：三者的款式表自 v0.31.0 起是同一份
+// IPHONE_ME_AVATAR_PRESETS，只是经 clsPrefix / meClass 换成各自应用的类名）。
 // getCurrent() 取当前头像，onPick(avatar) 回传归一化结果（默认 → null）。
 // 返回 { el, open }：el 要挂进 position:relative 的父容器（absolute inset 0 盖住父层）。
 // commit(avatar)（可选）在「保存」时调用：编辑资料这类即改即存的入口传它，
 // 让上传的头像保存后立即写回；表单类入口不传，等表单自己的「保存」一起提交。
 function iphoneQqBuildAvatarPicker(icons, { getCurrent, onPick, commit, presets, clsPrefix, meClass }) {
-  const presetList = Array.isArray(presets) && presets.length ? presets : IPHONE_QQ_ME_AVATAR_PRESETS;
+  const presetList = Array.isArray(presets) && presets.length ? presets : IPHONE_ME_AVATAR_PRESETS;
   const avatarCls = clsPrefix || 'iphone-qq__avatar--';
   const meCls = meClass || 'iphone-qq__me-avatar';
   const picker = document.createElement('div');
@@ -9149,11 +9143,11 @@ function iphoneWechatIcons() {
 // 归一化函数互不影响，共用 host.js 的存储与楼层机制。
 const IPHONE_WECHAT_USER_MACRO = IPHONE_QQ_USER_MACRO;
 
-// 归一化微信头像（内置款式见 IPHONE_WECHAT_ME_AVATAR_PRESETS；me 等价于默认）。
+// 归一化微信头像（内置款式见 IPHONE_ME_AVATAR_PRESETS，与 QQ / 小红书同一份；me 等价于默认）。
 function iphoneNormalizeWechatAvatar(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const preset = String(raw.preset || '').trim();
-  if (preset && preset !== 'me' && IPHONE_WECHAT_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
+  if (preset && preset !== 'me' && IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
     return { preset };
   }
   const url = String(raw.url || '').trim();
@@ -10655,9 +10649,9 @@ function iphoneWechatBuildEntityAvatar(entity, kind) {
   return el;
 }
 
-// 头像选择浮层（微信版）：复用 QQ 的通用组件，把内置款式、款式类前缀与默认
-// 头像类换成微信的（presets / clsPrefix / meClass），其余（上传、链接、选中逻辑）
-// 完全共用。
+// 头像选择浮层（微信版）：复用 QQ 的通用组件，把款式类前缀与默认头像类换成
+// 微信的（clsPrefix / meClass）；款式表自 v0.31.0 起三个应用是同一份，直接沿用
+// 组件默认的 IPHONE_ME_AVATAR_PRESETS，其余（上传、链接、选中逻辑）完全共用。
 // ---------- 微信回复解析 ----------
 // 回复格式与 QQ 完全同款：私聊每行 `联系人：「内容」`，群聊每行 `成员名：「内容」`。
 // 解析器直接复用 QQ 的实现（apps.js，定义在拼接后的同一作用域），这里保留
@@ -10670,7 +10664,7 @@ function iphoneWechatBuildAvatarPicker(icons, { getCurrent, onPick, commit }) {
     getCurrent: () => iphoneNormalizeWechatAvatar(getCurrent()),
     onPick: (avatar) => onPick(iphoneNormalizeWechatAvatar(avatar)),
     commit: commit ? (avatar) => commit(iphoneNormalizeWechatAvatar(avatar)) : undefined,
-    presets: IPHONE_WECHAT_ME_AVATAR_PRESETS,
+    presets: IPHONE_ME_AVATAR_PRESETS,
     clsPrefix: 'iphone-wx__avatar--',
     meClass: 'iphone-wx__me-avatar',
   });
@@ -13576,7 +13570,7 @@ function buildWechatAppScreen() {
 // 小红书是「网友发帖」——发布者是一群与玩家素不相识的互联网陌生人，由 AI 现场
 // 发明，发过一次就沉淀进「网友池」，之后复用同一个身份继续发帖、互相评论。
 // 封面由模型报一个题材、插件从内置图库挑同题材的一张（模型选不了图），保证图文
-// 相符；网友头像按加入网友池的顺序从 20 款内置头像里循环取用。
+// 相符；网友头像按加入网友池的顺序从内置头像里循环取用（与 QQ / 微信同一份款式表）。
 // 数据独立：chatMetadata.IPhone 的 xhsData / xhsProfile（与 qqData / wechatData
 // 并列），换聊天自动切换。楼层段头 `小红书笔记：`（段标签 [小红书笔记]）。
 // 复用已建好的基础设施：host.js 的上下文 / 存储 / 对话 API / 楼层读写、apps.js 的
@@ -13631,11 +13625,12 @@ function iphoneXhsGenId(prefix) {
 }
 
 // 归一化头像：null = 默认（灰底人形占位）；{ preset } 只认内置款式
-//（a1~a20，me 等价于默认）；{ url } 只认 http(s) 与 data:image 并限长。
+//（a1~a21，与 QQ / 微信同一份 IPHONE_ME_AVATAR_PRESETS；me 等价于默认）；
+// { url } 只认 http(s) 与 data:image 并限长。
 function iphoneNormalizeXhsAvatar(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const preset = String(raw.preset || '').trim();
-  if (preset && preset !== 'me' && IPHONE_XHS_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
+  if (preset && preset !== 'me' && IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
     return { preset };
   }
   const url = String(raw.url || '').trim();
@@ -13668,7 +13663,7 @@ function iphoneNormalizeXhsNetizen(raw) {
     xhsId: String(source.xhsId || '').replace(/[^\w.-]/g, '').slice(0, 32),
     ip: String(source.ip || '').trim().slice(0, 16),
     bio: String(source.bio || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120),
-    avatar: IPHONE_XHS_ME_AVATAR_PRESETS.some((p) => p.id === preset && p.id !== 'me') ? preset : '',
+    avatar: IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset && p.id !== 'me') ? preset : '',
   };
 }
 
@@ -14575,7 +14570,7 @@ function iphoneXhsBuildAvatarPicker(icons, { getCurrent, onPick, commit }) {
     getCurrent: () => iphoneNormalizeXhsAvatar(getCurrent()),
     onPick: (avatar) => onPick(iphoneNormalizeXhsAvatar(avatar)),
     commit: commit ? (avatar) => commit(iphoneNormalizeXhsAvatar(avatar)) : undefined,
-    presets: IPHONE_XHS_ME_AVATAR_PRESETS,
+    presets: IPHONE_ME_AVATAR_PRESETS,
     clsPrefix: 'iphone-xhs__avatar--',
     meClass: 'iphone-xhs__me-avatar',
   });
@@ -18112,6 +18107,7 @@ function createIphoneUi() {
   document.body.appendChild(overlay);
 
   renderIphoneGrid();
+  renderIphoneDock();
   renderIphonePageDots();
   initIphoneClock();
   initIphoneBattery();
@@ -18119,15 +18115,33 @@ function createIphoneUi() {
   return overlay;
 }
 
-// 主屏图标网格：当前只有一页，后续应用多了再分页。
+// 主屏图标网格：注册表里 dock !== true 的应用（常用应用进停靠栏，见 renderIphoneDock）。
+// 当前只有一页，后续应用多了再分页。
 function renderIphoneGrid() {
   const grid = document.getElementById(IPHONE_GRID_ID);
   if (!grid) return;
   grid.innerHTML = '';
   for (const app of IPHONE_APPS) {
+    if (app.dock) continue;
     const cell = buildIphoneAppIcon(app);
     cell.addEventListener('click', () => openIphoneApp(app, cell));
     grid.appendChild(cell);
+  }
+}
+
+// 停靠栏（iOS 的常用应用区）：注册表里 dock === true 的应用渲染进屏幕下方的
+// 毛玻璃框，图标布局与网格一致但隐藏名称（真机 Dock 只有图标），打开动画的
+// transform-origin 仍按图标位置计算，两处入口共用 openIphoneApp。
+function renderIphoneDock() {
+  const dock = document.getElementById(IPHONE_DOCK_ID);
+  if (!dock) return;
+  dock.innerHTML = '';
+  for (const app of IPHONE_APPS) {
+    if (!app.dock) continue;
+    const cell = buildIphoneAppIcon(app);
+    cell.classList.add('iphone-app-cell--dock');
+    cell.addEventListener('click', () => openIphoneApp(app, cell));
+    dock.appendChild(cell);
   }
 }
 

@@ -116,22 +116,10 @@ const IPHONE_QQ_USER_MACRO = '{{user}}';
 // 无宿主上下文（本地 test.html 预览）时的兜底昵称：有酒馆时一律用 {{user}}。
 const IPHONE_QQ_ME_FALLBACK_NAME = '小橘子';
 
-// 「我的头像」内置可选款式：Microsoft Fluent Emoji 3D 可爱小动物（MIT 许可），
+// 「我的头像」内置可选款式：v0.31.0 起与微信 / 小红书共用同一份款式表
+//（IPHONE_ME_AVATAR_PRESETS，定义在 constants.js），不再是 QQ 专属的小动物。
 // 经 CSS 背景类加载（相对路径只能走 CSS，见 style.css 对应类）；me = 默认头像
-//（同为 Fluent Emoji 3D 小熊），无覆盖类。
-const IPHONE_QQ_ME_AVATAR_PRESETS = Object.freeze([
-  { id: 'me', label: '默认' },
-  { id: 'cat', label: '小猫' },
-  { id: 'dog', label: '小狗' },
-  { id: 'fox', label: '小狐狸' },
-  { id: 'rabbit', label: '小兔' },
-  { id: 'panda', label: '熊猫' },
-  { id: 'frog', label: '青蛙' },
-  { id: 'penguin', label: '企鹅' },
-  { id: 'pig', label: '小猪' },
-  { id: 'hamster', label: '仓鼠' },
-  { id: 'chick', label: '小鸡' },
-]);
+//（v0.31.0 起为纯 CSS 灰底人形占位，无位图），无覆盖类。
 
 // ---------- 我的资料（设置里的 qqProfile ↔ 界面显示值） ----------
 // 归一化头像：null = 默认；{ preset } 仅收内置款式（me 等价于默认，归一为 null）；
@@ -139,7 +127,7 @@ const IPHONE_QQ_ME_AVATAR_PRESETS = Object.freeze([
 function iphoneNormalizeQqAvatar(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const preset = String(raw.preset || '').trim();
-  if (preset && preset !== 'me' && IPHONE_QQ_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
+  if (preset && preset !== 'me' && IPHONE_ME_AVATAR_PRESETS.some((p) => p.id === preset)) {
     return { preset };
   }
   const url = String(raw.url || '').trim();
@@ -2708,13 +2696,14 @@ function iphoneQqBuildAvatarCropper(icons, { onSave, onCancel }) {
 // ---------- 选择头像浮层（通用组件） ----------
 // 内置款式九宫格 + 上传（选图后进裁剪编辑器）+ 图片链接，多处复用（编辑资料 /
 // 好友资料 / 群聊资料 / 添加好友 / 创建群聊；v0.18.0 起微信的资料页与表单也复用，
-// 经 presets / clsPrefix / meClass 换成微信自己的款式与类名）。
+// v0.26.0 起小红书的编辑资料页同样复用：三者的款式表自 v0.31.0 起是同一份
+// IPHONE_ME_AVATAR_PRESETS，只是经 clsPrefix / meClass 换成各自应用的类名）。
 // getCurrent() 取当前头像，onPick(avatar) 回传归一化结果（默认 → null）。
 // 返回 { el, open }：el 要挂进 position:relative 的父容器（absolute inset 0 盖住父层）。
 // commit(avatar)（可选）在「保存」时调用：编辑资料这类即改即存的入口传它，
 // 让上传的头像保存后立即写回；表单类入口不传，等表单自己的「保存」一起提交。
 function iphoneQqBuildAvatarPicker(icons, { getCurrent, onPick, commit, presets, clsPrefix, meClass }) {
-  const presetList = Array.isArray(presets) && presets.length ? presets : IPHONE_QQ_ME_AVATAR_PRESETS;
+  const presetList = Array.isArray(presets) && presets.length ? presets : IPHONE_ME_AVATAR_PRESETS;
   const avatarCls = clsPrefix || 'iphone-qq__avatar--';
   const meCls = meClass || 'iphone-qq__me-avatar';
   const picker = document.createElement('div');
