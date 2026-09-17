@@ -8888,6 +8888,32 @@
   border-radius: 0;
 }
 
+/* ---------- 轻提示（发布后网友评论的进度 / 结果） ---------- */
+.iphone-xhs__toast {
+  position: absolute;
+  left: 50%;
+  bottom: 108px;
+  z-index: 6;
+  max-width: 300px;
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 18px;
+  text-align: center;
+  transform: translate(-50%, 8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.iphone-xhs__toast.is-show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
 /* ---------- 设置 · 小红书提示词子页（与其余提示词页同一套推入视差） ---------- */
 .iphone-st.is-xhspreset-open .iphone-st__page--xhspreset {
   box-shadow: -14px 0 34px rgba(0, 0, 0, 0.18);

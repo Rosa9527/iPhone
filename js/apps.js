@@ -5188,7 +5188,8 @@ function buildSettingsAppScreen() {
   // 角色扮演指令 + 可选的扮演与对白指导（npcSection，默认显示）+ 上下文注入
   //（世界书开关 / 记录楼层开关 / 主线楼层数）+ 可选写作指导（guidanceSection，
   // 仅「动态提示词」与「零钱评估」页）+ 可选回复指导与回复格式（replySection，
-  // 仅「动态提示词」页，v0.17.0）+ 输出格式 + 占位符说明 + 恢复默认；仅标题、
+  // 动态 / 朋友圈 / 小红书三类页共用：小红书那一节管评论区的两次调用，v0.33.0）
+  // + 输出格式 + 占位符说明 + 恢复默认；仅标题、
   // 存档键、个别脚注与默认值不同。
   const buildPresetPage = ({ pageClass, openClass, navTitle, sectionPrefix, formatFootText, footText, resetLabel, save, getPreset, defaults, guidanceSection, replySection, floorLogLabels, npcSection }) => {
     // 记录楼层的称谓（QQ 页用「QQ」，微信页用「微信」；<qq_chat_log> / <wechat_chat_log>）
@@ -5568,12 +5569,14 @@ function buildSettingsAppScreen() {
     sectionPrefix: '小红书笔记',
     guidanceSection: {
       title: '笔记写作指导',
-      footText: '包在 <xhs_guidance> 里随 system 发送的写作指导：发明网友、挑题材、标题与正文的写法、互动数据要真实等；改写后即时生效，留空则整段不发送（输出格式里仍有基本的区块示例可依）。',
+      footText: '包在 <xhs_guidance> 里随 system 发送的写作指导：发明网友、挑题材、'
+        + '每篇与剧情或世界观挂钩（直接相关 / 间接相关 / 背景与世界观三种写法）、标题与正文的写法、互动数据要真实等；'
+        + '改写后即时生效，留空则整段不发送（输出格式里仍有基本的区块示例可依）。',
     },
     replySection: {
-      title: '回复写作指导',
-      guidanceFootText: '包在 <reply_guidance> 里随 system 发送：玩家在笔记下留言后，由 AI 生成新的评论回复（作者本人 / 路过的网友应声）。改写后即时生效，留空则整段不发送。',
-      formatFootText: 'AI 回复按每行「评论人：内容」解析成新评论（回复某人写作「评论人 回复 被回复人：内容」）；这段包在 <output_format> 里随 system 发送，模型没按格式输出时整段兜底成作者的一条回复。',
+      title: '评论写作指导',
+      guidanceFootText: '包在 <reply_guidance> 里随 system 发送：评论区的两次调用都用它——玩家在笔记下留言后由 AI 生成新的评论回复（作者本人 / 路过的网友应声），以及玩家自己发布笔记后由 AI 生成网友评论（v0.33.0）。改写后即时生效，留空则整段不发送。',
+      formatFootText: 'AI 回复按每行「评论人：内容」解析成新评论（回复某人写作「评论人 回复 被回复人：内容」）；这段包在 <output_format> 里随 system 发送。玩家留言时模型没按格式输出会整段兜底成作者的一条回复；玩家自己发帖时不兜底（那等于替玩家发言），失败只在页内浮一条提示。',
     },
     formatFootText: 'AI 回复按「昵称：发布者」开头的笔记区块解析（小红书号 / IP / 简介 / 封面 / 标题 / 正文 / 话题 / 位置 / 点赞 / 收藏 / 评论区）；封面只填题材（美食 / 宠物 / 旅行 / 家居 / 数码 / 穿搭 / 探店），插件据此挑同题材的内置封面；模型没按格式输出时整次刷新作废并提示重试。',
     footText: '可用占位符：{{user}} = 你的名字。与朋友圈不同，这里没有联系人名单——发布者是一群「网友」：'

@@ -619,7 +619,11 @@ async function iphoneGenerateXhsNotes(xhsScreen) {
   if (guidance) sysParts.push(`以下是小红书笔记的写作指导：\n<xhs_guidance>\n${resolve(guidance)}\n</xhs_guidance>`);
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
-  const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  // user 里再点一次「与剧情 / 世界观挂钩」：这是本页内容生成的核心要求（写作指导
+  // 可被玩家改写或清空，而这一句始终在最后、最靠近生成位置），并重申三种写法分散开。
+  const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。`
+    + `每篇都要与当前剧情或世界观设定相关联——直接相关 / 间接相关 / 背景与世界观三种写法里选一种，几篇之间分散开。`
+    + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -694,10 +698,14 @@ async function iphoneGenerateXhsNotes(xhsScreen) {
   return created;
 }
 
-// ---------- 小红书笔记回复（玩家留言后调用一次对话 API） ----------
+// ---------- 小红书评论生成（玩家留言后的回复 / 玩家自己发帖后的网友评论） ----------
 // 与朋友圈回复同一套范式：`<dynamic_post>` 换成 `<xhs_note>`（含封面题材、标题、
 // 正文、话题、完整评论区），评论人可以是已有网友、新网友或笔记作者本人。
-async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
+// published = true（v0.33.0）是玩家自己发布笔记后的那一次：作者就是玩家本人，评论区
+// 一般还空着，网友来抢首评。两种情形共用同一份指导与行格式，差别只在 user 侧那一句、
+// `<xhs_note>` 段的介绍语与解析兜底——玩家留言时解析失败整段兜底成作者的一条回复，
+// 玩家自己发的笔记不做这种兜底（那等于替玩家发言），解析不了就抛错交给调用方提示。
+async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } = {}) {
   const settings = iphoneGetSettings();
   const data = iphoneGetXhsData();
   const post = data.notes.find((n) => n.id === note?.id) || note;
@@ -727,7 +735,7 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
   ];
   if (post.topics.length) postLines.push(`话题：${post.topics.map((t) => `#${t}`).join(' ')}`);
   postLines.push(`点赞：${iphoneXhsLikeCount(post)}｜收藏：${iphoneXhsCollectCount(post)}`);
-  postLines.push('评论区（时间旧→新）：');
+  postLines.push(published ? '评论区（这篇笔记刚发布，一般还空着）：' : '评论区（时间旧→新）：');
   if (!post.comments.length) {
     postLines.push('（暂无评论）');
   } else {
@@ -759,7 +767,9 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
   if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<xhs_chat_log>…</xhs_chat_log>：最近一次同步到酒馆楼层的手机记录，供你了解最近的动态；');
-  outlineItems.push('<xhs_note>…</xhs_note>：玩家正在评论的那篇笔记——作者、封面题材、标题、正文、话题与完整评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
+  outlineItems.push(published
+    ? '<xhs_note>…</xhs_note>：玩家「{{user}}」刚发布的那篇笔记——作者就是玩家本人，含封面题材、标题、正文、话题与评论区（一般还空着）；'
+    : '<xhs_note>…</xhs_note>：玩家正在评论的那篇笔记——作者、封面题材、标题、正文、话题与完整评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
   if (replyGuidance) outlineItems.push('<reply_guidance>…</reply_guidance>：评论回复的写作指导；');
   if (replyFormat) outlineItems.push('<output_format>…</output_format>：回复格式要求，位于提示词末尾，必须严格遵守；');
   sysParts.push('【提示词结构说明】本次请求的提示词由以下部分组成，均已用 XML 标签包裹并附介绍：\n'
@@ -775,11 +785,15 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
     ? `评论区里署名「${customNick}」的评论也是 TA 写的。`
     : '评论区的署名用的就是 TA 的名字。';
   sysParts.push(`以下是玩家身份说明：${playerDesc}。${identityNote}不要把 TA 当成网友或替 TA 发言。`);
-  sysParts.push(`以下是玩家正在评论的那篇笔记（含完整评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`);
+  sysParts.push(published
+    ? `以下是玩家刚刚发布的那篇笔记（作者就是 TA 本人，含评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`
+    : `以下是玩家正在评论的那篇笔记（含完整评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`);
   if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
   if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
 
-  const userContent = `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = published
+    ? `${playerDesc}刚刚发布了这篇笔记（作者就是 TA 本人），请根据以上信息生成新的网友评论。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
+    : `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -818,6 +832,9 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
   }
   let fallbackUsed = false;
   if (!created.length) {
+    // 玩家自己发的笔记不能走「兜底成作者回复」：那篇的作者就是玩家，兜底等于替玩家
+    // 发言（也与「不要替玩家说话」的指导相冲突），解析不了就直接失败、由调用方提示。
+    if (published) throw new Error('AI 没有返回有效的网友评论（需要「评论人：内容」格式的行）。');
     const whole = String(reply ?? '').replace(/\s+/g, ' ').trim()
       .replace(/^[^：:\n]{1,30}?(?:\s+回复\s+[^：:\n]{1,30}?)?\s*[:：]\s*/, '')
       .slice(0, IPHONE_XHS_COMMENT_CAP);
@@ -826,7 +843,9 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
     fallbackUsed = true;
   }
   iphoneSetXhsData(xhsScreen, fresh);
-  iphoneLog('info', `小红书回复成功：生成 ${created.length} 条新评论${fallbackUsed ? '（整段兜底为作者回复）' : ''}`);
+  iphoneLog('info', published
+    ? `小红书发帖成功：生成 ${created.length} 条网友评论`
+    : `小红书回复成功：生成 ${created.length} 条新评论${fallbackUsed ? '（整段兜底为作者回复）' : ''}`);
   return created;
 }
 
@@ -1491,7 +1510,7 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
     render();
     onChanged?.();
     try {
-      const created = await iphoneGenerateXhsNoteReply(target, screen);
+      const created = await iphoneGenerateXhsComments(target, screen);
       const data = iphoneGetXhsData();
       const t2 = data.notes.find((n) => n.id === note.id);
       if (!t2) throw new Error('这篇笔记已经不在了');
@@ -1940,7 +1959,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
         <span>仅自己可见</span>
         <i>${icons.lock}</i>
       </label>
-      <p class="iphone-xhs__compose-foot">封面从内置图库挑选，与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。</p>
+      <p class="iphone-xhs__compose-foot">封面从内置图库挑选，与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
     </div>
   `;
 
@@ -1978,6 +1997,28 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
   titleInput.addEventListener('input', refreshSend);
   textInput.addEventListener('input', refreshSend);
 
+  // 玩家自己发的笔记也调一次 API（v0.33.0）：发布后让网友来评论区应声。
+  // 不等 API：笔记先落地、发布页立即关掉（发布本身是本机操作，不该卡在网络上），
+  // 评论生成完再补进评论区，成功 / 失败各浮一条轻提示。勾选「仅自己可见」时不调
+  // ——私密笔记网友看不到，评论区自然是空的。
+  const requestNetizenComments = async (note) => {
+    screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: '已发布，网友评论生成中…' }));
+    try {
+      const created = await iphoneGenerateXhsComments(note, screen, { published: true });
+      const fresh = iphoneGetXhsData();
+      const target = fresh.notes.find((n) => n.id === note.id);
+      // 等 API 期间笔记被删掉了（「不喜欢」）：什么也不做，评论随笔记一起没了
+      if (!target) return;
+      target.comments = [...target.comments, ...created].slice(-40);
+      iphoneSetXhsData(screen, fresh);
+      void iphoneSyncXhsNotesFloor();
+      screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: `网友评论已生成（${created.length} 条）` }));
+    } catch (error) {
+      iphoneLog('warn', '小红书发帖后生成网友评论失败', error);
+      screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: `网友评论生成失败：${String(error?.message || error)}` }));
+    }
+  };
+
   const publish = () => {
     const title = titleInput.value.trim();
     const text = textInput.value.trim();
@@ -1988,7 +2029,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     }
     const profile = iphoneGetXhsProfile();
     const data = iphoneGetXhsData();
-    data.notes.push(iphoneNormalizeXhsNote({
+    const note = iphoneNormalizeXhsNote({
       id: iphoneXhsGenId('n'),
       authorId: '__me__',
       ts: Date.now(),
@@ -2002,7 +2043,8 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       collects: 0,
       comments: [],
       private: Boolean(privateBox.checked),
-    }));
+    });
+    data.notes.push(note);
     iphoneSetXhsData(screen, data);
     void iphoneSyncXhsNotesFloor();
     iphoneLog('info', '已发布一篇小红书笔记');
@@ -2015,6 +2057,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     errRow.hidden = true;
     onPublished?.();
     onClose?.();
+    if (!note.private) void requestNetizenComments(note);
   };
   pubBtn.addEventListener('click', publish);
   view.querySelector('.iphone-xhs__prof-back').addEventListener('click', () => onClose?.());
@@ -2132,6 +2175,17 @@ function buildXhsAppScreen() {
   const setOverlay = (open) => {
     screen.classList.toggle('is-xhs-overlay', Boolean(open));
   };
+
+  // 小红书里的轻提示（发布后的网友评论进度等）：屏幕内浮一条，2 秒后消失
+  const toast = document.createElement('p');
+  toast.className = 'iphone-xhs__toast';
+  let toastTimer = 0;
+  screen.addEventListener('iphone-xhs-toast', (event) => {
+    toast.textContent = String(event.detail || '');
+    toast.classList.add('is-show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('is-show'), 2400);
+  });
 
   const pageHome = iphoneXhsBuildHomePage({ icons, onOpenNote: openNote, screen });
   const pageMarket = iphoneXhsBuildMarketPage(icons);
@@ -2273,6 +2327,7 @@ function buildXhsAppScreen() {
   screen.appendChild(inboxView);
   screen.appendChild(profileView);
   screen.appendChild(composeView);
+  screen.appendChild(toast);
 
   screen._renderXhs = () => {
     pageHome._render();

@@ -1,11 +1,11 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-17 22:43:15 · 文件数: 12 · 指纹: 91ac3d6c
+// 构建时间: 2026-09-18 00:10:57 · 文件数: 12 · 指纹: cb303356
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.32.0';
+const IPHONE_MODULE_VERSION = '0.33.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -463,14 +463,25 @@ const IPHONE_ME_AVATAR_PRESETS = Object.freeze([
 // 小红书笔记生成（下拉刷新）：一次生成 1~3 篇网友笔记，每篇自带封面主题、标题、
 // 正文、话题、位置与互动（点赞数 / 收藏数 / 评论区）。封面主题是给插件用的——
 // 模型不能选图，改为报一个题材，插件从内置图库里挑一张同题材的封面，保证图文相符。
+// 内容上每篇都必须与剧情或世界观挂钩，三种写法任选其一：直接相关（网友目击 /
+// 围观剧情事件，只写公开渠道能看到的那一面）、间接相关（同城 / 同行 / 同圈子的
+// 日常见闻）、背景与世界观（这个世界的时代风貌与流行话题）——但网友始终是路人
+// 视角，不写成剧情复述，也不出现 {{user}} 的名字。
 const IPHONE_XHS_NOTE_GUIDANCE = `# 任务
 - 你要为「小红书」首页生成新的网友笔记：每次写 1~3 篇，像真实社区的信息流那样题材各异、长短不一。
 - 网友是互联网上素不相识的陌生人：发布者不是「{{user}}」的联系人，也不要把主线剧情里的人物直接搬进来当网友（除非设定上他们真的会发小红书）。
 - 发布者可以是已有网友名单里的人（熟面孔回归，延续 TA 一贯的人设与内容方向），也可以新造一位网友——新网友要有辨识度高的昵称、合理的小红书号和 IP 属地。
 - 题材要贴合小红书真实生态：美食探店、减脂餐、穿搭、美妆、家居收纳、租房、宠物、旅行攻略、数码测评、职场吐槽、情感困惑、学习方法、追星、手工、健身、吐槽避雷……一次刷新里不要两三篇都挤在同一题材。
-- 内容可以与当前剧情、世界书有一点点若有若无的呼应（比如同一座城市、同一个行业、正在流行的话题），但不要写成剧情的复述，更不要出现「{{user}}」的名字。
 - 每篇笔记都要有互动：点赞数、收藏数与评论区（1~3 条评论），像真实小红书那样有人捧场、有人追问、有人杠。评论区里其他网友可以互相接话，也可以由作者本人回复。
 - 数据要真实可信：普通网友的笔记点赞几十到几千，只有内容特别抓人的才上万；收藏数一般少于点赞数；评论数远少于点赞数。不要每篇都写爆款。
+
+# 与剧情的关联（每篇必须命中其一）
+- 网友和「{{user}}」素不相识，却生活在同一个世界里：每篇笔记都要与当前剧情或世界观连得上，从下面三种写法里选一种来写。
+- **直接相关**：网友亲历或围观了剧情里发生的事——现场的另一视角、路过时看到的场面、被波及的余波、对热点的议论；只写路人视角下公开能看到的那一面，不要写成剧情的复述。
+- **间接相关**：网友的生活与剧情同城、同行、同圈子，写出的日常见闻（物价、通勤、加班、天气、本地新闻）与剧情处在同一个世界里，从侧面互相印证。
+- **背景与世界观**：写这个世界的时代风貌、社会百态、流行话题与行业八卦，反映剧情所处的背景设定。
+- 三种写法轮着来：一次刷新里各篇分散开，长期看三种都要出现，不要篇篇都是围观剧情的帖子。
+- 无论选哪种写法，网友都只是路人：TA 没有全知视角，不知道幕后发生了什么，也不知道「{{user}}」是谁——不要出现「{{user}}」的名字，也不要让网友像知情者那样议论剧情内幕。
 
 # 笔记写法
 - 标题是小红书的灵魂：口语化、有信息量、带一点钩子（数字、对比、悬念、情绪），20 字以内，可以带 emoji。
@@ -478,7 +489,7 @@ const IPHONE_XHS_NOTE_GUIDANCE = `# 任务
 - 话题标签紧贴内容，2~4 个，用 # 开头。
 - 先是人，后是设定：不同网友的语气、关注点与生活方式要有明显差异——精致的人、糙快的人、抠门的人、爱较真的人，写出来的东西不该是一个味道。
 - 不出现编号、条目式播报或任何系统腔。`;
-const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区块。每个区块按下面的字段逐行书写，完整示例（昵称、内容与数据仅示意，必须换成贴合当前剧情的真实内容）：\n\n'
+const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区块。每个区块按下面的字段逐行书写，完整示例（昵称、内容与数据仅示意，必须换成与当前剧情或世界观相关联的真实内容——直接相关 / 间接相关 / 背景与世界观三种写法都符合要求，示例本身只是一个格式样板）：\n\n'
   + '昵称：小鹿今天吃什么\n'
   + '小红书号：lulu_eats\n'
   + 'IP：上海\n'
@@ -506,13 +517,16 @@ const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区�
   + '- 「评论：」单独占一行，下面每行一条评论，1~3 条，格式为「评论人：内容」，'
   + '作者回复写作「作者昵称 回复 评论人：内容」。评论人可以是已有网友，也可以是新网友（会自动收进网友池）。\n'
   + '只输出符合格式的笔记区块，不要输出任何解释、旁白或格式以外的文字。';
-// 小红书「评论/回复」：玩家在某篇笔记下留言后，调用一次对话 API 生成新的评论回复
-//（作者本人或路过的网友应声）。与朋友圈同一套「评论人：内容」行格式。
+// 小红书「评论生成」：玩家在某篇笔记下留言后、或玩家自己发布一篇笔记后（v0.33.0），
+// 调用一次对话 API 生成新的网友评论（作者本人或路过的网友应声）。两种情形共用同一份
+// 指导与「评论人：内容」行格式，差别只在 user 侧那一句与 <xhs_note> 段的介绍语。
 const IPHONE_XHS_REPLY_GUIDANCE = `# 任务
-- 你正在小红书的一篇笔记下面：玩家「{{user}}」留下了新评论，请生成 1~3 条新的评论回复。
-- 谁来应声要合理：作者本人（笔记的发布者）看到评论多半会回；路过的网友也常常插话、追问、抖机灵、抬杠——真实小红书的评论区里，陌生网友之间的互动往往比作者还热闹。
-- 回复要顺着评论区已有的对话往下接，不复读别人说过的话；玩家点名回复了谁，优先让那个人应声。
-- 不要替玩家「{{user}}」发言：TA 的评论由玩家自己写。
+- 你正在小红书的一篇笔记下面，请生成 1~3 条新的网友评论。两种情形都由你应声：
+  - 玩家「{{user}}」在评论区留下了新评论（评论区最后一条）——网友们接话、追问、抖机灵；
+  - 玩家「{{user}}」刚发布了一篇笔记（作者就是 TA，评论区还空着）——网友们来抢首评、围观、提问。
+- 谁来应声要合理：作者本人（笔记的发布者）看到评论多半会回；路过的网友也常常插话、追问、抖机灵、抬杠——真实小红书的评论区里，陌生网友之间的互动往往比作者还热闹。玩家自己发的那篇笔记，作者就是玩家本人，不要替 TA 以作者身份发言。
+- 评论要顺着评论区已有的对话往下接，不复读别人说过的话；玩家点名回复了谁，优先让那个人应声；评论区还空着时就是首评，别假装已经有人在先。
+- 不要替玩家「{{user}}」发言：TA 的话由玩家自己写。
 - 语气完全是小红书评论区的语气：短、口语、有网感，可以用 emoji 和网络用语，不要客气话套话。
 
 # 写法
@@ -523,13 +537,16 @@ const IPHONE_XHS_REPLY_FORMAT = '每条新评论占一行，输出 1~3 行。每
   + '汤圆不圆：蹲一个空气炸锅型号🙏\n'
   + '小鹿今天吃什么 回复 {{user}}：谢谢喜欢～下次做卤牛肉再发一篇\n\n'
   + '格式说明：评论人必须是已有的网友昵称、这篇笔记的作者，或一位新造的网友昵称（会自动收进网友池）；不要替玩家说话。'
+  + '玩家自己发的那篇笔记，作者就是玩家本人，不要以作者身份发言。'
   + '内容一行写完、不要换行；不要输出点赞行、笔记正文或任何解释、旁白。只输出符合格式的评论行。';
 // 「设置 · 小红书提示词」：小红书笔记生成与评论回复用的提示词组合，存
 // settings.promptPresets.xhsNotes。字段与 IPHONE_QZONE_PRESET_DEFAULT 同义，
 // 唯一差别是 guidance / format 面向「网友」而不是「联系人」。
 const IPHONE_XHS_PRESET_DEFAULT = Object.freeze({
   persona: '你正在扮演小红书上的网友们——一群与「{{user}}」素不相识的互联网陌生人。'
-    + '他们的昵称、IP 属地、生活方式与说话方式都由你现场发明，可以呼应世界书与主线剧情里的时代背景、城市与流行话题，'
+    + '他们的昵称、IP 属地、生活方式与说话方式都由你现场发明，但都生活在剧情所在的世界里：'
+    + '笔记内容要直接或间接地关联主线剧情，或反映剧情所处的时代背景与世界观设定，'
+    + '让刷小红书的人看到的正是这个世界的日常一角。'
     + '但不要直接把剧情人物写成网友。每位网友一旦出现就要保持人设一致，像一个真实的人那样持续发帖与评论。',
   worldBook: true,
   latestFloor: false, // 与另外两个动态页一致：默认不带记录楼层
@@ -8483,7 +8500,8 @@ function buildSettingsAppScreen() {
   // 角色扮演指令 + 可选的扮演与对白指导（npcSection，默认显示）+ 上下文注入
   //（世界书开关 / 记录楼层开关 / 主线楼层数）+ 可选写作指导（guidanceSection，
   // 仅「动态提示词」与「零钱评估」页）+ 可选回复指导与回复格式（replySection，
-  // 仅「动态提示词」页，v0.17.0）+ 输出格式 + 占位符说明 + 恢复默认；仅标题、
+  // 动态 / 朋友圈 / 小红书三类页共用：小红书那一节管评论区的两次调用，v0.33.0）
+  // + 输出格式 + 占位符说明 + 恢复默认；仅标题、
   // 存档键、个别脚注与默认值不同。
   const buildPresetPage = ({ pageClass, openClass, navTitle, sectionPrefix, formatFootText, footText, resetLabel, save, getPreset, defaults, guidanceSection, replySection, floorLogLabels, npcSection }) => {
     // 记录楼层的称谓（QQ 页用「QQ」，微信页用「微信」；<qq_chat_log> / <wechat_chat_log>）
@@ -8863,12 +8881,14 @@ function buildSettingsAppScreen() {
     sectionPrefix: '小红书笔记',
     guidanceSection: {
       title: '笔记写作指导',
-      footText: '包在 <xhs_guidance> 里随 system 发送的写作指导：发明网友、挑题材、标题与正文的写法、互动数据要真实等；改写后即时生效，留空则整段不发送（输出格式里仍有基本的区块示例可依）。',
+      footText: '包在 <xhs_guidance> 里随 system 发送的写作指导：发明网友、挑题材、'
+        + '每篇与剧情或世界观挂钩（直接相关 / 间接相关 / 背景与世界观三种写法）、标题与正文的写法、互动数据要真实等；'
+        + '改写后即时生效，留空则整段不发送（输出格式里仍有基本的区块示例可依）。',
     },
     replySection: {
-      title: '回复写作指导',
-      guidanceFootText: '包在 <reply_guidance> 里随 system 发送：玩家在笔记下留言后，由 AI 生成新的评论回复（作者本人 / 路过的网友应声）。改写后即时生效，留空则整段不发送。',
-      formatFootText: 'AI 回复按每行「评论人：内容」解析成新评论（回复某人写作「评论人 回复 被回复人：内容」）；这段包在 <output_format> 里随 system 发送，模型没按格式输出时整段兜底成作者的一条回复。',
+      title: '评论写作指导',
+      guidanceFootText: '包在 <reply_guidance> 里随 system 发送：评论区的两次调用都用它——玩家在笔记下留言后由 AI 生成新的评论回复（作者本人 / 路过的网友应声），以及玩家自己发布笔记后由 AI 生成网友评论（v0.33.0）。改写后即时生效，留空则整段不发送。',
+      formatFootText: 'AI 回复按每行「评论人：内容」解析成新评论（回复某人写作「评论人 回复 被回复人：内容」）；这段包在 <output_format> 里随 system 发送。玩家留言时模型没按格式输出会整段兜底成作者的一条回复；玩家自己发帖时不兜底（那等于替玩家发言），失败只在页内浮一条提示。',
     },
     formatFootText: 'AI 回复按「昵称：发布者」开头的笔记区块解析（小红书号 / IP / 简介 / 封面 / 标题 / 正文 / 话题 / 位置 / 点赞 / 收藏 / 评论区）；封面只填题材（美食 / 宠物 / 旅行 / 家居 / 数码 / 穿搭 / 探店），插件据此挑同题材的内置封面；模型没按格式输出时整次刷新作废并提示重试。',
     footText: '可用占位符：{{user}} = 你的名字。与朋友圈不同，这里没有联系人名单——发布者是一群「网友」：'
@@ -14316,7 +14336,11 @@ async function iphoneGenerateXhsNotes(xhsScreen) {
   if (guidance) sysParts.push(`以下是小红书笔记的写作指导：\n<xhs_guidance>\n${resolve(guidance)}\n</xhs_guidance>`);
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
-  const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  // user 里再点一次「与剧情 / 世界观挂钩」：这是本页内容生成的核心要求（写作指导
+  // 可被玩家改写或清空，而这一句始终在最后、最靠近生成位置），并重申三种写法分散开。
+  const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。`
+    + `每篇都要与当前剧情或世界观设定相关联——直接相关 / 间接相关 / 背景与世界观三种写法里选一种，几篇之间分散开。`
+    + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -14391,10 +14415,14 @@ async function iphoneGenerateXhsNotes(xhsScreen) {
   return created;
 }
 
-// ---------- 小红书笔记回复（玩家留言后调用一次对话 API） ----------
+// ---------- 小红书评论生成（玩家留言后的回复 / 玩家自己发帖后的网友评论） ----------
 // 与朋友圈回复同一套范式：`<dynamic_post>` 换成 `<xhs_note>`（含封面题材、标题、
 // 正文、话题、完整评论区），评论人可以是已有网友、新网友或笔记作者本人。
-async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
+// published = true（v0.33.0）是玩家自己发布笔记后的那一次：作者就是玩家本人，评论区
+// 一般还空着，网友来抢首评。两种情形共用同一份指导与行格式，差别只在 user 侧那一句、
+// `<xhs_note>` 段的介绍语与解析兜底——玩家留言时解析失败整段兜底成作者的一条回复，
+// 玩家自己发的笔记不做这种兜底（那等于替玩家发言），解析不了就抛错交给调用方提示。
+async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } = {}) {
   const settings = iphoneGetSettings();
   const data = iphoneGetXhsData();
   const post = data.notes.find((n) => n.id === note?.id) || note;
@@ -14424,7 +14452,7 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
   ];
   if (post.topics.length) postLines.push(`话题：${post.topics.map((t) => `#${t}`).join(' ')}`);
   postLines.push(`点赞：${iphoneXhsLikeCount(post)}｜收藏：${iphoneXhsCollectCount(post)}`);
-  postLines.push('评论区（时间旧→新）：');
+  postLines.push(published ? '评论区（这篇笔记刚发布，一般还空着）：' : '评论区（时间旧→新）：');
   if (!post.comments.length) {
     postLines.push('（暂无评论）');
   } else {
@@ -14456,7 +14484,9 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
   if (injectParts) outlineItems.push(injectParts.outline);
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<xhs_chat_log>…</xhs_chat_log>：最近一次同步到酒馆楼层的手机记录，供你了解最近的动态；');
-  outlineItems.push('<xhs_note>…</xhs_note>：玩家正在评论的那篇笔记——作者、封面题材、标题、正文、话题与完整评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
+  outlineItems.push(published
+    ? '<xhs_note>…</xhs_note>：玩家「{{user}}」刚发布的那篇笔记——作者就是玩家本人，含封面题材、标题、正文、话题与评论区（一般还空着）；'
+    : '<xhs_note>…</xhs_note>：玩家正在评论的那篇笔记——作者、封面题材、标题、正文、话题与完整评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
   if (replyGuidance) outlineItems.push('<reply_guidance>…</reply_guidance>：评论回复的写作指导；');
   if (replyFormat) outlineItems.push('<output_format>…</output_format>：回复格式要求，位于提示词末尾，必须严格遵守；');
   sysParts.push('【提示词结构说明】本次请求的提示词由以下部分组成，均已用 XML 标签包裹并附介绍：\n'
@@ -14472,11 +14502,15 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
     ? `评论区里署名「${customNick}」的评论也是 TA 写的。`
     : '评论区的署名用的就是 TA 的名字。';
   sysParts.push(`以下是玩家身份说明：${playerDesc}。${identityNote}不要把 TA 当成网友或替 TA 发言。`);
-  sysParts.push(`以下是玩家正在评论的那篇笔记（含完整评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`);
+  sysParts.push(published
+    ? `以下是玩家刚刚发布的那篇笔记（作者就是 TA 本人，含评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`
+    : `以下是玩家正在评论的那篇笔记（含完整评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`);
   if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
   if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
 
-  const userContent = `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = published
+    ? `${playerDesc}刚刚发布了这篇笔记（作者就是 TA 本人），请根据以上信息生成新的网友评论。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
+    : `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -14515,6 +14549,9 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
   }
   let fallbackUsed = false;
   if (!created.length) {
+    // 玩家自己发的笔记不能走「兜底成作者回复」：那篇的作者就是玩家，兜底等于替玩家
+    // 发言（也与「不要替玩家说话」的指导相冲突），解析不了就直接失败、由调用方提示。
+    if (published) throw new Error('AI 没有返回有效的网友评论（需要「评论人：内容」格式的行）。');
     const whole = String(reply ?? '').replace(/\s+/g, ' ').trim()
       .replace(/^[^：:\n]{1,30}?(?:\s+回复\s+[^：:\n]{1,30}?)?\s*[:：]\s*/, '')
       .slice(0, IPHONE_XHS_COMMENT_CAP);
@@ -14523,7 +14560,9 @@ async function iphoneGenerateXhsNoteReply(note, xhsScreen) {
     fallbackUsed = true;
   }
   iphoneSetXhsData(xhsScreen, fresh);
-  iphoneLog('info', `小红书回复成功：生成 ${created.length} 条新评论${fallbackUsed ? '（整段兜底为作者回复）' : ''}`);
+  iphoneLog('info', published
+    ? `小红书发帖成功：生成 ${created.length} 条网友评论`
+    : `小红书回复成功：生成 ${created.length} 条新评论${fallbackUsed ? '（整段兜底为作者回复）' : ''}`);
   return created;
 }
 
@@ -15188,7 +15227,7 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
     render();
     onChanged?.();
     try {
-      const created = await iphoneGenerateXhsNoteReply(target, screen);
+      const created = await iphoneGenerateXhsComments(target, screen);
       const data = iphoneGetXhsData();
       const t2 = data.notes.find((n) => n.id === note.id);
       if (!t2) throw new Error('这篇笔记已经不在了');
@@ -15637,7 +15676,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
         <span>仅自己可见</span>
         <i>${icons.lock}</i>
       </label>
-      <p class="iphone-xhs__compose-foot">封面从内置图库挑选，与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。</p>
+      <p class="iphone-xhs__compose-foot">封面从内置图库挑选，与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
     </div>
   `;
 
@@ -15675,6 +15714,28 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
   titleInput.addEventListener('input', refreshSend);
   textInput.addEventListener('input', refreshSend);
 
+  // 玩家自己发的笔记也调一次 API（v0.33.0）：发布后让网友来评论区应声。
+  // 不等 API：笔记先落地、发布页立即关掉（发布本身是本机操作，不该卡在网络上），
+  // 评论生成完再补进评论区，成功 / 失败各浮一条轻提示。勾选「仅自己可见」时不调
+  // ——私密笔记网友看不到，评论区自然是空的。
+  const requestNetizenComments = async (note) => {
+    screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: '已发布，网友评论生成中…' }));
+    try {
+      const created = await iphoneGenerateXhsComments(note, screen, { published: true });
+      const fresh = iphoneGetXhsData();
+      const target = fresh.notes.find((n) => n.id === note.id);
+      // 等 API 期间笔记被删掉了（「不喜欢」）：什么也不做，评论随笔记一起没了
+      if (!target) return;
+      target.comments = [...target.comments, ...created].slice(-40);
+      iphoneSetXhsData(screen, fresh);
+      void iphoneSyncXhsNotesFloor();
+      screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: `网友评论已生成（${created.length} 条）` }));
+    } catch (error) {
+      iphoneLog('warn', '小红书发帖后生成网友评论失败', error);
+      screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: `网友评论生成失败：${String(error?.message || error)}` }));
+    }
+  };
+
   const publish = () => {
     const title = titleInput.value.trim();
     const text = textInput.value.trim();
@@ -15685,7 +15746,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     }
     const profile = iphoneGetXhsProfile();
     const data = iphoneGetXhsData();
-    data.notes.push(iphoneNormalizeXhsNote({
+    const note = iphoneNormalizeXhsNote({
       id: iphoneXhsGenId('n'),
       authorId: '__me__',
       ts: Date.now(),
@@ -15699,7 +15760,8 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       collects: 0,
       comments: [],
       private: Boolean(privateBox.checked),
-    }));
+    });
+    data.notes.push(note);
     iphoneSetXhsData(screen, data);
     void iphoneSyncXhsNotesFloor();
     iphoneLog('info', '已发布一篇小红书笔记');
@@ -15712,6 +15774,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     errRow.hidden = true;
     onPublished?.();
     onClose?.();
+    if (!note.private) void requestNetizenComments(note);
   };
   pubBtn.addEventListener('click', publish);
   view.querySelector('.iphone-xhs__prof-back').addEventListener('click', () => onClose?.());
@@ -15829,6 +15892,17 @@ function buildXhsAppScreen() {
   const setOverlay = (open) => {
     screen.classList.toggle('is-xhs-overlay', Boolean(open));
   };
+
+  // 小红书里的轻提示（发布后的网友评论进度等）：屏幕内浮一条，2 秒后消失
+  const toast = document.createElement('p');
+  toast.className = 'iphone-xhs__toast';
+  let toastTimer = 0;
+  screen.addEventListener('iphone-xhs-toast', (event) => {
+    toast.textContent = String(event.detail || '');
+    toast.classList.add('is-show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('is-show'), 2400);
+  });
 
   const pageHome = iphoneXhsBuildHomePage({ icons, onOpenNote: openNote, screen });
   const pageMarket = iphoneXhsBuildMarketPage(icons);
@@ -15970,6 +16044,7 @@ function buildXhsAppScreen() {
   screen.appendChild(inboxView);
   screen.appendChild(profileView);
   screen.appendChild(composeView);
+  screen.appendChild(toast);
 
   screen._renderXhs = () => {
     pageHome._render();
