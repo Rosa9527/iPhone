@@ -1,11 +1,11 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-16 22:46:43 · 文件数: 12 · 指纹: 2486813e
+// 构建时间: 2026-09-17 22:43:15 · 文件数: 12 · 指纹: 91ac3d6c
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.31.0';
+const IPHONE_MODULE_VERSION = '0.32.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -928,6 +928,11 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 注入等），本插件在宿主「提示词就绪」事件里抓快照，拼进自己的子请求，让手机上
   // 的模型与主线剧情保持一致。false = 不附带（手机请求回到「只看自己拼的段」）。
   injectCaptureEnabled: true,
+  // 逐条排除（v0.32.0）：「设置 · 第三方注入」里勾选「不附带」的条目键名。
+  // 存键而不是存内容——注入内容每轮都在变（变量表随剧情走），键才是扩展的
+  // 稳定身份；某个扩展本轮没跑，它的键留在表里不碍事，下次注入进来照样排除。
+  // 空数组 = 全都附带。纯配置，跨聊天共享（不像快照那样随聊天清空）。
+  injectExcluded: [],
   // 提示词预设：各聊天场景的提示词组合（「设置 · 私聊提示词」/「群聊提示词」/
   // 「动态提示词」/「朋友圈提示词」/「小红书提示词」里编辑）。qqChat = QQ 联系人
   // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；
@@ -2941,6 +2946,11 @@ try {
 // 排除自身：本插件也会往注册表写东西（楼层同步等），用 IPHONE_INJECT_SELF_KEYS
 // 里的键前缀挡掉，避免自己抄自己。
 //
+// 逐条排除（v0.32.0）：「设置 · 第三方注入」里每条前的勾选框，勾中 = 这条不随
+// 手机请求附带。排除按条目键记在 settings.injectExcluded（纯配置、跨聊天共享）
+// ——快照每轮都在换、内容也在变，键才是扩展的稳定身份；某个扩展本轮没跑，它的
+// 键留在表里不碍事，下次注入进来照样是排除状态。见 iphoneInjectAttachableEntries。
+//
 // 降级：宿主不暴露 extensionPrompts（本地 test.html 预览、或将来版本换了形状）时
 // 静默跳过——快照为空，各请求与从前完全一样。
 
@@ -3129,8 +3139,58 @@ function iphoneInjectEffectiveEntries() {
 
 // 切换聊天 / 开新对话时清掉：快照里的变量状态属于上一个聊天，带进新聊天只会
 // 让手机上聊天的模型看到别人的状态；新聊天首次发送前会有自己的捕获。
+// 逐条排除表（settings.injectExcluded）不清：它记的是「哪个扩展的注入不要」，
+// 与聊天内容无关，属于配置。
 function iphoneInjectClearSnapshot() {
   iphoneInjectSnapshot = null;
+}
+
+// ---------- 逐条排除（v0.32.0） ----------
+//
+// 设置页每条前的勾选框写这里：勾中 = 这条不随手机请求附带。
+// 存的是条目键名数组（不是实时条目），键由各扩展自己决定、不随内容变，
+// 所以扩展重开 / 内容更新后排除状态都还在。
+
+// 排除键集合（设置里的数组 → Set，便于逐条查询）。
+function iphoneInjectExcludedKeys() {
+  const list = iphoneGetSettings().injectExcluded;
+  return new Set(Array.isArray(list) ? list.map((key) => String(key)) : []);
+}
+
+function iphoneInjectIsExcluded(key, excludedKeys) {
+  const set = excludedKeys || iphoneInjectExcludedKeys();
+  return set.has(String(key));
+}
+
+// 勾选 / 取消勾选一条（设置页调用）。excluded = true 表示不附带这条。
+function iphoneInjectSetExcluded(key, excluded) {
+  const settings = iphoneGetSettings();
+  const list = Array.isArray(settings.injectExcluded) ? settings.injectExcluded.slice() : [];
+  const name = String(key);
+  const index = list.indexOf(name);
+  if (excluded && index < 0) list.push(name);
+  if (!excluded && index >= 0) list.splice(index, 1);
+  settings.injectExcluded = list;
+  iphoneSaveSettings(settings);
+}
+
+function iphoneInjectCountExcluded() {
+  return iphoneInjectExcludedKeys().size;
+}
+
+// 清掉全部排除（「全部恢复附带」按钮）。
+function iphoneInjectClearExcluded() {
+  const settings = iphoneGetSettings();
+  settings.injectExcluded = [];
+  iphoneSaveSettings(settings);
+}
+
+// 本次请求「将要附带」的条目：实时 + 快照合并的结果，再减去玩家逐条排除的。
+// 设置页预览与各请求拼段都走这里，两边看到的永远是同一份。
+function iphoneInjectAttachableEntries() {
+  const excluded = iphoneInjectExcludedKeys();
+  if (!excluded.size) return iphoneInjectEffectiveEntries();
+  return iphoneInjectEffectiveEntries().filter((entry) => !excluded.has(String(entry?.key ?? '')));
 }
 
 // ---------- 拼段 ----------
@@ -3140,7 +3200,7 @@ function iphoneInjectClearSnapshot() {
 // 本身就来自玩家已启用的扩展，本插件只是把它带给手机上的对话）。
 function iphoneInjectBuildSection() {
   if (!iphoneInjectCaptureEnabled()) return '';
-  const entries = iphoneInjectEffectiveEntries();
+  const entries = iphoneInjectAttachableEntries();
   if (!entries.length) return '';
   const lines = [];
   let total = 0;
@@ -7926,14 +7986,18 @@ function buildSettingsAppScreen() {
   // 主提示词、被本插件顺带带进手机请求的那些段）。
   const injectDetail = document.createElement('span');
   const refreshInjectDetail = () => {
-    // 与请求实际附带的内容同源：实时读当前注册表 + 快照补齐，见 inject.js。
-    const count = iphoneInjectEffectiveEntries().length;
+    // 与请求实际附带的内容同源：实时读当前注册表 + 快照补齐 − 逐条排除，见 inject.js。
+    const total = iphoneInjectEffectiveEntries().length;
+    const attached = iphoneInjectAttachableEntries().length;
+    const excluded = iphoneInjectCountExcluded();
     if (!iphoneInjectCaptureEnabled()) {
       injectDetail.textContent = '已关闭';
-    } else if (count) {
-      injectDetail.textContent = `${count} 条`;
-    } else {
+    } else if (!total) {
       injectDetail.textContent = '未捕获到';
+    } else if (!attached) {
+      injectDetail.textContent = '已全部排除';
+    } else {
+      injectDetail.textContent = excluded ? `${attached} 条 · 排除 ${excluded}` : `${attached} 条`;
     }
   };
   const injectRow = makeRow({
@@ -8901,15 +8965,54 @@ function buildSettingsAppScreen() {
   const injectScroll = document.createElement('div');
   injectScroll.className = 'iphone-st__scroll iphone-st__form';
 
-  // 预览列表：将要附带的每一条一段，点标题展开原文。
-  // 每条标注新鲜度：实时（此刻注册表里的值）/ 上一轮（快照带来的，扩展已清空）。
+  // 预览列表：将要附带的每一条一段，点标题展开原文，条目前的勾选框勾中 = 这条
+  // 不附带（名字划掉，见 iphoneInjectAttachableEntries）。排除的条目仍留在列表里
+  // ——不然勾完就没法取消了。
+  // 每条还标注新鲜度：实时（此刻注册表里的值）/ 上一轮（快照带来的，扩展已清空）。
   const injectList = document.createElement('div');
   injectList.className = 'iphone-st__inject-list';
 
+  // 列表上方的工具条：排除计数 + 「全部恢复附带」（有排除时才出现）。
+  // 与世界书应用的「清除全部排除」同一套做法（见 buildWorldBookScreen）。
+  const injectToolbar = document.createElement('div');
+  injectToolbar.className = 'iphone-st__inject-toolbar';
+  const injectCountEl = document.createElement('span');
+  injectCountEl.className = 'iphone-st__inject-count';
+  const injectRestoreBtn = document.createElement('button');
+  injectRestoreBtn.type = 'button';
+  injectRestoreBtn.className = 'iphone-st__inject-restore';
+  injectRestoreBtn.textContent = '全部恢复附带';
+  injectRestoreBtn.addEventListener('click', () => {
+    iphoneInjectClearExcluded();
+    renderInjectPreview();
+    refreshInjectDetail();
+  });
+  injectToolbar.append(injectCountEl, injectRestoreBtn);
+
+  const refreshInjectChrome = () => {
+    // 关掉总开关时列表给的是「已关闭」空态，工具条也一并不显示——否则空态文案
+    // 旁边挂着「全部附带」，两句自相矛盾。此时排除表原样留着，重开开关即回来。
+    const enabled = iphoneInjectCaptureEnabled();
+    const entries = enabled ? iphoneInjectEffectiveEntries() : [];
+    // 只数「这次真出现在列表里的」被排除条目。扩展哪天卸载了，它的键还留在设置里
+    // （见 iphoneInjectSetExcluded），那种幽灵条目不进计数——但「全部恢复」按钮
+    // 按设置里的总数为准，否则幽灵键就没法清掉了。
+    const blocked = entries
+      .filter((entry) => iphoneInjectIsExcluded(String(entry?.key ?? ''))).length;
+    const totalExcluded = iphoneInjectCountExcluded();
+    injectCountEl.textContent = !enabled
+      ? ''
+      : (blocked
+        ? `已排除 ${blocked} 条${totalExcluded > blocked ? `（另有 ${totalExcluded - blocked} 条本轮未出现）` : ''}`
+        : (entries.length ? '全部附带' : ''));
+    injectRestoreBtn.hidden = !enabled || totalExcluded === 0;
+  };
+
   const renderInjectPreview = () => {
     injectList.innerHTML = '';
-    const entries = iphoneInjectCaptureEnabled() ? iphoneInjectEffectiveEntries() : [];
-    if (!entries.length) {
+    const all = iphoneInjectCaptureEnabled() ? iphoneInjectEffectiveEntries() : [];
+    refreshInjectChrome();
+    if (!all.length) {
       const empty = document.createElement('p');
       empty.className = 'iphone-st__empty';
       empty.textContent = iphoneInjectCaptureEnabled()
@@ -8918,24 +9021,48 @@ function buildSettingsAppScreen() {
       injectList.appendChild(empty);
       return;
     }
-    for (const entry of entries) {
+    for (const entry of all) {
+      const key = String(entry?.key || '');
       const text = String(entry?.value ?? '');
       const block = document.createElement('section');
       block.className = 'iphone-st__inject';
-      const head = document.createElement('button');
-      head.type = 'button';
+      const head = document.createElement('div');
       head.className = 'iphone-st__inject-head';
+      // 勾选框单独成 label（不能塞进 button 里：button 内嵌表单控件是非法结构，
+      // 点勾选框还会连带触发展开）。整行其余部分仍是展开按钮。
+      const check = document.createElement('label');
+      check.className = 'iphone-st__inject-check';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.setAttribute('aria-label', `不附带 ${key || '（未命名）'}`);
+      check.appendChild(checkbox);
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'iphone-st__inject-toggle';
       const name = document.createElement('span');
       name.className = 'iphone-st__inject-key';
-      name.textContent = String(entry?.key || '（未命名）');
+      name.textContent = key || '（未命名）';
       const meta = document.createElement('span');
       meta.className = 'iphone-st__inject-meta';
-      meta.textContent = `${text.length} 字 · ${entry?.live ? '实时' : '上一轮'}`;
-      head.append(name, meta);
+      toggle.append(name, meta);
       const body = document.createElement('pre');
       body.className = 'iphone-st__inject-body';
       body.textContent = text;
-      head.addEventListener('click', () => block.classList.toggle('is-open'));
+      const paint = () => {
+        const isExcluded = iphoneInjectIsExcluded(key);
+        checkbox.checked = isExcluded;
+        block.classList.toggle('is-excluded', isExcluded);
+        meta.textContent = `${text.length} 字 · ${entry?.live ? '实时' : '上一轮'}${isExcluded ? ' · 不附带' : ''}`;
+      };
+      checkbox.addEventListener('change', () => {
+        iphoneInjectSetExcluded(key, checkbox.checked);
+        paint();
+        refreshInjectDetail();
+        refreshInjectChrome();
+      });
+      toggle.addEventListener('click', () => block.classList.toggle('is-open'));
+      paint();
+      head.append(check, toggle);
       block.append(head, body);
       injectList.appendChild(block);
     }
@@ -8978,14 +9105,17 @@ function buildSettingsAppScreen() {
     + '不在此列（本插件另有 <world_info> 段）。';
   injectScroll.appendChild(injectFoot);
 
-  /* -- 将要附带的内容预览 -- */
-  injectScroll.appendChild(sectionTitle('第三方注入 · 将要附带的内容'));
+  /* -- 捕获到的内容（逐条附带开关） -- */
+  injectScroll.appendChild(sectionTitle('第三方注入 · 捕获到的内容'));
+  injectScroll.appendChild(injectToolbar);
   injectScroll.appendChild(injectList);
   const injectListFoot = document.createElement('p');
   injectListFoot.className = 'iphone-st__foot';
-  injectListFoot.textContent = '点条目展开原文。变量状态这类内容每轮都在变：标「实时」的是插件此刻要注入的值，'
-    + '标「上一轮」的是扩展已清空、用酒馆上一轮组装时的快照补上的（要让这类内容变新，去酒馆里点一次发送即可）。'
-    + '切换聊天会清空快照。';
+  injectListFoot.textContent = '勾中条目左侧的方框即「不附带这一条」（名字划掉）：被勾掉的条目不会拼进 '
+    + '<context_injection> 段，其余照常发送；取消勾选即恢复。排除按插件名记着，换聊天、重启都还在，'
+    + '列表里的条目仍会显示（不隐藏），随时可以取消。点条目展开原文。变量状态这类内容每轮都在变：'
+    + '标「实时」的是插件此刻要注入的值，标「上一轮」的是扩展已清空、用酒馆上一轮组装时的快照补上的'
+    + '（要让这类内容变新，去酒馆里点一次发送即可）。切换聊天会清空快照。';
   injectScroll.appendChild(injectListFoot);
 
   injectPage.appendChild(injectNav);

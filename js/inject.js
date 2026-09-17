@@ -47,6 +47,11 @@
 // 排除自身：本插件也会往注册表写东西（楼层同步等），用 IPHONE_INJECT_SELF_KEYS
 // 里的键前缀挡掉，避免自己抄自己。
 //
+// 逐条排除（v0.32.0）：「设置 · 第三方注入」里每条前的勾选框，勾中 = 这条不随
+// 手机请求附带。排除按条目键记在 settings.injectExcluded（纯配置、跨聊天共享）
+// ——快照每轮都在换、内容也在变，键才是扩展的稳定身份；某个扩展本轮没跑，它的
+// 键留在表里不碍事，下次注入进来照样是排除状态。见 iphoneInjectAttachableEntries。
+//
 // 降级：宿主不暴露 extensionPrompts（本地 test.html 预览、或将来版本换了形状）时
 // 静默跳过——快照为空，各请求与从前完全一样。
 
@@ -235,8 +240,58 @@ function iphoneInjectEffectiveEntries() {
 
 // 切换聊天 / 开新对话时清掉：快照里的变量状态属于上一个聊天，带进新聊天只会
 // 让手机上聊天的模型看到别人的状态；新聊天首次发送前会有自己的捕获。
+// 逐条排除表（settings.injectExcluded）不清：它记的是「哪个扩展的注入不要」，
+// 与聊天内容无关，属于配置。
 function iphoneInjectClearSnapshot() {
   iphoneInjectSnapshot = null;
+}
+
+// ---------- 逐条排除（v0.32.0） ----------
+//
+// 设置页每条前的勾选框写这里：勾中 = 这条不随手机请求附带。
+// 存的是条目键名数组（不是实时条目），键由各扩展自己决定、不随内容变，
+// 所以扩展重开 / 内容更新后排除状态都还在。
+
+// 排除键集合（设置里的数组 → Set，便于逐条查询）。
+function iphoneInjectExcludedKeys() {
+  const list = iphoneGetSettings().injectExcluded;
+  return new Set(Array.isArray(list) ? list.map((key) => String(key)) : []);
+}
+
+function iphoneInjectIsExcluded(key, excludedKeys) {
+  const set = excludedKeys || iphoneInjectExcludedKeys();
+  return set.has(String(key));
+}
+
+// 勾选 / 取消勾选一条（设置页调用）。excluded = true 表示不附带这条。
+function iphoneInjectSetExcluded(key, excluded) {
+  const settings = iphoneGetSettings();
+  const list = Array.isArray(settings.injectExcluded) ? settings.injectExcluded.slice() : [];
+  const name = String(key);
+  const index = list.indexOf(name);
+  if (excluded && index < 0) list.push(name);
+  if (!excluded && index >= 0) list.splice(index, 1);
+  settings.injectExcluded = list;
+  iphoneSaveSettings(settings);
+}
+
+function iphoneInjectCountExcluded() {
+  return iphoneInjectExcludedKeys().size;
+}
+
+// 清掉全部排除（「全部恢复附带」按钮）。
+function iphoneInjectClearExcluded() {
+  const settings = iphoneGetSettings();
+  settings.injectExcluded = [];
+  iphoneSaveSettings(settings);
+}
+
+// 本次请求「将要附带」的条目：实时 + 快照合并的结果，再减去玩家逐条排除的。
+// 设置页预览与各请求拼段都走这里，两边看到的永远是同一份。
+function iphoneInjectAttachableEntries() {
+  const excluded = iphoneInjectExcludedKeys();
+  if (!excluded.size) return iphoneInjectEffectiveEntries();
+  return iphoneInjectEffectiveEntries().filter((entry) => !excluded.has(String(entry?.key ?? '')));
 }
 
 // ---------- 拼段 ----------
@@ -246,7 +301,7 @@ function iphoneInjectClearSnapshot() {
 // 本身就来自玩家已启用的扩展，本插件只是把它带给手机上的对话）。
 function iphoneInjectBuildSection() {
   if (!iphoneInjectCaptureEnabled()) return '';
-  const entries = iphoneInjectEffectiveEntries();
+  const entries = iphoneInjectAttachableEntries();
   if (!entries.length) return '';
   const lines = [];
   let total = 0;

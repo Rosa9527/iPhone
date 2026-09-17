@@ -38,7 +38,8 @@
                                               → 直达「我的淘宝」的订单 / 收藏子页
            test.html?app=settings&taobaopreset=1 → 再推入「淘宝提示词」子页
            test.html?app=settings&inject=1 → 再推入「第三方注入」子页（配 &st=1
-                                              时先模拟一次捕获，列表里就有内容）
+                                              时先模拟一次捕获，列表里就有内容；
+                                              每条前的勾选框勾中 = 该条不附带）
            test.html?seed=1 → 注入演示小红书数据（网友 / 笔记 / 评论 / 私密笔记）与
                              淘宝数据（商品 / 购物车 / 订单），本地测试台没有 AI，
                              配合 ?app=xhs / ?app=taobao 才有的看
@@ -52,7 +53,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iPhone 扩展 · 本地测试台</title>
-<link rel="stylesheet" href="style.css?v=0.31.0">
+<link rel="stylesheet" href="style.css?v=0.32.0">
 <style>
   body {
     margin: 0;
@@ -230,7 +231,7 @@
       };
     }
   </script>
-  <script src="index.js?v=0.31.0"></script>
+  <script src="index.js?v=0.32.0"></script>
   <script>
     const params = new URLSearchParams(location.search);
     /* ?seed=1：注入一批演示网友 / 笔记 / 评论，以及演示淘宝商品 / 购物车 / 订单。

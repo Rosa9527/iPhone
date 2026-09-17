@@ -1,7 +1,7 @@
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.31.0';
+const IPHONE_MODULE_VERSION = '0.32.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -924,6 +924,11 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 注入等），本插件在宿主「提示词就绪」事件里抓快照，拼进自己的子请求，让手机上
   // 的模型与主线剧情保持一致。false = 不附带（手机请求回到「只看自己拼的段」）。
   injectCaptureEnabled: true,
+  // 逐条排除（v0.32.0）：「设置 · 第三方注入」里勾选「不附带」的条目键名。
+  // 存键而不是存内容——注入内容每轮都在变（变量表随剧情走），键才是扩展的
+  // 稳定身份；某个扩展本轮没跑，它的键留在表里不碍事，下次注入进来照样排除。
+  // 空数组 = 全都附带。纯配置，跨聊天共享（不像快照那样随聊天清空）。
+  injectExcluded: [],
   // 提示词预设：各聊天场景的提示词组合（「设置 · 私聊提示词」/「群聊提示词」/
   // 「动态提示词」/「朋友圈提示词」/「小红书提示词」里编辑）。qqChat = QQ 联系人
   // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；
