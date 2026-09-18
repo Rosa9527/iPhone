@@ -1,5 +1,5 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-18 21:56:32 · 文件数: 12 · 指纹: 69475e28
+// 构建时间: 2026-09-18 22:26:15 · 文件数: 12 · 指纹: cf1000e6
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
@@ -499,12 +499,35 @@ const IPHONE_ME_AVATAR_PRESETS = Object.freeze([
 // 围观剧情事件，只写公开渠道能看到的那一面）、间接相关（同城 / 同行 / 同圈子的
 // 日常见闻）、背景与世界观（这个世界的时代风貌与流行话题）——但网友始终是路人
 // 视角，不写成剧情复述，也不出现 {{user}} 的名字。
+//
+// 两个「量」的常量（v0.41.0）：必须在下面的提示词模板之前声明——模板里会引用它们，
+// 而 const 在同一份文件里是「先声明后使用」的（放后面会让整包在第 1 行就 TDZ 报错）。
+// 网友笔记每篇的评论条数：v0.41.0 起从 1~3 放宽到 3~7。解析时的条数上限也要跟着这份
+// 区间走——旧版本在解析处硬砍 3 条，模型写再多也只留 3 条。
+const IPHONE_XHS_NOTE_COMMENTS_MIN = 3;
+const IPHONE_XHS_NOTE_COMMENTS_MAX = 7;
+// 玩家自己发帖后的初始互动量与粉丝换算。真实小红书上一条普通笔记的点赞大约是粉丝数的
+// 一成到四成（爆款才会超过粉丝总数），收藏一般是点赞的三到五成；还没有粉丝的新账号也有
+// 一段「路人流量」（推荐页刷到的人顺手点的赞），否则新号永远 0 赞 0 藏、粉丝也永远涨不
+// 起来。粉丝数本身仍是派生的（见 iphoneXhsFanCount）：12 个赞 / 藏 ≈ 1 个粉丝，所以
+// 一条按粉丝数起量的笔记会自然带来新粉丝。
+const IPHONE_XHS_ME_REACH = Object.freeze({
+  likeRate: Object.freeze([0.12, 0.42]),
+  likeBase: Object.freeze([30, 120]),
+  collectRate: Object.freeze([0.25, 0.55]),
+  fansDivisor: 12,
+  // 玩家发帖后请网友来评论的条数：粉丝越多、愿意来评论区的人越多。3 条起步，
+  // 每 350 个粉丝大约多一条，最多 12 条（一次请求能稳定写出来的量）。
+  commentBase: 3,
+  commentPerFans: 350,
+  commentMax: 12,
+});
 const IPHONE_XHS_NOTE_GUIDANCE = `# 任务
 - 你要为「小红书」首页生成新的网友笔记：每次写 1~3 篇，像真实社区的信息流那样题材各异、长短不一。
 - 网友是互联网上素不相识的陌生人：发布者不是「{{user}}」的联系人，也不要把主线剧情里的人物直接搬进来当网友（除非设定上他们真的会发小红书）。
 - 发布者可以是已有网友名单里的人（熟面孔回归，延续 TA 一贯的人设与内容方向），也可以新造一位网友——新网友要有辨识度高的昵称、合理的小红书号和 IP 属地。
 - 题材要贴合小红书真实生态：美食探店、减脂餐、穿搭、美妆、家居收纳、租房、宠物、旅行攻略、数码测评、职场吐槽、情感困惑、学习方法、追星、手工、健身、吐槽避雷……一次刷新里不要两三篇都挤在同一题材。
-- 每篇笔记都要有互动：点赞数、收藏数与评论区（1~3 条评论），像真实小红书那样有人捧场、有人追问、有人杠。评论区里其他网友可以互相接话，也可以由作者本人回复。
+- 每篇笔记都要有互动：点赞数、收藏数与评论区（${IPHONE_XHS_NOTE_COMMENTS_MIN}~${IPHONE_XHS_NOTE_COMMENTS_MAX} 条评论），像真实小红书那样有人捧场、有人追问、有人杠。评论区里其他网友可以互相接话，也可以由作者本人回复。点赞多的笔记评论就多写几条，冷门的写三四条；作者回复也算在条数里。
 - 数据要真实可信：普通网友的笔记点赞几十到几千，只有内容特别抓人的才上万；收藏数一般少于点赞数；评论数远少于点赞数。不要每篇都写爆款。
 
 # 与剧情的关联（每篇必须命中其一）
@@ -536,7 +559,10 @@ const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区�
   + '评论：\n'
   + '汤圆不圆：周三那个牛肉看着好嫩，求做法！\n'
   + '小鹿今天吃什么 回复 汤圆不圆：牛里脊切薄片，黑胡椒海盐抓一下，热锅三十秒就好～\n'
-  + '打工人小张：15块？我楼下盖饭都22了[捂脸]\n\n'
+  + '打工人小张：15块？我楼下盖饭都22了[捂脸]\n'
+  + 'momo：收藏了，下周一就照着做，希望我不要又点外卖😂\n'
+  + '减脂第80天：鸡胸肉腌一下再烤会更好吃，我一般是隔夜腌\n'
+  + '小鹿今天吃什么 回复 减脂第80天：学到了！下次试试\n\n'
   + '格式说明：\n'
   + '- 「昵称」是发布者：写已有网友名单里的名字，或新造一位网友。\n'
   + '- 「小红书号」「IP」「简介」只有新造网友时才有意义（已有网友沿用 TA 原来的资料），写不写都行。\n'
@@ -546,14 +572,15 @@ const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区�
   + '- 「话题」用 # 开头，2~4 个，用空格分隔。\n'
   + '- 「位置」写城市名（可省略）。\n'
   + '- 「点赞」「收藏」写阿拉伯数字（可省略，省略时插件按 0 处理）。\n'
-  + '- 「评论：」单独占一行，下面每行一条评论，1~3 条，格式为「评论人：内容」，'
-  + '作者回复写作「作者昵称 回复 评论人：内容」。评论人可以是已有网友，也可以是新网友（会自动收进网友池）。\n'
+  + `- 「评论：」单独占一行，下面每行一条评论，${IPHONE_XHS_NOTE_COMMENTS_MIN}~${IPHONE_XHS_NOTE_COMMENTS_MAX} 条，格式为「评论人：内容」，`
+  + '作者回复写作「作者昵称 回复 评论人：内容」。评论人可以是已有网友，也可以是新网友（会自动收进网友池）。'
+  + '点赞高的笔记多写几条、凑不够热度的小笔记写三四条即可，但每篇都不能只写一条。\n'
   + '只输出符合格式的笔记区块，不要输出任何解释、旁白或格式以外的文字。';
 // 小红书「评论生成」：玩家在某篇笔记下留言后、或玩家自己发布一篇笔记后（v0.33.0），
 // 调用一次对话 API 生成新的网友评论（作者本人或路过的网友应声）。两种情形共用同一份
 // 指导与「评论人：内容」行格式，差别只在 user 侧那一句与 <xhs_note> 段的介绍语。
 const IPHONE_XHS_REPLY_GUIDANCE = `# 任务
-- 你正在小红书的一篇笔记下面，请生成 1~3 条新的网友评论。两种情形都由你应声：
+- 你正在小红书的一篇笔记下面，请生成新的网友评论（条数见请求末尾的具体要求：玩家自己发布的新笔记会按 TA 的粉丝数给出 3~12 条，其余情形 1~3 条）。两种情形都由你应声：
   - 玩家「{{user}}」在评论区留下了新评论（评论区最后一条）——网友们接话、追问、抖机灵；
   - 玩家「{{user}}」刚发布了一篇笔记（作者就是 TA，评论区还空着）——网友们来抢首评、围观、提问。
 - 谁来应声要合理：作者本人（笔记的发布者）看到评论多半会回；路过的网友也常常插话、追问、抖机灵、抬杠——真实小红书的评论区里，陌生网友之间的互动往往比作者还热闹。玩家自己发的那篇笔记，作者就是玩家本人，不要替 TA 以作者身份发言。
@@ -565,7 +592,7 @@ const IPHONE_XHS_REPLY_GUIDANCE = `# 任务
 - 评论是一两句话，不是长文，也不是笔记正文。
 - 不同网友的语气要有差异；作者回复和路人评论要能分得出来。
 - 不出现编号、条目式播报或任何系统腔。`;
-const IPHONE_XHS_REPLY_FORMAT = '每条新评论占一行，输出 1~3 行。每行格式为「评论人：内容」，回复某人时写成「评论人 回复 被回复人：内容」。完整示例（人名与内容仅示意）：\n\n'
+const IPHONE_XHS_REPLY_FORMAT = '每条新评论占一行，输出 1~3 行（玩家自己发布的新笔记按请求里给出的具体条数输出）。每行格式为「评论人：内容」，回复某人时写成「评论人 回复 被回复人：内容」。完整示例（人名与内容仅示意）：\n\n'
   + '汤圆不圆：蹲一个空气炸锅型号🙏\n'
   + '小鹿今天吃什么 回复 {{user}}：谢谢喜欢～下次做卤牛肉再发一篇\n\n'
   + '格式说明：评论人必须是已有的网友昵称、这篇笔记的作者，或一位新造的网友昵称（会自动收进网友池）；不要替玩家说话。'
@@ -14396,6 +14423,39 @@ function iphoneXhsCollectCount(note) {
   return (Number(note?.collects) || 0) + (note?.collectMine ? 1 : 0);
 }
 
+// 「我」的粉丝数：由自己笔记的互动量派生（12 个赞 / 藏 ≈ 1 个粉丝），没人互动就没有
+// 粉丝。「我」页的三栏统计与发帖时的起量都用它，两处永远同一个数（v0.41.0 起抽成
+// 函数，此前只在「我」页里内联算过一次）。
+function iphoneXhsFanCount(data) {
+  return (data?.notes || []).reduce((sum, note) => (
+    note.authorId === '__me__'
+      ? sum + Math.floor((iphoneXhsLikeCount(note) + iphoneXhsCollectCount(note)) / IPHONE_XHS_ME_REACH.fansDivisor)
+      : sum
+  ), 0);
+}
+
+// 玩家自己发帖后的初始互动量（v0.41.0）：按当前粉丝数起量——粉丝越多，一条普通笔记
+// 的点赞越多（粉丝数的一成到四成），收藏一般是点赞的三到五成；还没有粉丝时也有一段
+// 路人流量，免得新账号永远 0 赞 0 藏、粉丝永远涨不起来。这些数落盘后就会反过来推高
+// iphoneXhsFanCount()，于是「发帖 → 有赞有藏 → 粉丝跟着涨」自然成立。
+function iphoneXhsRollMeNoteStats(fans) {
+  const { likeRate, likeBase, collectRate } = IPHONE_XHS_ME_REACH;
+  const pick = ([lo, hi]) => lo + Math.random() * (hi - lo);
+  const rate = pick(likeRate);
+  const base = Math.round(pick(likeBase));
+  const likes = Math.max(1, Math.round(Math.max(0, fans) * rate) + base);
+  const collects = Math.max(1, Math.round(likes * pick(collectRate)));
+  return { likes, collects };
+}
+
+// 玩家发帖后请网友来评论的条数区间：粉丝越多，愿意来评论区围观的人越多（3 条起步、
+// 最多 12 条，每 350 个粉丝大约多一条）。
+function iphoneXhsMeCommentRange(fans) {
+  const { commentBase, commentPerFans, commentMax } = IPHONE_XHS_ME_REACH;
+  const hi = Math.min(commentMax, commentBase + Math.round(Math.max(0, fans) / commentPerFans));
+  return [Math.max(commentBase, hi - 3), hi];
+}
+
 // ---------- 首页频道筛选 ----------
 // 「推荐」= 全部；其余频道按标题、正文与话题里的关键词过滤（对照真实小红书的
 // 发现页横滑条，是题材聚合而不是独立数据源）。
@@ -14705,6 +14765,17 @@ async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } 
     : `以下是玩家正在评论的那篇笔记（含完整评论区）：\n<xhs_note>\n${postText}\n</xhs_note>`);
   if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
   if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
+  // 玩家自己发的新笔记：条数按 TA 的粉丝数来（v0.41.0）——粉丝越多，来评论区围观、
+  // 追问、抖机灵的人越多。这段放在提示词最末尾（格式要求之后）：玩家可能改写甚至清空
+  // 默认的回复指导与格式，这里明确写成「覆盖上面的条数」，模型不会只写默认的 1~3 条。
+  if (published) {
+    const fans = iphoneXhsFanCount(data);
+    const [lo, hi] = iphoneXhsMeCommentRange(fans);
+    const countText = lo === hi ? `${lo} 条` : `${lo}~${hi} 条`;
+    sysParts.push(`补充要求：这篇笔记是玩家自己的账号发的，TA 在小红书上有 ${fans} 个粉丝。`
+      + `请生成 ${countText}新评论（这个条数覆盖上面格式说明里的条数限制，仍然每行一条「评论人：内容」）。`
+      + `粉丝越多、笔记的赞越多，来评论区的人就越多：有人抢首评、有人追问细节、有人抬杠挑刺、有人跑题闲聊，不要条条都是捧场话。`);
+  }
 
   const userContent = published
     ? `${playerDesc}刚刚发布了这篇笔记（作者就是 TA 本人），请根据以上信息生成新的网友评论。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
@@ -14844,10 +14915,12 @@ function iphoneParseXhsNotesReply(text) {
   return notes
     .map((note) => ({
       ...note,
+      // 每篇的评论条数上限跟着提示词里的区间走（v0.41.0 起 3~7 条；旧版本在这里硬砍
+      // 3 条，模型写再多也只留 3 条，这就是「刷新出来的笔记永远只有三条评论」的原因）
       comments: (note.comments || [])
         .map((c) => ({ name: c.name, replyName: c.replyName, text: c.text }))
         .filter((c) => c.name && c.text)
-        .slice(0, 3),
+        .slice(0, IPHONE_XHS_NOTE_COMMENTS_MAX),
     }))
     .filter((note) => note.name && (note.title || note.text));
 }
@@ -15849,9 +15922,9 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
       historyHint.textContent = seen ? `${seen} 篇看过的笔记` : '看过的笔记';
     }
     // 粉丝数由「我」自己的笔记互动量派生（没人互动就没有粉丝），获赞与收藏是
-    // 全部笔记的点赞 + 收藏合计
+    // 全部笔记的点赞 + 收藏合计（粉丝数的算法见 iphoneXhsFanCount）
     const likes = mine.reduce((sum, n) => sum + iphoneXhsLikeCount(n) + iphoneXhsCollectCount(n), 0);
-    const fans = mine.reduce((sum, n) => sum + Math.floor((iphoneXhsLikeCount(n) + iphoneXhsCollectCount(n)) / 12), 0);
+    const fans = iphoneXhsFanCount(data);
     const set = (key, value) => {
       const el = page.querySelector(`[data-xhs-stat-${key}]`);
       if (el) el.textContent = iphoneXhsFormatCount(value);
@@ -16157,7 +16230,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
         <span>仅自己可见</span>
         <i>${icons.lock}</i>
       </label>
-      <p class="iphone-xhs__compose-foot">封面从内置图库挑选（42 张，按题材筛选），与网友笔记同一套素材；第一格「不带图」发纯文字笔记（正文就是首图，真机的文字帖）。发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
+      <p class="iphone-xhs__compose-foot">封面从内置图库挑选（42 张，按题材筛选），与网友笔记同一套素材；第一格「不带图」发纯文字笔记（正文就是首图，真机的文字帖）。发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布时按你的粉丝数给这条笔记起量（赞 / 藏），粉丝数也跟着涨；随后调一次对话 API 让网友来评论——粉丝越多，来评论区的人越多（勾选「仅自己可见」则不给互动、也不调）。</p>
     </div>
   `;
 
@@ -16252,7 +16325,10 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
   // 评论生成完再补进评论区，成功 / 失败各浮一条轻提示。勾选「仅自己可见」时不调
   // ——私密笔记网友看不到，评论区自然是空的。
   const requestNetizenComments = async (note) => {
-    screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: '已发布，网友评论生成中…' }));
+    // 提示里带上这条笔记的起量（赞 / 藏按粉丝数给的），玩家一眼能看出发帖真的有人互动
+    screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', {
+      detail: `已发布（赞 ${iphoneXhsFormatCount(iphoneXhsLikeCount(note))} · 藏 ${iphoneXhsFormatCount(iphoneXhsCollectCount(note))}），网友评论生成中…`,
+    }));
     try {
       const created = await iphoneGenerateXhsComments(note, screen, { published: true });
       const fresh = iphoneGetXhsData();
@@ -16285,6 +16361,11 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     }
     const profile = iphoneGetXhsProfile();
     const data = iphoneGetXhsData();
+    // 互动量按当前粉丝数起量（v0.41.0）：粉丝越多，这条笔记的赞 / 藏越多，而它们
+    // 又会反过来推高粉丝数——发帖不再是一篇 0 赞 0 藏、粉丝永远不动的死数据。
+    // 「仅自己可见」的笔记没人看得到，所以保持 0 赞 0 藏（也不调 API 生成评论）。
+    const isPrivate = Boolean(privateBox.checked);
+    const stats = isPrivate ? { likes: 0, collects: 0 } : iphoneXhsRollMeNoteStats(iphoneXhsFanCount(data));
     const note = iphoneNormalizeXhsNote({
       id: iphoneXhsGenId('n'),
       authorId: '__me__',
@@ -16296,10 +16377,10 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       topics: iphoneXhsTopicList(topicInput.value),
       location: locInput.value.trim() || profile.ip,
       ip: profile.ip,
-      likes: 0,
-      collects: 0,
+      likes: stats.likes,
+      collects: stats.collects,
       comments: [],
-      private: Boolean(privateBox.checked),
+      private: isPrivate,
     });
     data.notes.push(note);
     iphoneSetXhsData(screen, data);
