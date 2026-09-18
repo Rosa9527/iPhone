@@ -1,5 +1,5 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-18 22:59:54 · 文件数: 12 · 指纹: 4fb7554a
+// 构建时间: 2026-09-18 23:55:49 · 文件数: 12 · 指纹: 77856d0f
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
@@ -576,6 +576,64 @@ const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区�
   + '作者回复写作「作者昵称 回复 评论人：内容」。评论人可以是已有网友，也可以是新网友（会自动收进网友池）。'
   + '点赞高的笔记多写几条、凑不够热度的小笔记写三四条即可，但每篇都不能只写一条。\n'
   + '只输出符合格式的笔记区块，不要输出任何解释、旁白或格式以外的文字。';
+// v0.38.0 ~ v0.40.0 发布的默认写作指导与输出格式（v0.41.0 把评论条数从 1~3 放宽到 3~7
+// 时，这两段里所有涉及条数的句子都跟着改写了）。提示词预设的存档是「整份冻结」的：玩家
+// 只要在旧版设置页里改动过任何一项（哪怕只是拨一下世界书开关），当时的整份默认文案——
+// 含这两段——就原样存进设置存档，之后升级只换默认值永远轮不到它，刷新出来的笔记便一直
+// 按旧文案只写 1~3 条评论。这里把旧默认原文固化下来，供 iphoneGetXhsPreset 识别「与历史
+// 默认一字不差」的存档值并回退到当前默认；真正改写过文案的存档一字不动。
+const IPHONE_XHS_NOTE_GUIDANCE_LEGACY = `# 任务
+- 你要为「小红书」首页生成新的网友笔记：每次写 1~3 篇，像真实社区的信息流那样题材各异、长短不一。
+- 网友是互联网上素不相识的陌生人：发布者不是「{{user}}」的联系人，也不要把主线剧情里的人物直接搬进来当网友（除非设定上他们真的会发小红书）。
+- 发布者可以是已有网友名单里的人（熟面孔回归，延续 TA 一贯的人设与内容方向），也可以新造一位网友——新网友要有辨识度高的昵称、合理的小红书号和 IP 属地。
+- 题材要贴合小红书真实生态：美食探店、减脂餐、穿搭、美妆、家居收纳、租房、宠物、旅行攻略、数码测评、职场吐槽、情感困惑、学习方法、追星、手工、健身、吐槽避雷……一次刷新里不要两三篇都挤在同一题材。
+- 每篇笔记都要有互动：点赞数、收藏数与评论区（1~3 条评论），像真实小红书那样有人捧场、有人追问、有人杠。评论区里其他网友可以互相接话，也可以由作者本人回复。
+- 数据要真实可信：普通网友的笔记点赞几十到几千，只有内容特别抓人的才上万；收藏数一般少于点赞数；评论数远少于点赞数。不要每篇都写爆款。
+
+# 与剧情的关联（每篇必须命中其一）
+- 网友和「{{user}}」素不相识，却生活在同一个世界里：每篇笔记都要与当前剧情或世界观连得上，从下面三种写法里选一种来写。
+- **直接相关**：网友亲历或围观了剧情里发生的事——现场的另一视角、路过时看到的场面、被波及的余波、对热点的议论；只写路人视角下公开能看到的那一面，不要写成剧情的复述。
+- **间接相关**：网友的生活与剧情同城、同行、同圈子，写出的日常见闻（物价、通勤、加班、天气、本地新闻）与剧情处在同一个世界里，从侧面互相印证。
+- **背景与世界观**：写这个世界的时代风貌、社会百态、流行话题与行业八卦，反映剧情所处的背景设定。
+- 三种写法轮着来：一次刷新里各篇分散开，长期看三种都要出现，不要篇篇都是围观剧情的帖子。
+- 无论选哪种写法，网友都只是路人：TA 没有全知视角，不知道幕后发生了什么，也不知道「{{user}}」是谁——不要出现「{{user}}」的名字，也不要让网友像知情者那样议论剧情内幕。
+
+# 笔记写法
+- 标题是小红书的灵魂：口语化、有信息量、带一点钩子（数字、对比、悬念、情绪），20 字以内，可以带 emoji。
+- 正文像真人在分享：第一人称，讲自己的经历与感受，可以有具体的细节（价格、地点、时间、品牌），分成两三句自然的短句。
+- 话题标签紧贴内容，2~4 个，用 # 开头。
+- 先是人，后是设定：不同网友的语气、关注点与生活方式要有明显差异——精致的人、糙快的人、抠门的人、爱较真的人，写出来的东西不该是一个味道。
+- 不出现编号、条目式播报或任何系统腔。`;
+
+const IPHONE_XHS_NOTE_FORMAT_LEGACY = `每篇笔记占一个区块，输出 1~3 个区块。每个区块按下面的字段逐行书写，完整示例（昵称、内容与数据仅示意，必须换成与当前剧情或世界观相关联的真实内容——直接相关 / 间接相关 / 背景与世界观三种写法都符合要求，示例本身只是一个格式样板）：
+
+昵称：小鹿今天吃什么
+小红书号：lulu_eats
+IP：上海
+简介：一人食便当日记｜省钱也要吃好
+封面：美食
+标题：一周不重样的减脂便当，成本不到15块🍱
+正文：最近在控制体重，外卖实在吃不起也不健康，索性自己带饭。周一到周五的搭配都写在图里了，鸡胸肉用空气炸锅烤的，嫩得不像话。最贵的一餐是周三的牛肉，也就 22 块。
+话题：#减脂餐 #便当 #上班带饭 #省钱
+位置：上海
+点赞：1286
+收藏：734
+评论：
+汤圆不圆：周三那个牛肉看着好嫩，求做法！
+小鹿今天吃什么 回复 汤圆不圆：牛里脊切薄片，黑胡椒海盐抓一下，热锅三十秒就好～
+打工人小张：15块？我楼下盖饭都22了[捂脸]
+
+格式说明：
+- 「昵称」是发布者：写已有网友名单里的名字，或新造一位网友。
+- 「小红书号」「IP」「简介」只有新造网友时才有意义（已有网友沿用 TA 原来的资料），写不写都行。
+- 「封面」从这些题材里挑一个最贴合的（只能填题材名）｜美食、宠物、旅行、家居、数码、穿搭、探店、美妆、健身、学习。
+- 「标题」一行写完，不要换行；「正文」一行写完，不要换行（可以用逗号分句）。
+- 「话题」用 # 开头，2~4 个，用空格分隔。
+- 「位置」写城市名（可省略）。
+- 「点赞」「收藏」写阿拉伯数字（可省略，省略时插件按 0 处理）。
+- 「评论：」单独占一行，下面每行一条评论，1~3 条，格式为「评论人：内容」，作者回复写作「作者昵称 回复 评论人：内容」。评论人可以是已有网友，也可以是新网友（会自动收进网友池）。
+只输出符合格式的笔记区块，不要输出任何解释、旁白或格式以外的文字。`;
+
 // 小红书「评论生成」：玩家在某篇笔记下留言后、或玩家自己发布一篇笔记后（v0.33.0），
 // 调用一次对话 API 生成新的网友评论（作者本人或路过的网友应声）。两种情形共用同一份
 // 指导与「评论人：内容」行格式，差别只在 user 侧那一句与 <xhs_note> 段的介绍语。
@@ -14080,11 +14138,22 @@ function iphoneNormalizeXhsData(raw) {
     msgRead[entry.id] = [...new Set(list.map((id) => String(id || '').trim()).filter(Boolean))]
       .slice(-IPHONE_XHS_MSG_READ_CAP);
   }
+  // 清空账本：聚合子页「清空」掉的通知按 id 记账（思路与已读一致——通知是从真实
+  // 数据派生的、没有独立实体，只能记 id）。账本里的 id 不再出现在任何消息列表里；
+  // 没有账本的老存档视为什么都没删过。
+  const msgDeletedSource = source.msgDeleted && typeof source.msgDeleted === 'object' ? source.msgDeleted : {};
+  const msgDeleted = {};
+  for (const entry of IPHONE_XHS_MSG_ENTRIES) {
+    const list = Array.isArray(msgDeletedSource[entry.id]) ? msgDeletedSource[entry.id] : [];
+    msgDeleted[entry.id] = [...new Set(list.map((id) => String(id || '').trim()).filter(Boolean))]
+      .slice(-IPHONE_XHS_MSG_READ_CAP);
+  }
   return {
     netizens: iphoneXhsPruneNetizens(netizens, notes),
     notes,
     following,
     msgRead,
+    msgDeleted,
     notesFloorSynced: Math.max(0, Math.floor(Number(source.notesFloorSynced) || 0)),
   };
 }
@@ -14116,6 +14185,25 @@ function iphoneXhsMarkInboxRead(type) {
   const next = {
     ...data,
     msgRead: { ...data.msgRead, [type]: [...(data.msgRead[type] || []), ...ids].slice(-IPHONE_XHS_MSG_READ_CAP) },
+  };
+  iphoneGetQqStorage().xhsData = iphoneNormalizeXhsData(next);
+  iphoneSaveQqStorage();
+  return true;
+}
+
+// 清空某条聚合入口当前的全部通知：把派生出的所有 id 记进 msgDeleted 账本并落盘。
+// 通知没有独立实体，「删除」只能按 id 记账（与已读同一套思路）；这些 id 今后不再
+// 出现在任何消息列表里，底层的赞 / 收藏 / 评论数据不动。返回是否有变化。
+function iphoneXhsClearInbox(type) {
+  const data = iphoneGetXhsData();
+  const ids = (iphoneXhsCollectNotifications(data)[type] || []).map((item) => item.id);
+  if (!ids.length) return false;
+  const seen = new Set(data.msgDeleted?.[type] || []);
+  const add = ids.filter((id) => !seen.has(id));
+  if (!add.length) return false;
+  const next = {
+    ...data,
+    msgDeleted: { ...data.msgDeleted, [type]: [...(data.msgDeleted[type] || []), ...add].slice(-IPHONE_XHS_MSG_READ_CAP) },
   };
   iphoneGetQqStorage().xhsData = iphoneNormalizeXhsData(next);
   iphoneSaveQqStorage();
@@ -14476,6 +14564,17 @@ function iphoneXhsNoteMatchesChannel(note, channel) {
 }
 
 // ---------- 小红书提示词预设（存 settings.promptPresets.xhsNotes） ----------
+// 预设存档是「整份冻结」的：玩家只要在旧版设置页里改动过任何一项（哪怕只是拨一下
+// 世界书开关），当时的整份默认文案——含与本次改动无关的 guidance / format——就原样
+// 写进存档，此后升级只换默认值永远轮不到这批存档。v0.41.0 把刷新笔记的评论条数从
+// 1~3 放宽到 3~7 时改的正是这两段文案，于是老存档还在按「1~3 条」发请求，刷新出来
+// 的笔记仍然只有三条评论。这里把与历史默认一字不差（容忍首尾空白）的存档值视为
+// 「没有自定义」，回退到当前默认；真正改写过文案的存档一字不动，清空仍表示有意不附带。
+const iphoneXhsPresetText = (value, legacy, fallback) => {
+  if (typeof value !== 'string') return fallback;
+  if (!value.trim()) return value;
+  return value.trim() === legacy.trim() ? fallback : value;
+};
 function iphoneGetXhsPreset() {
   const defaults = IPHONE_XHS_PRESET_DEFAULT;
   const raw = iphoneGetSettings().promptPresets?.xhsNotes || {};
@@ -14487,8 +14586,8 @@ function iphoneGetXhsPreset() {
   let historyFloors = Math.round(Number(raw.historyFloors));
   if (!Number.isFinite(historyFloors)) historyFloors = defaults.historyFloors;
   historyFloors = Math.min(50, Math.max(0, historyFloors));
-  const format = typeof raw.format === 'string' ? raw.format : defaults.format;
-  const guidance = typeof raw.guidance === 'string' ? raw.guidance : defaults.guidance;
+  const format = iphoneXhsPresetText(raw.format, IPHONE_XHS_NOTE_FORMAT_LEGACY, defaults.format);
+  const guidance = iphoneXhsPresetText(raw.guidance, IPHONE_XHS_NOTE_GUIDANCE_LEGACY, defaults.guidance);
   const replyGuidance = typeof raw.replyGuidance === 'string' ? raw.replyGuidance : defaults.replyGuidance;
   const replyFormat = typeof raw.replyFormat === 'string' ? raw.replyFormat : defaults.replyFormat;
   return { persona, worldBook, latestFloor, historyFloors, format, npcLogic, dialogueGuidance, guidance, replyGuidance, replyFormat };
@@ -14593,10 +14692,13 @@ async function iphoneGenerateXhsNotes(xhsScreen) {
   if (guidance) sysParts.push(`以下是小红书笔记的写作指导：\n<xhs_guidance>\n${resolve(guidance)}\n</xhs_guidance>`);
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
-  // user 里再点一次「与剧情 / 世界观挂钩」：这是本页内容生成的核心要求（写作指导
-  // 可被玩家改写或清空，而这一句始终在最后、最靠近生成位置），并重申三种写法分散开。
+  // user 里再点一次「与剧情 / 世界观挂钩」与「每篇评论条数」：这两句始终在最后、最
+  // 靠近生成位置（写作指导与输出格式可被玩家改写或清空，甚至冻结着旧版默认文案——见
+  // iphoneGetXhsPreset 的历史遗留说明，条数要求放这里才压得住），并重申三种写法分散开。
   const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。`
     + `每篇都要与当前剧情或世界观设定相关联——直接相关 / 间接相关 / 背景与世界观三种写法里选一种，几篇之间分散开。`
+    + `每篇的评论区都要写 ${IPHONE_XHS_NOTE_COMMENTS_MIN}~${IPHONE_XHS_NOTE_COMMENTS_MAX} 条评论（这个条数覆盖写作指导与格式说明里的条数限制）：`
+    + `点赞高的笔记多写几条、冷门的少写几条，几篇之间条数错开，不要每篇都一样。`
     + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
@@ -15648,11 +15750,18 @@ function iphoneXhsCollectNotifications(data) {
     follows.push({ id: `fw-${id}`, type: 'follows', name: netizen.name, noteId: '', ts: 0, text: '你关注了 TA' });
   }
   const byTs = (a, b) => (b.ts || 0) - (a.ts || 0);
-  return {
+  // 收口时按清空账本过滤：被「清空」掉的通知按 id 移出列表（底层数据不动，
+  // 只是消息页不再出现；之后新产生的互动 id 不同，照常进来）。
+  const out = {
     likes: likes.sort(byTs).slice(0, 30),
     follows: follows.slice(0, 30),
     comments: comments.sort(byTs).slice(0, 30),
   };
+  for (const entry of IPHONE_XHS_MSG_ENTRIES) {
+    const gone = new Set(data.msgDeleted?.[entry.id] || []);
+    out[entry.id] = out[entry.id].filter((item) => !gone.has(item.id));
+  }
+  return out;
 }
 
 function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
@@ -15694,13 +15803,14 @@ function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
       entries.appendChild(row);
     }
 
-    // 消息列表：三类通知按时序混排，最前面再补两条系统级会话
-    //（活动消息 / 系统消息，对照真实小红书消息页的常驻条目）
+    // 消息列表：赞与关注两类通知按时序混排——评论只收进「评论和@」，不在这里重复
+    // 出现；最前面再补两条系统级会话（活动消息 / 系统消息，对照真实小红书消息页的
+    // 常驻条目）
     const systemRows = [
       { id: 'sys-activity', name: '活动消息', text: '官方活动与话题邀约', ts: 0, tone: 'blue', icon: icons.comment },
       { id: 'sys-notice', name: '系统消息', text: '一起聊聊你眼中的「智能眼镜」吧', ts: 0, tone: 'blue', icon: icons.bell },
     ];
-    const all = [...inbox.likes, ...inbox.follows, ...inbox.comments]
+    const all = [...inbox.likes, ...inbox.follows]
       .sort((a, b) => (b.ts || 0) - (a.ts || 0))
       .slice(0, 30);
     list.innerHTML = '';
@@ -16427,25 +16537,48 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
 
 // ---------- 消息聚合子页 ----------
 // 点「赞和收藏 / 新增关注 / 评论和@」进入的列表页：与消息页同一份派生数据，
-// 按类型过滤后逐条列出，点条目跳到对应笔记。
-function iphoneXhsBuildInboxView({ icons, onClose, onOpenNote }) {
+// 按类型过滤后逐条列出，点条目跳到对应笔记。右上角「清空」清掉本页全部通知
+//（确认小卡确认后走 iphoneXhsClearInbox 的 id 账本，底层数据不动）。
+function iphoneXhsBuildInboxView({ icons, onClose, onOpenNote, onChanged }) {
   const view = document.createElement('div');
   view.className = 'iphone-xhs__inbox';
   view.innerHTML = `
     <header class="iphone-xhs__prof-nav">
       <button type="button" class="iphone-xhs__prof-back" aria-label="返回">${icons.back}</button>
       <p class="iphone-xhs__prof-title" data-inbox-title></p>
+      <button type="button" class="iphone-xhs__inbox-clear is-hidden" data-inbox-clear>清空</button>
     </header>
     <div class="iphone-xhs__inbox-list"></div>
   `;
   const titleEl = view.querySelector('[data-inbox-title]');
   const listEl = view.querySelector('.iphone-xhs__inbox-list');
+  const clearBtn = view.querySelector('[data-inbox-clear]');
+  let currentType = '';
+
+  // 清空确认小卡（QQ 资料页同思路的页内确认，不用原生 confirm）：清空是不可逆的
+  // 隐藏通知，弹一层让玩家想一下再动手。
+  const confirmBox = document.createElement('div');
+  confirmBox.className = 'iphone-xhs__inbox-confirm';
+  confirmBox.hidden = true;
+  confirmBox.innerHTML = `
+    <div class="iphone-xhs__inbox-confirm-card">
+      <p class="iphone-xhs__inbox-confirm-title">清空全部消息？</p>
+      <p class="iphone-xhs__inbox-confirm-text">清空后这里的消息会全部移除，之后的新消息照常进来。</p>
+      <div class="iphone-xhs__inbox-confirm-actions">
+        <button type="button" class="iphone-xhs__inbox-confirm-cancel" data-inbox-cancel>取消</button>
+        <button type="button" class="iphone-xhs__inbox-confirm-ok" data-inbox-ok>清空</button>
+      </div>
+    </div>
+  `;
+  view.appendChild(confirmBox);
 
   view._open = (type, label) => {
+    currentType = type;
     titleEl.textContent = label || '消息';
     const data = iphoneGetXhsData();
     const inbox = iphoneXhsCollectNotifications(data);
     const items = inbox[type] || [];
+    clearBtn.classList.toggle('is-hidden', !items.length);
     listEl.innerHTML = '';
     if (!items.length) {
       const empty = document.createElement('div');
@@ -16483,6 +16616,20 @@ function iphoneXhsBuildInboxView({ icons, onClose, onOpenNote }) {
     }
   };
   view.querySelector('.iphone-xhs__prof-back').addEventListener('click', () => onClose?.());
+  clearBtn.addEventListener('click', () => {
+    if (!(iphoneXhsCollectNotifications(iphoneGetXhsData())[currentType] || []).length) return;
+    confirmBox.hidden = false;
+  });
+  confirmBox.querySelector('[data-inbox-cancel]').addEventListener('click', () => {
+    confirmBox.hidden = true;
+  });
+  confirmBox.querySelector('[data-inbox-ok]').addEventListener('click', () => {
+    confirmBox.hidden = true;
+    if (!iphoneXhsClearInbox(currentType)) return;
+    // 列表就地回到空态；红点与底栏气泡随账本重算（onChanged 由外层接住）
+    view._open(currentType, titleEl.textContent);
+    onChanged?.('已清空');
+  });
   return view;
 }
 
@@ -16569,6 +16716,11 @@ function buildXhsAppScreen() {
       setOverlay(false);
     },
     onOpenNote: openNote,
+    // 清空后：红点 / 底栏气泡 / 消息页列表随账本重算，再浮一条轻提示
+    onChanged: (message) => {
+      if (message) screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: message }));
+      renderHeaderBadges();
+    },
   });
   const profileView = iphoneXhsBuildProfileView({
     icons,

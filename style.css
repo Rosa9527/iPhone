@@ -8840,16 +8840,24 @@
 }
 
 /* 消息页头部：居中标题 + 右侧搜索 / 新建（对照真实小红书消息页） */
+/* 消息页头：标题绝对定位、整行居中——右侧两个按钮（搜索 / 新建）宽度不等，
+   flex:1 的居中会被按钮宽度挤得偏左，真机标题落在屏幕中线上；按钮留在文档流里
+   钉在右边，标题层 pointer-events:none 放行按钮点击 */
 .iphone-xhs__hdmsg {
+  position: relative;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   padding: 54px 12px 8px;
 }
 
 .iphone-xhs__hdmsg .iphone-xhs__hdtitle {
-  flex: 1;
+  position: absolute;
+  left: 0;
+  right: 0;
   padding: 0;
   font-size: 18px;
+  pointer-events: none;
 }
 
 .iphone-xhs__hdmsgbtn {
@@ -8919,6 +8927,98 @@
 
 .iphone-xhs__inbox-list::-webkit-scrollbar {
   display: none;
+}
+
+/* 子页头部：标题绝对定位整行居中（右侧「清空」比左侧返回键宽，flex:1 的居中会偏
+   左）；只作用于本子页，编辑资料 / 发布页同结构的头部不受影响 */
+.iphone-xhs__inbox .iphone-xhs__prof-nav {
+  position: relative;
+}
+
+.iphone-xhs__inbox .iphone-xhs__prof-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+/* 右上角「清空」：红字文字钮，本页没有可清的消息时整个藏掉 */
+.iphone-xhs__inbox-clear {
+  flex: none;
+  margin-left: auto;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  color: #ff2442;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.iphone-xhs__inbox-clear.is-hidden {
+  display: none;
+}
+
+/* 清空确认小卡：页内居中的一张白卡 + 半透明遮罩（QQ 资料页同思路，不用原生 confirm） */
+.iphone-xhs__inbox-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.iphone-xhs__inbox-confirm[hidden] {
+  display: none;
+}
+
+.iphone-xhs__inbox-confirm-card {
+  width: 100%;
+  padding: 18px 16px 14px;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+}
+
+.iphone-xhs__inbox-confirm-title {
+  margin: 0 0 6px;
+  color: #17181a;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.iphone-xhs__inbox-confirm-text {
+  margin: 0 0 14px;
+  color: #8a8a8f;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.iphone-xhs__inbox-confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.iphone-xhs__inbox-confirm-cancel,
+.iphone-xhs__inbox-confirm-ok {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 17px;
+  background: #f5f5f7;
+  color: #17181a;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.iphone-xhs__inbox-confirm-ok {
+  background: #ff2442;
+  color: #fff;
+  font-weight: 600;
 }
 
 /* ---------- 我（个人主页） ---------- */
