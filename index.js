@@ -1,11 +1,11 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-18 00:10:57 · 文件数: 12 · 指纹: cb303356
+// 构建时间: 2026-09-18 09:15:54 · 文件数: 12 · 指纹: 7790e88c
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.33.0';
+const IPHONE_MODULE_VERSION = '0.35.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -26,6 +26,29 @@ const IPHONE_DOCK_ID = 'iphone-dock';
 const IPHONE_PAGE_DOTS_ID = 'iphone-page-dots';
 const IPHONE_HOME_INDICATOR_ID = 'iphone-home-indicator';
 const IPHONE_APP_LAYER_ID = 'iphone-app-layer';
+
+// ---------- Home 手势 ----------
+// 判定不落在 5px 高的指示条本体上，而是屏幕底部一条全宽感应带：手机上那根
+// 细条是点不中的（这是「不灵敏」的主因），而各应用底栏都留了 ≥24px 的下
+// 内边距让位给 Home 条，带内不压任何按钮，上滑返回因此也不会与底部按钮打架。
+//
+// 每组参数给两个值：设计稿像素（大屏上随整机缩放，保持比例观感）与 CSS 像素
+// 下限（手机上整机只剩七成多，纯按比例缩会让命中区小到点不中——手指的物理
+// 尺寸不随界面缩放，所以取两者中较大的那个）。
+const IPHONE_HOME_ZONE_H = 22;        // 感应带高度 · 设计稿像素
+const IPHONE_HOME_ZONE_H_MIN = 26;    // 感应带高度 · CSS 像素下限
+const IPHONE_HOME_SWIPE_UP = 22;      // 上滑触发位移 · 设计稿像素
+const IPHONE_HOME_SWIPE_UP_MIN = 20;  // 上滑触发位移 · CSS 像素下限
+const IPHONE_HOME_FLICK_UP = 10;      // 快速轻扫的最小位移 · 设计稿像素
+const IPHONE_HOME_FLICK_UP_MIN = 10;  // 快速轻扫的最小位移 · CSS 像素下限
+const IPHONE_HOME_FLICK_MS = 250;     // 快速轻扫的时长上限（毫秒）
+const IPHONE_HOME_TAP_SLOP = 8;       // 位移不超过它仍算点击 · 设计稿像素
+const IPHONE_HOME_TAP_SLOP_MIN = 8;   // 位移不超过它仍算点击 · CSS 像素下限
+const IPHONE_HOME_TAP_MS = 500;       // 点击的时长上限：超过按长按处理，不触发（毫秒）
+const IPHONE_HOME_TAP_SPAN = 150;     // 点击生效的横向范围（设计稿像素，居中）
+// 判定「感应带内的这一下是不是压在页面自己的控件上」用（点击让给控件，
+// 上滑不受影响）：日志页底栏的下拉框就压在这条带里，靠它避免误返回。
+const IPHONE_HOME_SKIP_SELECTOR = 'button, a, input, textarea, select, label, [contenteditable], [role="button"], [role="tab"], [role="slider"], [role="switch"]';
 
 // ---------- 悬浮球 ----------
 const IPHONE_BALL_SIZE = 46;
@@ -568,22 +591,23 @@ const IPHONE_XHS_ME = Object.freeze({
 //（IPHONE_ME_AVATAR_PRESETS，见上方「内置头像款式」段），不再是独立的一套。
 // 小红书笔记封面图库：模型在生成时报一个「题材」，插件从这里挑同题材的一张
 //（未命中题材就按哈希随便挑一张），保证图文题材相符。ratio = 宽/高，瀑布流的
-// 卡片高度按它算，长短交错才像真实信息流。文件见 assets/xhs-cover-*.jpg。
+// 卡片高度按它算，长短交错才像真实信息流。video = 这条封面按视频笔记处理，
+// 卡片右上角带半透明播放圆标（真机的视频卡都有）。
 const IPHONE_XHS_COVERS = Object.freeze([
-  { id: 'c01', topic: '美食', ratio: 0.75 },
+  { id: 'c01', topic: '美食', ratio: 0.75, video: true },
   { id: 'c02', topic: '美食', ratio: 1 },
   { id: 'c03', topic: '美食', ratio: 0.8 },
   { id: 'c04', topic: '美食', ratio: 1 },
-  { id: 'c05', topic: '宠物', ratio: 0.75 },
+  { id: 'c05', topic: '宠物', ratio: 0.75, video: true },
   { id: 'c06', topic: '宠物', ratio: 0.8 },
-  { id: 'c07', topic: '旅行', ratio: 0.75 },
+  { id: 'c07', topic: '旅行', ratio: 0.75, video: true },
   { id: 'c08', topic: '旅行', ratio: 0.8 },
   { id: 'c09', topic: '旅行', ratio: 1 },
   { id: 'c10', topic: '家居', ratio: 1 },
-  { id: 'c11', topic: '家居', ratio: 0.8 },
+  { id: 'c11', topic: '家居', ratio: 0.8, video: true },
   { id: 'c12', topic: '数码', ratio: 1 },
-  { id: 'c13', topic: '数码', ratio: 1.3333 },
-  { id: 'c14', topic: '穿搭', ratio: 0.75 },
+  { id: 'c13', topic: '数码', ratio: 1.3333, video: true },
+  { id: 'c14', topic: '穿搭', ratio: 0.75, video: true },
   { id: 'c15', topic: '探店', ratio: 1.3333 },
   { id: 'c16', topic: '探店', ratio: 1 },
 ]);
@@ -13742,6 +13766,8 @@ function iphoneXhsIcons() {
     more: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="5.2" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.8" cy="12" r="1.6"/></g></svg>',
     close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
     plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.8v14.4M4.8 12h14.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
+    // 视频封面右上角的播放三角（真机那个半透明圆标里的白色实心三角）
+    playFill: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 7.4v9.2l7.6-4.6z" fill="currentColor"/></svg>',
     // 笔记互动：心形（赞）/ 星形（收藏）/ 气泡（评论）/ 分享 / 不喜欢
     heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2S3.4 15.4 3.4 9.4a4.7 4.7 0 0 1 8.6-2.7 4.7 4.7 0 0 1 8.6 2.7c0 6-8.6 10.8-8.6 10.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     heartFill: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2S3.4 15.4 3.4 9.4a4.7 4.7 0 0 1 8.6-2.7 4.7 4.7 0 0 1 8.6 2.7c0 6-8.6 10.8-8.6 10.8z" fill="currentColor"/></svg>',
@@ -13762,6 +13788,14 @@ function iphoneXhsIcons() {
     // 「我」页面右上角：菜单 / 二维码
     menu: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.4 7.2h15.2M4.4 12h15.2M4.4 16.8h15.2"/></g></svg>',
     qr: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.6" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="14" y="3.6" width="6.4" height="6.4" rx="1.2"/><rect x="3.6" y="14" width="6.4" height="6.4" rx="1.2"/><path d="M14 14h2.8v2.8H14zM17.6 17.6h2.8v2.8h-2.8zM14 20.4h1.2M20.4 14h-1.2"/></g></svg>',
+    // 笔记详情顶栏的分享（iOS 样式：方框带向上箭头）
+    iosShare: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3.6M8.2 7.2 12 3.4l3.8 3.8"/><rect x="4.6" y="9" width="14.8" height="11" rx="2.4"/></g></svg>',
+    // 消息页右上角：搜索 + 圆圈加号；「我」页快捷卡：浏览记录 / 钱包
+    plusCircle: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 8.2v7.6M8.2 12h7.6"/></g></svg>',
+    clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.2V12l3.2 2.1"/></g></svg>',
+    wallet: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.4" y="6.4" width="17.2" height="12.2" rx="2.6"/><path d="M3.4 10.2h17.2"/><circle cx="16.6" cy="14.6" r="1.1" fill="currentColor" stroke="none"/></g></svg>',
+    // 系统消息行（消息列表里的蓝铃铛圆标）
+    bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><path d="M12 3.2a5.6 5.6 0 0 0-5.6 5.6v3.7l-1.4 3a1 1 0 0 0 .9 1.4h12.2a1 1 0 0 0 .9-1.4l-1.4-3V8.8A5.6 5.6 0 0 0 12 3.2z"/><path d="M9.8 18.9a2.3 2.3 0 0 0 4.4 0z"/></g></svg>',
     // 占位图标：市集页
     bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4.6 8h14.8l-1.2 11.2a1.8 1.8 0 0 1-1.8 1.6H7.6a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.6 10.4V6.6a3.4 3.4 0 0 1 6.8 0v3.8"/></g></svg>',
   };
@@ -14120,6 +14154,12 @@ function iphoneXhsIsTextNote(note) {
   let hash = 0;
   for (let i = 0; i < text.length; i += 1) hash = (hash * 37 + text.charCodeAt(i)) % 100000;
   return hash % 10 < 4;
+}
+
+// 视频笔记：封面款式自带 video 标记（真机的视频卡右上角有播放圆标）。
+function iphoneXhsIsVideoNote(note) {
+  if (!note || iphoneXhsIsTextNote(note)) return false;
+  return !!iphoneXhsCoverFor(note).video;
 }
 
 // 信息流列高估算（两列平衡用）：有图按封面宽高比折算，文字卡按字数折行。
@@ -14746,8 +14786,8 @@ function iphoneXhsBuildAvatarPicker(icons, { getCurrent, onPick, commit }) {
 }
 
 // ---------- 首页瀑布流 ----------
-// 卡片：封面图（或纯文字卡）+ 标题 + 作者行（头像 / 昵称 / 小心心数），两列高度用
-// 封面宽高比估算，逐张丢进当前更矮的一列——真实小红书的错落感就是这么来的。
+// 卡片：封面（纯文字笔记是黄底引言卡）+ 标题 + 作者行（头像 / 昵称 / 小心心数）。
+// 两列高度用封面宽高比估算，逐张丢进当前更矮的一列——真机的错落感就是这么来的。
 function iphoneXhsBuildNoteCard(data, note, icons, onOpen) {
   const card = document.createElement('article');
   card.className = 'iphone-xhs__card';
@@ -14756,8 +14796,8 @@ function iphoneXhsBuildNoteCard(data, note, icons, onOpen) {
   const textOnly = iphoneXhsIsTextNote(note);
   const cover = document.createElement('div');
   if (textOnly) {
-    // 纯文字卡（对照真实小红书的文字笔记）：整张卡就是一段摘录，不带配图
-    cover.className = 'iphone-xhs__card-cover iphone-xhs__card-cover--text';
+    // 纯文字笔记在首图位放一张黄底引言卡（对照真机：米黄底 + 大引号 + 大字摘录 + 短横）
+    cover.className = 'iphone-xhs__card-cover iphone-xhs__card-cover--quote';
     const quote = document.createElement('p');
     quote.className = 'iphone-xhs__card-quote';
     quote.textContent = note.text;
@@ -14766,6 +14806,13 @@ function iphoneXhsBuildNoteCard(data, note, icons, onOpen) {
     const coverInfo = iphoneXhsCoverFor(note);
     cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(coverInfo)}`;
     cover.style.aspectRatio = String(coverInfo.ratio);
+    // 视频笔记在封面右上角有半透明播放圆标（真机每张视频卡都有）
+    if (iphoneXhsIsVideoNote(note)) {
+      const play = document.createElement('span');
+      play.className = 'iphone-xhs__card-play';
+      play.innerHTML = icons.playFill || '';
+      cover.appendChild(play);
+    }
   }
   card.appendChild(cover);
 
@@ -14810,10 +14857,18 @@ function iphoneXhsBuildHomePage({ icons, onOpenNote, screen }) {
 
   const feed = document.createElement('div');
   feed.className = 'iphone-xhs__feed';
+
+  // 频道横滑条在滚动区里（真机滚动时它会跟着内容一起滚走，顶栏只留关注/发现）
+  const channels = document.createElement('nav');
+  channels.className = 'iphone-xhs__channels';
+  channels.innerHTML = IPHONE_XHS_CHANNELS
+    .map((name, i) => `<button type="button" class="iphone-xhs__channel${i === 0 ? ' is-active' : ''}">${name}</button>`)
+    .join('') + `<button type="button" class="iphone-xhs__chevron" aria-label="频道管理">${icons.chevronDown}</button>`;
+  scroll.appendChild(channels);
   scroll.appendChild(feed);
   page.appendChild(scroll);
 
-  const state = { channel: '推荐', tab: 'discover', following: false };
+  const state = { channel: '推荐', tab: 'discover' };
 
   function visibleNotes(data) {
     const base = data.notes.filter((note) => !note.private);
@@ -14930,13 +14985,31 @@ function iphoneXhsBuildHomePage({ icons, onOpenNote, screen }) {
     state.tab = tab;
     renderFeed();
   };
+  // 「关注」页只留关注流：频道条收起（真机行为，顶栏点「关注」后横滑条整条消失）
+  page._setFollowTab = (following) => {
+    channels.classList.toggle('is-hidden', following);
+  };
+  page._channels = channels;
+  channels.querySelectorAll('.iphone-xhs__channel').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      channels.querySelectorAll('.iphone-xhs__channel').forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      state.channel = btn.textContent.trim();
+      renderFeed();
+    });
+  });
+  channels.querySelector('.iphone-xhs__chevron')?.addEventListener('click', () => {
+    screen.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: '频道管理仅作演示' }));
+  });
   page._render = renderFeed;
   return page;
 }
 
 // ---------- 笔记详情 ----------
-// 打开一篇笔记：封面大图 + 标题正文话题 + 时间与 IP +「不喜欢」+ 评论区 + 底部
-// 互动条（留言输入 / 赞 / 收藏 / 评论数）。作者的「关注」按钮就地切换关注状态。
+// 打开一篇笔记：封面大图 + 标题正文话题 + 时间与 IP + 作者行（头像 / 昵称 /
+//「关注」/ 徽章，对照真实详情页排在图下方）+ 评论区 + 底部互动条（留言输入 /
+// 赞 / 收藏 / 评论数）。「不喜欢」藏在右上「更多」里（真实小红书同款），
+// 点「更多」弹出底部动作条：不感兴趣 / 取消。
 function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
   const view = document.createElement('div');
   view.className = 'iphone-xhs__noteview';
@@ -14972,42 +15045,40 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
   view.appendChild(errRow);
   view.appendChild(bar);
 
+  // 「更多」的底部动作条（真实小红书把「不感兴趣」收在这里）：灰字大按钮 + 取消
+  const sheet = document.createElement('div');
+  sheet.className = 'iphone-xhs__sheet-actions';
+  sheet.innerHTML = `
+    <div class="iphone-xhs__sheet-mask" data-sheet-cancel></div>
+    <div class="iphone-xhs__sheet-panel">
+      <button type="button" class="iphone-xhs__sheet-act" data-act-dislike>不感兴趣</button>
+      <button type="button" class="iphone-xhs__sheet-cancel" data-sheet-cancel>取消</button>
+    </div>
+  `;
+  view.appendChild(sheet);
+  const closeSheet = () => sheet.classList.remove('is-open');
+  sheet.querySelectorAll('[data-sheet-cancel]').forEach((el) => {
+    el.addEventListener('click', closeSheet);
+  });
+
   let noteId = '';
   let sending = false;
 
   const currentNote = () => iphoneGetXhsData().notes.find((n) => n.id === noteId) || null;
 
-  function renderNav(note, data) {
-    const author = iphoneXhsAuthorOf(data, note);
-    const following = iphoneXhsIsFollowing(data, author.id);
+  // 顶栏只留返回 / 分享 / 更多（真实详情页同款：作者资料在图下方）
+  function renderNav() {
     nav.innerHTML = `
       <button type="button" class="iphone-xhs__note-back" aria-label="返回">${icons.back}</button>
-      <span class="iphone-xhs__note-avatar" data-note-author-avatar></span>
-      <span class="iphone-xhs__note-author" data-note-author-name></span>
-      ${author.mine
-        ? '<span class="iphone-xhs__note-self">我</span>'
-        : `<button type="button" class="iphone-xhs__note-follow${following ? ' is-on' : ''}">${following ? '已关注' : '关注'}</button>`}
+      <span class="iphone-xhs__note-navtitle"></span>
+      <button type="button" class="iphone-xhs__note-share" aria-label="分享">${icons.iosShare}</button>
       <button type="button" class="iphone-xhs__note-more" aria-label="更多">${icons.more}</button>
     `;
-    const avatarEl = nav.querySelector('[data-note-author-avatar]');
-    if (avatarEl) avatarEl.replaceWith(author.mine
-      ? iphoneXhsBuildMeAvatar(iphoneGetXhsProfile())
-      : iphoneXhsBuildNetizenAvatar(data, author.name));
-    const nameEl = nav.querySelector('[data-note-author-name]');
-    if (nameEl) nameEl.textContent = author.name;
     nav.querySelector('.iphone-xhs__note-back')?.addEventListener('click', () => onClose?.());
-    const followBtn = nav.querySelector('.iphone-xhs__note-follow');
-    if (followBtn) {
-      followBtn.addEventListener('click', () => {
-        const fresh = iphoneGetXhsData();
-        const has = fresh.following.includes(author.id);
-        fresh.following = has
-          ? fresh.following.filter((id) => id !== author.id)
-          : [...fresh.following, author.id];
-        iphoneSetXhsData(screen, fresh);
-        render();
-      });
-    }
+    nav.querySelector('.iphone-xhs__note-share')?.addEventListener('click', () => {
+      view.dispatchEvent(new CustomEvent('iphone-xhs-toast', { detail: '分享面板仅作演示' }));
+    });
+    nav.querySelector('.iphone-xhs__note-more')?.addEventListener('click', () => sheet.classList.add('is-open'));
   }
 
   function buildCommentRow(data, note, comment, index) {
@@ -15073,7 +15144,7 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
     const data = iphoneGetXhsData();
     const author = iphoneXhsAuthorOf(data, note);
     const cover = iphoneXhsCoverFor(note);
-    renderNav(note, data);
+    renderNav();
 
     scroll.innerHTML = '';
     if (iphoneXhsIsTextNote(note)) {
@@ -15127,19 +15198,47 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
     ].filter(Boolean).join(' · ');
     body.appendChild(meta);
 
-    const dislike = document.createElement('button');
-    dislike.type = 'button';
-    dislike.className = 'iphone-xhs__note-dislike';
-    dislike.innerHTML = `${icons.dislike}<span>不喜欢</span>`;
-    dislike.addEventListener('click', () => {
-      const fresh = iphoneGetXhsData();
-      fresh.notes = fresh.notes.filter((n) => n.id !== note.id);
-      iphoneSetXhsData(screen, fresh);
-      void iphoneSyncXhsNotesFloor();
-      onChanged?.();
-      onClose?.();
-    });
-    body.appendChild(dislike);
+    // 作者行（真实详情页：图下方左侧头像 + 昵称 + 徽章，右侧「关注」）
+    const authorRow = document.createElement('div');
+    authorRow.className = 'iphone-xhs__author';
+    authorRow.appendChild(author.mine
+      ? iphoneXhsBuildMeAvatar(iphoneGetXhsProfile())
+      : iphoneXhsBuildNetizenAvatar(data, author.name));
+    const authorInfo = document.createElement('span');
+    authorInfo.className = 'iphone-xhs__author-info';
+    const authorName = document.createElement('b');
+    authorName.textContent = author.name;
+    authorInfo.appendChild(authorName);
+    if (author.mine) {
+      const badge = document.createElement('i');
+      badge.className = 'iphone-xhs__author-badge';
+      badge.textContent = '我';
+      authorInfo.appendChild(badge);
+    } else if (note.comments.length && note.comments[0].name === author.name) {
+      const badge = document.createElement('i');
+      badge.className = 'iphone-xhs__author-badge';
+      badge.textContent = '作者';
+      authorInfo.appendChild(badge);
+    }
+    authorRow.appendChild(authorInfo);
+    if (!author.mine) {
+      const following = iphoneXhsIsFollowing(data, author.id);
+      const followBtn = document.createElement('button');
+      followBtn.type = 'button';
+      followBtn.className = `iphone-xhs__author-follow${following ? ' is-on' : ''}`;
+      followBtn.textContent = following ? '已关注' : '关注';
+      followBtn.addEventListener('click', () => {
+        const fresh = iphoneGetXhsData();
+        const has = fresh.following.includes(author.id);
+        fresh.following = has
+          ? fresh.following.filter((id) => id !== author.id)
+          : [...fresh.following, author.id];
+        iphoneSetXhsData(screen, fresh);
+        render();
+      });
+      authorRow.appendChild(followBtn);
+    }
+    body.appendChild(authorRow);
     scroll.appendChild(body);
 
     const commentsWrap = document.createElement('section');
@@ -15168,6 +15267,18 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
     commentBtn.innerHTML = `${icons.comment}<i>${note.comments.length}</i>`;
     refreshSend();
   }
+
+  sheet.querySelector('[data-act-dislike]')?.addEventListener('click', () => {
+    closeSheet();
+    const note = currentNote();
+    if (!note) return;
+    const fresh = iphoneGetXhsData();
+    fresh.notes = fresh.notes.filter((n) => n.id !== note.id);
+    iphoneSetXhsData(screen, fresh);
+    void iphoneSyncXhsNotesFloor();
+    onChanged?.();
+    onClose?.();
+  });
 
   function refreshSend() {
     sendBtn.classList.toggle('is-active', Boolean(input.value.trim()));
@@ -15336,20 +15447,45 @@ function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
       row.className = 'iphone-xhs__msg-entry';
       const count = inbox[entry.id]?.length || 0;
       row.innerHTML = `
-        <span class="iphone-xhs__msg-ico ${toneClass[entry.tone] || ''}" aria-hidden="true">${entryIcon[entry.id] || ''}</span>
+        <span class="iphone-xhs__msg-icowrap">
+          <span class="iphone-xhs__msg-ico ${toneClass[entry.tone] || ''}" aria-hidden="true">${entryIcon[entry.id] || ''}</span>
+          ${count ? `<span class="iphone-xhs__msg-dot"></span>` : ''}
+        </span>
         <span class="iphone-xhs__msg-label">${entry.label}</span>
-        <span class="iphone-xhs__msg-count">${count ? iphoneXhsFormatCount(count) : ''}</span>
-        <span class="iphone-xhs__msg-chev" aria-hidden="true">${icons.chevronRight}</span>
       `;
       row.addEventListener('click', () => onOpenInbox(entry.id, entry.label));
       entries.appendChild(row);
     }
 
-    // 消息列表：把三类通知按时序混排（真实小红书的消息页也是这个顺序）
+    // 消息列表：三类通知按时序混排，最前面再补两条系统级会话
+    //（活动消息 / 系统消息，对照真实小红书消息页的常驻条目）
+    const systemRows = [
+      { id: 'sys-activity', name: '活动消息', text: '官方活动与话题邀约', ts: 0, tone: 'blue', icon: icons.comment },
+      { id: 'sys-notice', name: '系统消息', text: '一起聊聊你眼中的「智能眼镜」吧', ts: 0, tone: 'blue', icon: icons.bell },
+    ];
     const all = [...inbox.likes, ...inbox.follows, ...inbox.comments]
       .sort((a, b) => (b.ts || 0) - (a.ts || 0))
       .slice(0, 30);
     list.innerHTML = '';
+    for (const sys of systemRows) {
+      const row = document.createElement('div');
+      row.className = 'iphone-xhs__msg-row';
+      const ico = document.createElement('span');
+      ico.className = `iphone-xhs__msg-ico iphone-xhs__msg-ico--row ${toneClass[sys.tone] || ''}`;
+      ico.innerHTML = sys.icon;
+      row.appendChild(ico);
+      const body = document.createElement('div');
+      body.className = 'iphone-xhs__msg-body';
+      const name = document.createElement('p');
+      name.className = 'iphone-xhs__msg-name';
+      name.textContent = sys.name;
+      const text = document.createElement('p');
+      text.className = 'iphone-xhs__msg-text';
+      text.textContent = sys.text;
+      body.append(name, text);
+      row.appendChild(body);
+      list.appendChild(row);
+    }
     if (!all.length) {
       const empty = document.createElement('div');
       empty.className = 'iphone-xhs__empty';
@@ -15391,6 +15527,10 @@ function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
 }
 
 // ---------- 我（个人主页） ----------
+// 对照真实小红书「我」页：深色渐变头图（顶行菜单 / 编辑主页 / 扫码 / 分享，往下
+// 大头像 + 昵称 + 小红书号 / IP + 统计行 + 简介 + 标签 + 两张快捷卡），下接白底
+// 的「笔记 / 收藏 / 赞」Tab 与笔记子筛选（公开 / 私密 / 合集）三列图墙。数据全部
+// 从真实状态派生（收藏 / 赞 = 玩家自己点过的笔记），编辑走「编辑资料」覆盖层。
 function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
   const page = document.createElement('div');
   page.className = 'iphone-xhs__tabpage iphone-xhs__me is-hidden';
@@ -15401,14 +15541,21 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
   const header = document.createElement('div');
   header.className = 'iphone-xhs__me-header';
   header.innerHTML = `
+    <div class="iphone-xhs__me-actions">
+      <span class="iphone-xhs__me-action" aria-hidden="true">${icons.menu}</span>
+      <button type="button" class="iphone-xhs__me-editpill" data-xhs-open-profile>
+        ${icons.edit}<span>编辑主页</span>
+      </button>
+      <span class="iphone-xhs__me-action" aria-hidden="true">${icons.qr}</span>
+      <span class="iphone-xhs__me-action" aria-hidden="true">${icons.iosShare}</span>
+    </div>
     <div class="iphone-xhs__me-top">
       <span class="iphone-xhs__me-avatar iphone-xhs__me-avatar--lg" data-xhs-me-avatar data-xhs-open-profile role="button" aria-label="编辑资料" tabindex="0"></span>
-      <div class="iphone-xhs__me-info">
-        <p class="iphone-xhs__me-name" data-xhs-me-name></p>
-        <p class="iphone-xhs__me-id" data-xhs-me-id></p>
-        <p class="iphone-xhs__me-ip" data-xhs-me-ip></p>
-      </div>
-      <button type="button" class="iphone-xhs__me-edit" aria-label="编辑资料">${icons.edit}</button>
+      <p class="iphone-xhs__me-name" data-xhs-me-name></p>
+    </div>
+    <div class="iphone-xhs__me-ids">
+      <p class="iphone-xhs__me-id" data-xhs-me-id></p>
+      <p class="iphone-xhs__me-ip" data-xhs-me-ip></p>
     </div>
     <div class="iphone-xhs__me-stats">
       <button type="button" class="iphone-xhs__me-stat" data-stat="follow"><b data-xhs-stat-follow>0</b><i>关注</i></button>
@@ -15417,39 +15564,93 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
     </div>
     <p class="iphone-xhs__me-bio" data-xhs-me-bio></p>
     <div class="iphone-xhs__me-tags" data-xhs-me-tags></div>
+    <div class="iphone-xhs__me-cards">
+      <div class="iphone-xhs__me-card2">
+        <span class="iphone-xhs__me-card2-ico" aria-hidden="true">${icons.clock}</span>
+        <span class="iphone-xhs__me-card2-body">
+          <b>浏览记录</b>
+          <i data-xhs-history-hint>看过的笔记</i>
+        </span>
+      </div>
+      <div class="iphone-xhs__me-card2">
+        <span class="iphone-xhs__me-card2-ico" aria-hidden="true">${icons.wallet}</span>
+        <span class="iphone-xhs__me-card2-body">
+          <b>钱包</b>
+          <i>查看详情</i>
+        </span>
+      </div>
+    </div>
   `;
   scroll.appendChild(header);
 
   const tabs = document.createElement('nav');
   tabs.className = 'iphone-xhs__me-tabs';
+  // 三个内容 Tab 全部从真实数据派生：笔记 = 我发的；收藏 / 赞 = 玩家收藏过 / 点过赞的
   const tabDefs = [
-    { id: 'public', label: '公开' },
-    { id: 'private', label: '私密' },
-    { id: 'album', label: '合集' },
+    { id: 'notes', label: '笔记' },
+    { id: 'collects', label: '收藏' },
+    { id: 'likes', label: '赞' },
   ];
   const tabButtons = [];
   for (const def of tabDefs) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `iphone-xhs__me-tab${def.id === 'public' ? ' is-active' : ''}`;
-    btn.textContent = def.label;
+    btn.className = `iphone-xhs__me-tab${def.id === 'notes' ? ' is-active' : ''}`;
+    btn.innerHTML = `<i>${def.label}</i>`;
     btn.addEventListener('click', () => {
       tabButtons.forEach((b) => b.classList.remove('is-active'));
       btn.classList.add('is-active');
       state.tab = def.id;
+      state.sub = 'public';
+      renderSubs();
       renderGrid();
     });
     tabButtons.push(btn);
     tabs.appendChild(btn);
   }
+  const tabSearch = document.createElement('span');
+  tabSearch.className = 'iphone-xhs__me-tabsearch';
+  tabSearch.innerHTML = icons.search;
+  tabs.appendChild(tabSearch);
   scroll.appendChild(tabs);
+
+  // 笔记 Tab 下的子筛选行（真实「我」页：公开 / 私密 / 合集 + 计数）
+  const subs = document.createElement('div');
+  subs.className = 'iphone-xhs__me-subs';
+  scroll.appendChild(subs);
 
   const grid = document.createElement('div');
   grid.className = 'iphone-xhs__me-grid';
   scroll.appendChild(grid);
   page.appendChild(scroll);
 
-  const state = { tab: 'public' };
+  const state = { tab: 'notes', sub: 'public' };
+
+  function renderSubs() {
+    const data = iphoneGetXhsData();
+    const mine = data.notes.filter((n) => n.authorId === '__me__');
+    // 子筛选只属于「笔记」Tab（收藏 / 赞 没有公开与私密之分）
+    subs.hidden = state.tab !== 'notes';
+    if (subs.hidden) return;
+    subs.innerHTML = '';
+    const defs = [
+      { id: 'public', label: '公开', count: mine.filter((n) => !n.private).length },
+      { id: 'private', label: '私密', count: mine.filter((n) => n.private).length, lock: true },
+      { id: 'album', label: '合集', count: 0 },
+    ];
+    for (const def of defs) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `iphone-xhs__me-sub${state.sub === def.id ? ' is-active' : ''}`;
+      btn.innerHTML = `${def.lock ? `<span class="iphone-xhs__me-sublock" aria-hidden="true">${icons.lock}</span>` : ''}<span>${def.label}</span><i>${def.count}</i>`;
+      btn.addEventListener('click', () => {
+        state.sub = def.id;
+        renderSubs();
+        renderGrid();
+      });
+      subs.appendChild(btn);
+    }
+  }
 
   function renderHeader() {
     const profile = iphoneGetXhsProfile();
@@ -15458,7 +15659,7 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
     iphoneRefreshXhsMeIdentity(page);
     const bio = page.querySelector('[data-xhs-me-bio]');
     if (bio) {
-      bio.textContent = profile.bio || '点击右上角编辑资料，写一句介绍自己吧～';
+      bio.textContent = profile.bio || '点击「编辑主页」，写一句介绍自己吧～';
       bio.classList.toggle('is-empty', !profile.bio);
     }
     const tags = page.querySelector('[data-xhs-me-tags]');
@@ -15470,6 +15671,11 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
         chip.textContent = tag;
         tags.appendChild(chip);
       }
+    }
+    const historyHint = page.querySelector('[data-xhs-history-hint]');
+    if (historyHint) {
+      const seen = data.notes.filter((n) => n.likeMine || n.collectMine).length;
+      historyHint.textContent = seen ? `${seen} 篇看过的笔记` : '看过的笔记';
     }
     // 粉丝数由「我」自己的笔记互动量派生（没人互动就没有粉丝），获赞与收藏是
     // 全部笔记的点赞 + 收藏合计
@@ -15484,47 +15690,103 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
     set('likes', likes);
   }
 
+  // 三列图墙的封面卡：真实「我」页是正方形封面、底部一行点赞数；私密笔记挂锁标
+  function buildGridCard(data, note) {
+    const card = document.createElement('article');
+    card.className = 'iphone-xhs__me-card';
+    const cover = document.createElement('div');
+    cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(iphoneXhsCoverFor(note))}`;
+    cover.style.aspectRatio = '1';
+    if (note.private) {
+      const lock = document.createElement('span');
+      lock.className = 'iphone-xhs__me-lock';
+      lock.innerHTML = icons.lock;
+      cover.appendChild(lock);
+    }
+    card.appendChild(cover);
+    const foot = document.createElement('p');
+    foot.className = 'iphone-xhs__me-cardfoot';
+    foot.innerHTML = `${note.likeMine ? icons.heartFill : icons.heart}<i>${iphoneXhsFormatCount(iphoneXhsLikeCount(note))}</i>`;
+    card.appendChild(foot);
+    card.addEventListener('click', () => onOpenNote(note));
+    return card;
+  }
+
+  // 收藏 / 赞 Tab 的瀑布卡：真实「我」页这两页是双列瀑布流——原比例的封面 +
+  // 标题 + 作者行，而不是笔记 Tab 那种正方形图墙。
+  function buildWaterfallCard(data, note) {
+    const card = document.createElement('article');
+    card.className = 'iphone-xhs__me-waterfall-card';
+    const cover = document.createElement('div');
+    const coverInfo = iphoneXhsCoverFor(note);
+    cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(coverInfo)}`;
+    cover.style.aspectRatio = String(coverInfo.ratio);
+    card.appendChild(cover);
+    const title = document.createElement('p');
+    title.className = 'iphone-xhs__card-title';
+    title.textContent = note.title || note.text;
+    card.appendChild(title);
+    const foot = document.createElement('div');
+    foot.className = 'iphone-xhs__card-foot';
+    const author = iphoneXhsAuthorOf(data, note);
+    foot.appendChild(author.mine
+      ? iphoneXhsBuildMeAvatar(iphoneGetXhsProfile())
+      : iphoneXhsBuildNetizenAvatar(data, author.name));
+    const name = document.createElement('span');
+    name.className = 'iphone-xhs__card-name';
+    name.textContent = author.name;
+    foot.appendChild(name);
+    const like = document.createElement('span');
+    like.className = 'iphone-xhs__card-like';
+    like.innerHTML = `${note.likeMine ? icons.heartFill : icons.heart}<i>${iphoneXhsFormatCount(iphoneXhsLikeCount(note))}</i>`;
+    foot.appendChild(like);
+    card.appendChild(foot);
+    card.addEventListener('click', () => onOpenNote(note));
+    return card;
+  }
+
   function renderGrid() {
     const data = iphoneGetXhsData();
-    const mine = data.notes.filter((n) => n.authorId === '__me__').reverse();
     grid.innerHTML = '';
-    const list = state.tab === 'album' ? [] : mine.filter((n) => (state.tab === 'private' ? n.private : !n.private));
-    if (state.tab === 'album') {
-      const empty = document.createElement('div');
-      empty.className = 'iphone-xhs__empty iphone-xhs__empty--grid';
-      empty.textContent = '还没有创建合集';
-      grid.appendChild(empty);
-      return;
+    // 只有笔记 Tab 是正方形图墙，收藏 / 赞 走双列瀑布（与真机一致）
+    grid.classList.toggle('is-waterfall', state.tab !== 'notes');
+    let list = [];
+    let emptyText = '';
+    if (state.tab === 'notes') {
+      const mine = data.notes.filter((n) => n.authorId === '__me__');
+      if (state.sub === 'album') {
+        const empty = document.createElement('div');
+        empty.className = 'iphone-xhs__empty iphone-xhs__empty--grid';
+        empty.textContent = '还没有创建合集';
+        grid.appendChild(empty);
+        return;
+      }
+      // 私密笔记排在公开前面（真实「我」页私密内容置顶），私密卡左上挂锁标
+      list = state.sub === 'private'
+        ? mine.filter((n) => n.private)
+        : mine.filter((n) => !n.private);
+      emptyText = state.sub === 'private' ? '还没有私密笔记' : '还没有发布过笔记，点底部红「+」发一篇吧';
+    } else if (state.tab === 'collects') {
+      list = data.notes.filter((n) => n.collectMine);
+      emptyText = '还没有收藏过笔记';
+    } else {
+      list = data.notes.filter((n) => n.likeMine);
+      emptyText = '还没有给笔记点过赞';
     }
     if (!list.length) {
       const empty = document.createElement('div');
       empty.className = 'iphone-xhs__empty iphone-xhs__empty--grid';
-      empty.textContent = state.tab === 'private' ? '还没有私密笔记' : '还没有发布过笔记，点底部红「+」发一篇吧';
+      empty.textContent = emptyText;
       grid.appendChild(empty);
       return;
     }
-    for (const note of list) {
-      const card = document.createElement('article');
-      card.className = 'iphone-xhs__me-card';
-      const cover = document.createElement('div');
-      cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(iphoneXhsCoverFor(note))}`;
-      cover.style.aspectRatio = '0.78';
-      card.appendChild(cover);
-      const title = document.createElement('p');
-      title.className = 'iphone-xhs__card-title';
-      title.textContent = note.title || note.text;
-      card.appendChild(title);
-      const foot = document.createElement('div');
-      foot.className = 'iphone-xhs__card-foot';
-      foot.innerHTML = `<span class="iphone-xhs__card-like">${note.likeMine ? icons.heartFill : icons.heart}<i>${iphoneXhsFormatCount(iphoneXhsLikeCount(note))}</i></span>`;
-      card.appendChild(foot);
-      card.addEventListener('click', () => onOpenNote(note));
-      grid.appendChild(card);
-    }
+    const build = state.tab === 'notes' ? buildGridCard : buildWaterfallCard;
+    for (const note of list) grid.appendChild(build(data, note));
   }
 
-  header.querySelector('[data-xhs-open-profile]')?.addEventListener('click', () => onEditProfile?.());
-  header.querySelector('.iphone-xhs__me-edit')?.addEventListener('click', () => onEditProfile?.());
+  header.querySelectorAll('[data-xhs-open-profile]').forEach((el) => {
+    el.addEventListener('click', () => onEditProfile?.());
+  });
   header.querySelector('[data-stat="follow"]')?.addEventListener('click', () => {
     const data = iphoneGetXhsData();
     if (!data.following.length) return;
@@ -15534,6 +15796,7 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
 
   page._render = () => {
     renderHeader();
+    renderSubs();
     renderGrid();
   };
   return page;
@@ -15964,44 +16227,80 @@ function buildXhsAppScreen() {
     if (header._mode === mode) return;
     header._mode = mode;
     if (mode === 'home') {
+      // 顶栏左侧那一格（真机 = 「关注」所在的定位点）有两种形态，互斥：
+      //   发现流 + 有未读互动 → 我的圆头像，右上角压一枚红色「更新」气泡
+      //   其余情况           → 灰字「关注」（切到关注流时变深并带下划线）
+      // 三种元素（关注槽 / 发现 / 城市）在真机上是等距平铺的，发现正好落在屏幕
+      // 中线上，所以整行用等宽三格平分；搜索绝对定位钉在最右。
+      const notify = iphoneXhsCollectNotifications(iphoneGetXhsData());
+      const unread = (notify.likes?.length || 0) + (notify.follows?.length || 0) + (notify.comments?.length || 0);
+      const homeTab = header._homeTab || 'discover';
+      const showAvatar = unread > 0 && homeTab === 'discover';
       header.innerHTML = `
         <div class="iphone-xhs__hdrow">
-          <button type="button" class="iphone-xhs__hdtab" data-htab="follow">关注</button>
-          <button type="button" class="iphone-xhs__hdtab is-active" data-htab="discover">发现</button>
-          <button type="button" class="iphone-xhs__hdcity">${IPHONE_XHS_CITY_DEFAULT}<span aria-hidden="true">${icons.chevronDown}</span></button>
+          <button type="button" class="iphone-xhs__hdnote" aria-label="通知">${icons.message}</button>
+          <div class="iphone-xhs__hdtabs">
+            <span class="iphone-xhs__hdcell">
+              ${showAvatar
+                ? `<button type="button" class="iphone-xhs__hdme" data-htab="follow" aria-label="关注更新"><i>更新</i></button>`
+                : `<button type="button" class="iphone-xhs__hdtab${homeTab === 'follow' ? ' is-active' : ''}" data-htab="follow">关注${
+                  unread ? `<i class="iphone-xhs__hdtab-num">${unread > 99 ? '99+' : unread}</i>` : ''
+                }</button>`}
+            </span>
+            <span class="iphone-xhs__hdcell">
+              <button type="button" class="iphone-xhs__hdtab${homeTab === 'discover' ? ' is-active' : ''}" data-htab="discover">发现</button>
+            </span>
+            <span class="iphone-xhs__hdcell">
+              <button type="button" class="iphone-xhs__hdcity" data-xhs-city>${IPHONE_XHS_CITY_DEFAULT}</button>
+            </span>
+          </div>
           <button type="button" class="iphone-xhs__hdsearch" aria-label="搜索">${icons.search}</button>
         </div>
-        <nav class="iphone-xhs__channels">
-          ${IPHONE_XHS_CHANNELS.map((name, i) => `<button type="button" class="iphone-xhs__channel${i === 0 ? ' is-active' : ''}">${name}</button>`).join('')}
-        </nav>
       `;
+      // 头像即「我」的个人入口：气泡是 <i>，头像作为按钮首个子元素插进去
+      const hdMe = header.querySelector('.iphone-xhs__hdme');
+      if (hdMe) {
+        const avatarEl = iphoneXhsBuildMeAvatar(iphoneGetXhsProfile());
+        avatarEl.classList.add('iphone-xhs__hdme-img');
+        hdMe.insertBefore(avatarEl, hdMe.firstChild);
+      }
       header.querySelectorAll('[data-htab]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          header.querySelectorAll('[data-htab]').forEach((b) => b.classList.remove('is-active'));
-          btn.classList.add('is-active');
-          header.classList.toggle('is-follow-tab', btn.dataset.htab === 'follow');
+          header._homeTab = btn.dataset.htab;
+          // 关注 / 发现切换会改变本槽位的形态（头像 ↔ 文字），必须强制重渲染
+          header._mode = null;
+          renderHeader('home');
+          pageHome._setFollowTab(btn.dataset.htab === 'follow');
           pageHome._setTab(btn.dataset.htab === 'follow' ? 'follow' : 'discover');
         });
       });
-      header.querySelectorAll('.iphone-xhs__channel').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          header.querySelectorAll('.iphone-xhs__channel').forEach((b) => b.classList.remove('is-active'));
-          btn.classList.add('is-active');
-          pageHome._setChannel(btn.textContent.trim());
-        });
-      });
+      return;
+    }
+    if (mode === 'messages') {
+      header.innerHTML = `
+        <div class="iphone-xhs__hdmsg">
+          <p class="iphone-xhs__hdtitle">消息</p>
+          <button type="button" class="iphone-xhs__hdmsgbtn" aria-label="搜索">${icons.search}</button>
+          <button type="button" class="iphone-xhs__hdmsgbtn" aria-label="新建消息">${icons.plusCircle}</button>
+        </div>
+      `;
       return;
     }
     header.innerHTML = `<p class="iphone-xhs__hdtitle">${mode === 'market' ? '市集' : '消息'}</p>`;
   }
 
-  // 底部标签栏：首页 / 市集 / 发布（红色圆形 +）/ 消息 / 我
+  // 底部标签栏：真机是纯文字标签（首页 / 市集 / ＋ / 消息 / 我），中间是红色圆角
+  // 方块加号；「消息」有未读时右上角挂一个红色数字气泡
+  const msgUnread = (() => {
+    const inbox = iphoneXhsCollectNotifications(iphoneGetXhsData());
+    return (inbox.likes?.length || 0) + (inbox.follows?.length || 0) + (inbox.comments?.length || 0);
+  })();
   const tabs = [
-    { key: 'home', label: '首页', icon: icons.home, page: pageHome, head: 'home' },
-    { key: 'market', label: '市集', icon: icons.market, page: pageMarket, head: 'market' },
-    { key: 'compose', label: '发布', icon: icons.plus, page: null, head: '' },
-    { key: 'messages', label: '消息', icon: icons.message, page: pageMessages, head: 'messages' },
-    { key: 'me', label: '我', icon: icons.me, page: pageMe, head: 'me' },
+    { key: 'home', label: '首页', page: pageHome, head: 'home' },
+    { key: 'market', label: '市集', page: pageMarket, head: 'market' },
+    { key: 'compose', label: '', icon: icons.plus, page: null, head: '' },
+    { key: 'messages', label: '消息', badge: msgUnread, page: pageMessages, head: 'messages' },
+    { key: 'me', label: '我', page: pageMe, head: 'me' },
   ];
   const tabbar = document.createElement('nav');
   tabbar.className = 'iphone-xhs__tabbar';
@@ -16010,7 +16309,11 @@ function buildXhsAppScreen() {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = `iphone-xhs__tab${tab.key === 'compose' ? ' iphone-xhs__tab--compose' : ''}${i === 0 ? ' is-active' : ''}`;
-    el.innerHTML = `<span class="iphone-xhs__tab-ico" aria-hidden="true">${tab.icon}</span><i>${tab.label}</i>`;
+    el.innerHTML = tab.key === 'compose'
+      ? `<span class="iphone-xhs__tab-plus" aria-hidden="true">${tab.icon}</span>`
+      : `<span class="iphone-xhs__tab-label">${tab.label}</span>${
+        tab.badge ? `<span class="iphone-xhs__tab-badge">${tab.badge > 99 ? '99+' : tab.badge}</span>` : ''
+      }`;
     el.addEventListener('click', () => {
       if (tab.key === 'compose') {
         composeView._open();
@@ -18304,7 +18607,7 @@ function createIphoneUi() {
               </span>
             </span>
           </div>
-          <div id="${IPHONE_HOME_INDICATOR_ID}" class="iphone-home-indicator" title="上滑或点击：返回主屏 / 收起手机"></div>
+          <div id="${IPHONE_HOME_INDICATOR_ID}" class="iphone-home-indicator" aria-hidden="true"></div>
         </div>
       </div>
     </div>
@@ -18548,44 +18851,172 @@ function iphoneRebuildActiveApp() {
 
 // ---------- 手势 ----------
 // 交互入口统一收口：应用内 Home 条 → 返回主屏；主屏 Home 条 / 遮罩空白 / Esc → 收起整机。
-// Home 条支持点击与上滑两种触发，上滑阈值参照 iOS 手势的行进距离判定。
+//
+// 判定不落在 5px 高的指示条本体上——手机上那条细线的命中率太低，是「不灵敏」的
+// 主因——而是屏幕底部一条全宽感应带（IPHONE_HOME_ZONE_H）：上滑在带内任意横向
+// 位置都生效，点击只认中央 IPHONE_HOME_TAP_SPAN（对应指示条的视觉位置）。
+//
+// 三条关键约束：
+// - **点击**落在页面自己的控件上时让给控件（见 isIphoneControlTarget），上滑不受
+//   此限——真机上从列表 / 底栏边缘上滑同样能返回主屏。底栏按钮都在感应带之上的
+//   安全区里，本就碰不到；日志页那种压进带里的下拉框靠这条让位，于是「想点控件
+//   却返回主屏」不会再发生。识别分两层：语义标签（选择器）与手型光标——代码库里
+//   可点击的 div 都标了 cursor: pointer（笔记卡、列表行、会话行…），单靠标签
+//   选择器兜不住；光标还得沿祖先查，卡片里的标题 / 摘要子元素自身是 cursor: auto，
+//   手型标在卡片上，只看落点元素会漏判。
+// - 手势触发后短期吞掉紧跟的 click：返回主屏的同时，手指落点下（应用关闭动画里
+//   还挂着的）底栏按钮 / 主屏图标不该被顺手点一次。
+// - 触摸开始拖动时压掉原生滚动（touchmove preventDefault）。不这么做的话，列表会
+//   先接住这次滑动并派发 pointercancel，手势在中途被系统收走——触屏上「滑不动」
+//   的根因。被系统中断（来电、切换应用）走 pointercancel 复位，状态不会留到
+//   下一次抬手造成误触发。
+function isIphoneControlTarget(target) {
+  if (!target || target.nodeType !== 1) return false;
+  if (target.closest?.(IPHONE_HOME_SKIP_SELECTOR)) return true;
+  try {
+    for (let node = target; node && node.id !== IPHONE_SCREEN_ID; node = node.parentElement) {
+      if (globalThis.getComputedStyle?.(node)?.cursor === 'pointer') return true;
+    }
+  } catch {}
+  return false;
+}
+
 function initIphoneGestures(overlay) {
   overlay.addEventListener('click', (event) => {
     // 只响应点在遮罩空白处（stage 之外）的点击：点手机本体不冒泡关闭。
     if (event.target === overlay) closeIphoneUi();
   });
 
+  const screen = getIphoneScreen();
   const indicator = document.getElementById(IPHONE_HOME_INDICATOR_ID);
-  if (!indicator) return;
-  let gestureActive = false;
-  let startY = 0;
-  let triggered = false;
+  if (!screen) return;
+
+  // 设计稿像素 → 当前屏幕像素。手机上整机会缩到七成多，纯按比例算出来的命中区
+  // 会小到点不中（手指的物理尺寸不随界面缩放），所以每个阈值都有 CSS 像素下限，
+  // 取两者中较大的那个；大屏上仍是等比手感。
+  const designPx = (design, min) => Math.max(design * (iphoneScale || 1), min ?? 0);
 
   const handleHomeAction = () => {
     if (iphoneAppOpen) closeIphoneApp();
     else closeIphoneUi();
   };
 
-  indicator.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    gestureActive = true;
-    triggered = false;
-    startY = event.clientY;
-    event.preventDefault();
-  });
-  window.addEventListener('pointermove', (event) => {
-    if (!gestureActive || triggered) return;
-    // 上滑超过 36px 判定为手势返回（鼠标场景是拖拽，触屏即真实上滑）。
-    if (startY - event.clientY >= 36) {
-      triggered = true;
+  // tracking 一次只跟一条指针：第二个指头按下即取消，多指拖拽不误判。
+  let tracking = null;
+  // 手势触发后短时间内吞掉紧跟的 click：避免「返回主屏」的同时又把手指
+  // 落点下的卡片 / 图标也点了一次（鼠标拖拽与触屏甩动都可能补发 click）。
+  let swallowClickUntil = 0;
+
+  const resetTracking = () => {
+    tracking = null;
+    indicator?.classList.remove('is-tracking');
+    screen.classList.remove('is-home-tracking');
+  };
+
+  const markTracking = () => {
+    indicator?.classList.add('is-tracking');
+    screen.classList.add('is-home-tracking');
+  };
+
+  const onPointerDown = (event) => {
+    if (event.button !== 0 || !isIphoneOpen()) return;
+    if (tracking) {
+      // 同一指针的旧状态可能是「在窗口外松开」留下的（收不到 pointerup）：
+      // 超过 3 秒视为残留，清掉后继续处理本次按下，手势不会因此永久失效。
+      if (tracking.pointerId !== event.pointerId || Date.now() - tracking.startedAt > 3000) resetTracking();
+      else return;
+    }
+    const rect = screen.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    if (event.clientX < rect.left || event.clientX > rect.right) return;
+    if (event.clientY < rect.top || event.clientY > rect.bottom) return;
+    if (rect.bottom - event.clientY > designPx(IPHONE_HOME_ZONE_H, IPHONE_HOME_ZONE_H_MIN)) return;
+    const centerX = rect.left + rect.width / 2;
+    // 落点是不是页面自己的控件：是则这次按下**整套让给控件**——不吞它的 click、
+    // 不拦它的滚动（列表从底栏按钮上起手照样能滑），点击与拖动都归控件。
+    const onControl = isIphoneControlTarget(event.target);
+    tracking = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startedAt: Date.now(),
+      // 点击要同时满足三个条件：起点落在指示条视觉所在的中段（底栏左右两端
+      // 的空白不该算返回）、不压在页面自己的控件上、抬手时是短促的轻点。
+      canTap: Math.abs(event.clientX - centerX) <= designPx(IPHONE_HOME_TAP_SPAN) / 2 && !onControl,
+      onControl,
+      triggered: false,
+    };
+    markTracking();
+    // 鼠标：压掉拖拽选字与图片原生拖拽（触屏的文本长按选择由 is-home-tracking
+    // 的 user-select: none 兜住）。控件上的按下不压，免得连带影响它自己的交互。
+    if (event.pointerType === 'mouse' && !onControl) event.preventDefault();
+  };
+
+  const onPointerMove = (event) => {
+    if (!tracking || event.pointerId !== tracking.pointerId || tracking.triggered) return;
+    const up = tracking.startY - event.clientY;
+    const lateral = Math.abs(event.clientX - tracking.startX);
+    if (up <= 0 || up <= lateral) return; // 只认竖直向上的滑动
+    // 慢拖够距离，或快速轻扫（iOS 的甩动手感）都算数。
+    const flick =
+      up >= designPx(IPHONE_HOME_FLICK_UP, IPHONE_HOME_FLICK_UP_MIN) &&
+      Date.now() - tracking.startedAt <= IPHONE_HOME_FLICK_MS;
+    if (up >= designPx(IPHONE_HOME_SWIPE_UP, IPHONE_HOME_SWIPE_UP_MIN) || flick) {
+      tracking.triggered = true;
+      swallowClickUntil = Date.now() + 350;
       handleHomeAction();
     }
-  });
-  window.addEventListener('pointerup', () => {
-    if (!gestureActive) return;
-    gestureActive = false;
-    if (!triggered) handleHomeAction();
-  });
+  };
+
+  const onPointerUp = (event) => {
+    if (!tracking || event.pointerId !== tracking.pointerId) return;
+    const state = tracking;
+    resetTracking();
+    if (state.triggered) return;
+    const moved = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+    // 位移在容差内、时长够短、起点在指示条中段且没压着控件 → 算点击
+    // （按住不放不触发）。
+    if (state.canTap && moved <= designPx(IPHONE_HOME_TAP_SLOP, IPHONE_HOME_TAP_SLOP_MIN) && Date.now() - state.startedAt <= IPHONE_HOME_TAP_MS) {
+      swallowClickUntil = Date.now() + 350;
+      handleHomeAction();
+    }
+  };
+
+  const onPointerCancel = (event) => {
+    if (!tracking || event.pointerId !== tracking.pointerId) return;
+    resetTracking();
+  };
+
+  const onTouchMove = (event) => {
+    if (!tracking || tracking.triggered) return;
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    // 一旦开始向上拖就交出滚动权（含阈值之前的那一小段），手势才不会被
+    // 列表的滚动接管后 pointercancel 掉。
+    if (tracking.startY - touch.clientY > 2) event.preventDefault();
+  };
+
+  // 捕获阶段吞掉手势后的那次 click（见 swallowClickUntil）。
+  const onClickCapture = (event) => {
+    if (!swallowClickUntil) return;
+    if (Date.now() > swallowClickUntil) {
+      swallowClickUntil = 0;
+      return;
+    }
+    swallowClickUntil = 0;
+    event.stopPropagation();
+    event.preventDefault();
+  };
+
+  // 监听挂在 overlay 而不是 screen 上：机身圆角外的底部角落（仍在屏幕矩形内）
+  // 命中测试落在 device 上，挂在 screen 上会收不到那次 pointerdown。
+  overlay.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
+  window.addEventListener('blur', resetTracking);
+  overlay.addEventListener('touchmove', onTouchMove, { passive: false });
+  overlay.addEventListener('click', onClickCapture, true);
 
   if (!globalThis[IPHONE_ESC_KEY_HANDLER_KEY]) {
     globalThis[IPHONE_ESC_KEY_HANDLER_KEY] = (event) => {

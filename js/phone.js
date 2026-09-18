@@ -72,7 +72,7 @@ function createIphoneUi() {
               </span>
             </span>
           </div>
-          <div id="${IPHONE_HOME_INDICATOR_ID}" class="iphone-home-indicator" title="上滑或点击：返回主屏 / 收起手机"></div>
+          <div id="${IPHONE_HOME_INDICATOR_ID}" class="iphone-home-indicator" aria-hidden="true"></div>
         </div>
       </div>
     </div>
@@ -316,44 +316,172 @@ function iphoneRebuildActiveApp() {
 
 // ---------- 手势 ----------
 // 交互入口统一收口：应用内 Home 条 → 返回主屏；主屏 Home 条 / 遮罩空白 / Esc → 收起整机。
-// Home 条支持点击与上滑两种触发，上滑阈值参照 iOS 手势的行进距离判定。
+//
+// 判定不落在 5px 高的指示条本体上——手机上那条细线的命中率太低，是「不灵敏」的
+// 主因——而是屏幕底部一条全宽感应带（IPHONE_HOME_ZONE_H）：上滑在带内任意横向
+// 位置都生效，点击只认中央 IPHONE_HOME_TAP_SPAN（对应指示条的视觉位置）。
+//
+// 三条关键约束：
+// - **点击**落在页面自己的控件上时让给控件（见 isIphoneControlTarget），上滑不受
+//   此限——真机上从列表 / 底栏边缘上滑同样能返回主屏。底栏按钮都在感应带之上的
+//   安全区里，本就碰不到；日志页那种压进带里的下拉框靠这条让位，于是「想点控件
+//   却返回主屏」不会再发生。识别分两层：语义标签（选择器）与手型光标——代码库里
+//   可点击的 div 都标了 cursor: pointer（笔记卡、列表行、会话行…），单靠标签
+//   选择器兜不住；光标还得沿祖先查，卡片里的标题 / 摘要子元素自身是 cursor: auto，
+//   手型标在卡片上，只看落点元素会漏判。
+// - 手势触发后短期吞掉紧跟的 click：返回主屏的同时，手指落点下（应用关闭动画里
+//   还挂着的）底栏按钮 / 主屏图标不该被顺手点一次。
+// - 触摸开始拖动时压掉原生滚动（touchmove preventDefault）。不这么做的话，列表会
+//   先接住这次滑动并派发 pointercancel，手势在中途被系统收走——触屏上「滑不动」
+//   的根因。被系统中断（来电、切换应用）走 pointercancel 复位，状态不会留到
+//   下一次抬手造成误触发。
+function isIphoneControlTarget(target) {
+  if (!target || target.nodeType !== 1) return false;
+  if (target.closest?.(IPHONE_HOME_SKIP_SELECTOR)) return true;
+  try {
+    for (let node = target; node && node.id !== IPHONE_SCREEN_ID; node = node.parentElement) {
+      if (globalThis.getComputedStyle?.(node)?.cursor === 'pointer') return true;
+    }
+  } catch {}
+  return false;
+}
+
 function initIphoneGestures(overlay) {
   overlay.addEventListener('click', (event) => {
     // 只响应点在遮罩空白处（stage 之外）的点击：点手机本体不冒泡关闭。
     if (event.target === overlay) closeIphoneUi();
   });
 
+  const screen = getIphoneScreen();
   const indicator = document.getElementById(IPHONE_HOME_INDICATOR_ID);
-  if (!indicator) return;
-  let gestureActive = false;
-  let startY = 0;
-  let triggered = false;
+  if (!screen) return;
+
+  // 设计稿像素 → 当前屏幕像素。手机上整机会缩到七成多，纯按比例算出来的命中区
+  // 会小到点不中（手指的物理尺寸不随界面缩放），所以每个阈值都有 CSS 像素下限，
+  // 取两者中较大的那个；大屏上仍是等比手感。
+  const designPx = (design, min) => Math.max(design * (iphoneScale || 1), min ?? 0);
 
   const handleHomeAction = () => {
     if (iphoneAppOpen) closeIphoneApp();
     else closeIphoneUi();
   };
 
-  indicator.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    gestureActive = true;
-    triggered = false;
-    startY = event.clientY;
-    event.preventDefault();
-  });
-  window.addEventListener('pointermove', (event) => {
-    if (!gestureActive || triggered) return;
-    // 上滑超过 36px 判定为手势返回（鼠标场景是拖拽，触屏即真实上滑）。
-    if (startY - event.clientY >= 36) {
-      triggered = true;
+  // tracking 一次只跟一条指针：第二个指头按下即取消，多指拖拽不误判。
+  let tracking = null;
+  // 手势触发后短时间内吞掉紧跟的 click：避免「返回主屏」的同时又把手指
+  // 落点下的卡片 / 图标也点了一次（鼠标拖拽与触屏甩动都可能补发 click）。
+  let swallowClickUntil = 0;
+
+  const resetTracking = () => {
+    tracking = null;
+    indicator?.classList.remove('is-tracking');
+    screen.classList.remove('is-home-tracking');
+  };
+
+  const markTracking = () => {
+    indicator?.classList.add('is-tracking');
+    screen.classList.add('is-home-tracking');
+  };
+
+  const onPointerDown = (event) => {
+    if (event.button !== 0 || !isIphoneOpen()) return;
+    if (tracking) {
+      // 同一指针的旧状态可能是「在窗口外松开」留下的（收不到 pointerup）：
+      // 超过 3 秒视为残留，清掉后继续处理本次按下，手势不会因此永久失效。
+      if (tracking.pointerId !== event.pointerId || Date.now() - tracking.startedAt > 3000) resetTracking();
+      else return;
+    }
+    const rect = screen.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    if (event.clientX < rect.left || event.clientX > rect.right) return;
+    if (event.clientY < rect.top || event.clientY > rect.bottom) return;
+    if (rect.bottom - event.clientY > designPx(IPHONE_HOME_ZONE_H, IPHONE_HOME_ZONE_H_MIN)) return;
+    const centerX = rect.left + rect.width / 2;
+    // 落点是不是页面自己的控件：是则这次按下**整套让给控件**——不吞它的 click、
+    // 不拦它的滚动（列表从底栏按钮上起手照样能滑），点击与拖动都归控件。
+    const onControl = isIphoneControlTarget(event.target);
+    tracking = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startedAt: Date.now(),
+      // 点击要同时满足三个条件：起点落在指示条视觉所在的中段（底栏左右两端
+      // 的空白不该算返回）、不压在页面自己的控件上、抬手时是短促的轻点。
+      canTap: Math.abs(event.clientX - centerX) <= designPx(IPHONE_HOME_TAP_SPAN) / 2 && !onControl,
+      onControl,
+      triggered: false,
+    };
+    markTracking();
+    // 鼠标：压掉拖拽选字与图片原生拖拽（触屏的文本长按选择由 is-home-tracking
+    // 的 user-select: none 兜住）。控件上的按下不压，免得连带影响它自己的交互。
+    if (event.pointerType === 'mouse' && !onControl) event.preventDefault();
+  };
+
+  const onPointerMove = (event) => {
+    if (!tracking || event.pointerId !== tracking.pointerId || tracking.triggered) return;
+    const up = tracking.startY - event.clientY;
+    const lateral = Math.abs(event.clientX - tracking.startX);
+    if (up <= 0 || up <= lateral) return; // 只认竖直向上的滑动
+    // 慢拖够距离，或快速轻扫（iOS 的甩动手感）都算数。
+    const flick =
+      up >= designPx(IPHONE_HOME_FLICK_UP, IPHONE_HOME_FLICK_UP_MIN) &&
+      Date.now() - tracking.startedAt <= IPHONE_HOME_FLICK_MS;
+    if (up >= designPx(IPHONE_HOME_SWIPE_UP, IPHONE_HOME_SWIPE_UP_MIN) || flick) {
+      tracking.triggered = true;
+      swallowClickUntil = Date.now() + 350;
       handleHomeAction();
     }
-  });
-  window.addEventListener('pointerup', () => {
-    if (!gestureActive) return;
-    gestureActive = false;
-    if (!triggered) handleHomeAction();
-  });
+  };
+
+  const onPointerUp = (event) => {
+    if (!tracking || event.pointerId !== tracking.pointerId) return;
+    const state = tracking;
+    resetTracking();
+    if (state.triggered) return;
+    const moved = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+    // 位移在容差内、时长够短、起点在指示条中段且没压着控件 → 算点击
+    // （按住不放不触发）。
+    if (state.canTap && moved <= designPx(IPHONE_HOME_TAP_SLOP, IPHONE_HOME_TAP_SLOP_MIN) && Date.now() - state.startedAt <= IPHONE_HOME_TAP_MS) {
+      swallowClickUntil = Date.now() + 350;
+      handleHomeAction();
+    }
+  };
+
+  const onPointerCancel = (event) => {
+    if (!tracking || event.pointerId !== tracking.pointerId) return;
+    resetTracking();
+  };
+
+  const onTouchMove = (event) => {
+    if (!tracking || tracking.triggered) return;
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    // 一旦开始向上拖就交出滚动权（含阈值之前的那一小段），手势才不会被
+    // 列表的滚动接管后 pointercancel 掉。
+    if (tracking.startY - touch.clientY > 2) event.preventDefault();
+  };
+
+  // 捕获阶段吞掉手势后的那次 click（见 swallowClickUntil）。
+  const onClickCapture = (event) => {
+    if (!swallowClickUntil) return;
+    if (Date.now() > swallowClickUntil) {
+      swallowClickUntil = 0;
+      return;
+    }
+    swallowClickUntil = 0;
+    event.stopPropagation();
+    event.preventDefault();
+  };
+
+  // 监听挂在 overlay 而不是 screen 上：机身圆角外的底部角落（仍在屏幕矩形内）
+  // 命中测试落在 device 上，挂在 screen 上会收不到那次 pointerdown。
+  overlay.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
+  window.addEventListener('blur', resetTracking);
+  overlay.addEventListener('touchmove', onTouchMove, { passive: false });
+  overlay.addEventListener('click', onClickCapture, true);
 
   if (!globalThis[IPHONE_ESC_KEY_HANDLER_KEY]) {
     globalThis[IPHONE_ESC_KEY_HANDLER_KEY] = (event) => {

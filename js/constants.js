@@ -1,7 +1,7 @@
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.33.0';
+const IPHONE_MODULE_VERSION = '0.35.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -22,6 +22,29 @@ const IPHONE_DOCK_ID = 'iphone-dock';
 const IPHONE_PAGE_DOTS_ID = 'iphone-page-dots';
 const IPHONE_HOME_INDICATOR_ID = 'iphone-home-indicator';
 const IPHONE_APP_LAYER_ID = 'iphone-app-layer';
+
+// ---------- Home 手势 ----------
+// 判定不落在 5px 高的指示条本体上，而是屏幕底部一条全宽感应带：手机上那根
+// 细条是点不中的（这是「不灵敏」的主因），而各应用底栏都留了 ≥24px 的下
+// 内边距让位给 Home 条，带内不压任何按钮，上滑返回因此也不会与底部按钮打架。
+//
+// 每组参数给两个值：设计稿像素（大屏上随整机缩放，保持比例观感）与 CSS 像素
+// 下限（手机上整机只剩七成多，纯按比例缩会让命中区小到点不中——手指的物理
+// 尺寸不随界面缩放，所以取两者中较大的那个）。
+const IPHONE_HOME_ZONE_H = 22;        // 感应带高度 · 设计稿像素
+const IPHONE_HOME_ZONE_H_MIN = 26;    // 感应带高度 · CSS 像素下限
+const IPHONE_HOME_SWIPE_UP = 22;      // 上滑触发位移 · 设计稿像素
+const IPHONE_HOME_SWIPE_UP_MIN = 20;  // 上滑触发位移 · CSS 像素下限
+const IPHONE_HOME_FLICK_UP = 10;      // 快速轻扫的最小位移 · 设计稿像素
+const IPHONE_HOME_FLICK_UP_MIN = 10;  // 快速轻扫的最小位移 · CSS 像素下限
+const IPHONE_HOME_FLICK_MS = 250;     // 快速轻扫的时长上限（毫秒）
+const IPHONE_HOME_TAP_SLOP = 8;       // 位移不超过它仍算点击 · 设计稿像素
+const IPHONE_HOME_TAP_SLOP_MIN = 8;   // 位移不超过它仍算点击 · CSS 像素下限
+const IPHONE_HOME_TAP_MS = 500;       // 点击的时长上限：超过按长按处理，不触发（毫秒）
+const IPHONE_HOME_TAP_SPAN = 150;     // 点击生效的横向范围（设计稿像素，居中）
+// 判定「感应带内的这一下是不是压在页面自己的控件上」用（点击让给控件，
+// 上滑不受影响）：日志页底栏的下拉框就压在这条带里，靠它避免误返回。
+const IPHONE_HOME_SKIP_SELECTOR = 'button, a, input, textarea, select, label, [contenteditable], [role="button"], [role="tab"], [role="slider"], [role="switch"]';
 
 // ---------- 悬浮球 ----------
 const IPHONE_BALL_SIZE = 46;
@@ -564,22 +587,23 @@ const IPHONE_XHS_ME = Object.freeze({
 //（IPHONE_ME_AVATAR_PRESETS，见上方「内置头像款式」段），不再是独立的一套。
 // 小红书笔记封面图库：模型在生成时报一个「题材」，插件从这里挑同题材的一张
 //（未命中题材就按哈希随便挑一张），保证图文题材相符。ratio = 宽/高，瀑布流的
-// 卡片高度按它算，长短交错才像真实信息流。文件见 assets/xhs-cover-*.jpg。
+// 卡片高度按它算，长短交错才像真实信息流。video = 这条封面按视频笔记处理，
+// 卡片右上角带半透明播放圆标（真机的视频卡都有）。
 const IPHONE_XHS_COVERS = Object.freeze([
-  { id: 'c01', topic: '美食', ratio: 0.75 },
+  { id: 'c01', topic: '美食', ratio: 0.75, video: true },
   { id: 'c02', topic: '美食', ratio: 1 },
   { id: 'c03', topic: '美食', ratio: 0.8 },
   { id: 'c04', topic: '美食', ratio: 1 },
-  { id: 'c05', topic: '宠物', ratio: 0.75 },
+  { id: 'c05', topic: '宠物', ratio: 0.75, video: true },
   { id: 'c06', topic: '宠物', ratio: 0.8 },
-  { id: 'c07', topic: '旅行', ratio: 0.75 },
+  { id: 'c07', topic: '旅行', ratio: 0.75, video: true },
   { id: 'c08', topic: '旅行', ratio: 0.8 },
   { id: 'c09', topic: '旅行', ratio: 1 },
   { id: 'c10', topic: '家居', ratio: 1 },
-  { id: 'c11', topic: '家居', ratio: 0.8 },
+  { id: 'c11', topic: '家居', ratio: 0.8, video: true },
   { id: 'c12', topic: '数码', ratio: 1 },
-  { id: 'c13', topic: '数码', ratio: 1.3333 },
-  { id: 'c14', topic: '穿搭', ratio: 0.75 },
+  { id: 'c13', topic: '数码', ratio: 1.3333, video: true },
+  { id: 'c14', topic: '穿搭', ratio: 0.75, video: true },
   { id: 'c15', topic: '探店', ratio: 1.3333 },
   { id: 'c16', topic: '探店', ratio: 1 },
 ]);
