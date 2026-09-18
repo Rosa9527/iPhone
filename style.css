@@ -7528,8 +7528,17 @@
   transform: translateX(50%);
 }
 
-/* 城市入口（真机顶栏「盐城」那类：纯文字，不带底色） */
+/* 城市入口（真机顶栏「盐城」那类：纯文字，不带底色）。v0.40.0 起取值跟随
+   「我 · 编辑资料 · IP 属地」，那里最多能写 16 个字，所以这里收住一格：等宽三格里
+   超长就省略号截断（text-overflow 需要 overflow + 定宽，按钮是 inline-block 即可），
+   不换行、不把顶栏撑高。 */
 .iphone-xhs__hdcity {
+  display: block;
+  max-width: 100%;
+  /* flex 项默认 min-width:auto，nowrap 文本的 min-content 就是整行字宽，
+     不写这行它不肯收缩，省略号也就永远不出现（会直接溢出格子）。 */
+  min-width: 0;
+  overflow: hidden;
   padding: 0;
   border: none;
   background: none;
@@ -7538,6 +7547,8 @@
   font-family: inherit;
   font-size: 17px;
   font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 放大镜：真机墨迹 19.7×19.6、右缘止于 x 373.4。图标「圆 + 手柄」加描边后占
@@ -7924,10 +7935,19 @@
 }
 
 .iphone-xhs__me-avatar {
+  border-radius: 50%;
   background:
     radial-gradient(circle at 50% 32%, #fff 0 17%, rgba(255, 255, 255, 0) 17.5%),
     radial-gradient(ellipse 40% 26% at 50% 86%, #fff 0 86%, rgba(255, 255, 255, 0) 92%),
     #d8d8d8;
+  /* 自定义 / 上传的「我」头像是内联 background-image（会盖掉上面的渐变底），尺寸与
+     平铺必须显式收住，而且必须排在上面那条 background shorthand 之后——shorthand
+     会把这三样重置回 auto / 0% 0% / repeat，于是 256px 的裁剪结果按原始像素平铺、
+     圆里只露出左上角一小块（v0.39.1 修复：上传头像「截取没问题但显示不对」就是这个；
+     QQ / 微信的同类规则见各自的 __me-avatar）。 */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 .iphone-xhs__me-avatar--lg {
@@ -9480,6 +9500,33 @@
   font-family: inherit;
   font-size: 14.5px;
   text-align: right;
+}
+
+/* 性别（v0.39.0）：不是输入框，是小号胶囊选择（♀ 女 / ♂ 男 / 保密），
+   选中态用小红书红——与右上角「保存」同一套粉底红字 */
+.iphone-xhs__prof-seg {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.iphone-xhs__prof-segbtn {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 13px;
+  background: #f2f2f4;
+  color: #4a4a4f;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.25;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.iphone-xhs__prof-segbtn.is-active {
+  background: #fff2f3;
+  color: #ff2442;
+  font-weight: 600;
 }
 
 .iphone-xhs__prof-bio {

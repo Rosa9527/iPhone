@@ -41,6 +41,11 @@ function iphoneXhsIcons() {
     atSquare: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a2.6 2.6 0 0 0 5.2 0V12a9.2 9.2 0 1 0-3.6 7.3"/></g></svg>',
     // 笔记详情 / 发布页：编辑 / 相机 / 定位 / 私密
     edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.6 4.6l3.8 3.8L9 18.8l-4.6.8.8-4.6z"/><path d="M13.4 6.8l3.8 3.8"/></g></svg>',
+    // 头像裁剪滑杆两端：缩小 / 放大（放大镜内加减号，与 QQ / 微信同款图形）。
+    // 共用组件 iphoneQqBuildAvatarCropper 就是从这里取图标，缺了会渲染成字面量
+    // 「undefined」（v0.39.1 修复）。
+    zoomOut: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.8" cy="10.8" r="5.6"/><path d="M15.1 15.1l4.2 4.2"/><path d="M8.4 10.8h4.8"/></g></svg>',
+    zoomIn: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.8" cy="10.8" r="5.6"/><path d="M15.1 15.1l4.2 4.2"/><path d="M8.4 10.8h4.8M10.8 8.4v4.8"/></g></svg>',
     camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.7 6.8 10 4.6h4l1.3 2.2"/><rect x="3.4" y="6.8" width="17.2" height="13" rx="3"/><circle cx="12" cy="13" r="3.3"/></g></svg>',
     location: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21s-6.4-5.3-6.4-10.4a6.4 6.4 0 0 1 12.8 0C18.4 15.7 12 21 12 21z"/><circle cx="12" cy="10.4" r="2.4"/></g></svg>',
     lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="5.2" y="10.4" width="13.6" height="9.4" rx="2.4"/><path d="M8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6"/></g></svg>',
@@ -81,12 +86,34 @@ function iphoneNormalizeXhsAvatar(raw) {
   return null;
 }
 
+// 性别（v0.39.0）：只认 female（♀ 女）/ male（♂ 男）/ secret（保密）三个值，
+// 空串 = 没填过——老存档没有这一栏，展示时回退 IPHONE_XHS_ME.gender 那个默认值，
+// 而「保密」是玩家明确选过的，不会回退。AI 或旧数据写成中文 / 符号也认。
+function iphoneNormalizeXhsGender(raw) {
+  const value = String(raw ?? '').trim().toLowerCase();
+  if (value === 'male' || value === '♂' || value === '男') return 'male';
+  if (value === 'secret' || value === '保密' || value === '隐藏') return 'secret';
+  if (value === 'female' || value === '♀' || value === '女') return 'female';
+  return '';
+}
+
+// 年龄（v0.39.0）：只留数字，截到 1~IPHONE_XHS_AGE_MAX；0 = 没填。
+function iphoneNormalizeXhsAge(raw) {
+  const digits = String(raw ?? '').replace(/[^\d]/g, '');
+  if (!digits) return 0;
+  const value = Math.floor(Number(digits));
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.min(IPHONE_XHS_AGE_MAX, value);
+}
+
 function iphoneNormalizeXhsProfile(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
   return {
     name: String(source.name || '').trim().slice(0, 24),
     xhsId: String(source.xhsId || '').replace(/[^\w.-]/g, '').slice(0, 32),
     ip: String(source.ip || '').trim().slice(0, 16),
+    gender: iphoneNormalizeXhsGender(source.gender),
+    age: iphoneNormalizeXhsAge(source.age),
     bio: String(source.bio || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120),
     avatar: iphoneNormalizeXhsAvatar(source.avatar),
   };
@@ -286,7 +313,7 @@ function iphoneSetXhsData(xhsScreen, next) {
 }
 
 // 取「我」的小红书资料（随聊天文件存取）：昵称默认跟随酒馆 {{user}}，小红书号与
-// IP 属地留空回退占位演示值；顺手把脏数据写回聊天文件。
+// IP 属地留空回退占位演示值，性别没填过回退默认值；顺手把脏数据写回聊天文件。
 function iphoneGetXhsProfile() {
   const storage = iphoneGetQqStorage();
   const normalized = iphoneNormalizeXhsProfile(storage.xhsProfile);
@@ -299,9 +326,20 @@ function iphoneGetXhsProfile() {
     name: normalized.name || iphoneGetTavernUserName() || IPHONE_QQ_ME_FALLBACK_NAME,
     xhsId: normalized.xhsId || IPHONE_XHS_ME.xhsId,
     ip: normalized.ip || IPHONE_XHS_ME.ip,
+    gender: normalized.gender || IPHONE_XHS_ME.gender,
+    age: normalized.age,
     bio: normalized.bio,
     avatar: normalized.avatar,
   };
+}
+
+// 「我」页标签行里的性别 + 年龄标签（v0.39.0）：真机把性别符号与年龄并排写在同一个
+// 标签里（如「♀ 25岁」）——IP 属地在上面的「小红书号 / IP属地」两行里已经有了，
+// 不再挤进标签。只填年龄就只写「25岁」，性别选保密或只有符号就只写符号；
+// 两样都没有时返回空串，调用方跳过这个标签。
+function iphoneXhsGenderTag(profile) {
+  const def = IPHONE_XHS_GENDERS.find((item) => item.id === profile?.gender);
+  return [def?.symbol || '', profile?.age ? `${profile.age}岁` : ''].filter(Boolean).join(' ');
 }
 
 function iphoneGetXhsCustomNick() {
@@ -339,6 +377,11 @@ function iphoneUpdateXhsProfile(xhsScreen, patch) {
   });
   iphoneSaveQqStorage();
   iphoneRefreshXhsMeIdentity(xhsScreen);
+  iphoneRefreshXhsCity(xhsScreen);
+  // 「我」页的标签行（性别 + 年龄）、统计与图墙都是从资料 / 笔记派生的，改完资料要
+  // 整页重渲染一次：只刷身份那几处的话，保存后回到「我」页看到的还是旧标签
+  //（v0.39.0 起标签行装了性别与年龄，改完必须当场对上）。
+  xhsScreen?._renderXhs?.();
 }
 
 // 把「我的头像」应用到节点：内置款式换 CSS 覆盖类，自定义图走内联 background-image，
@@ -367,6 +410,15 @@ function iphoneRefreshXhsMeIdentity(root) {
   root.querySelectorAll('[data-xhs-me-avatar]').forEach((el) => iphoneApplyXhsMeAvatarToEl(el, profile));
   root.querySelectorAll('[data-xhs-me-id]').forEach((el) => { el.textContent = `小红书号：${profile.xhsId}`; });
   root.querySelectorAll('[data-xhs-me-ip]').forEach((el) => { el.textContent = `IP属地：${profile.ip}`; });
+}
+
+// 首页顶栏「发现」右侧那个城市入口（v0.40.0）：取值与「我 · 编辑资料 · IP 属地」
+// 同一个（同一个 iphoneGetXhsProfile().ip，留空时一起回退占位演示值），所以两处永远
+// 一致——改完资料当场刷新，不用等切 Tab；换聊天文件也跟着走。
+function iphoneRefreshXhsCity(root) {
+  if (!root) return;
+  const city = iphoneGetXhsProfile().ip;
+  root.querySelectorAll('[data-xhs-city]').forEach((el) => { el.textContent = city; });
 }
 
 // ---------- 网友池 ----------
@@ -1984,7 +2036,14 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
     const tags = page.querySelector('[data-xhs-me-tags]');
     if (tags) {
       tags.innerHTML = '';
-      for (const tag of [`♀ ${profile.ip}`, '小红书创作者', mine.length ? `笔记 ${mine.length}` : '还没发过笔记']) {
+      // 第一个标签是性别 + 年龄（真机写法：♀ 25岁，v0.39.0 起 IP 属地不再挤在这里，
+      // 它在上面的「小红书号 / IP属地」两行里）；两样都没填就没有这个标签。
+      const labels = [
+        iphoneXhsGenderTag(profile),
+        '小红书创作者',
+        mine.length ? `笔记 ${mine.length}` : '还没发过笔记',
+      ].filter(Boolean);
+      for (const tag of labels) {
         const chip = document.createElement('span');
         chip.className = 'iphone-xhs__me-tag';
         chip.textContent = tag;
@@ -2174,6 +2233,16 @@ function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
         <span class="iphone-xhs__prof-label">小红书号</span>
         <input class="iphone-xhs__prof-input" type="text" data-field="xhsId" maxlength="32" placeholder="字母 / 数字" autocomplete="off" spellcheck="false">
       </label>
+      <div class="iphone-xhs__prof-row iphone-xhs__prof-row--gender">
+        <span class="iphone-xhs__prof-label">性别</span>
+        <div class="iphone-xhs__prof-seg" data-field="gender">
+          ${IPHONE_XHS_GENDERS.map((item) => `<button type="button" class="iphone-xhs__prof-segbtn" data-gender="${item.id}">${item.symbol ? `${item.symbol} ` : ''}${item.label}</button>`).join('')}
+        </div>
+      </div>
+      <label class="iphone-xhs__prof-row">
+        <span class="iphone-xhs__prof-label">年龄</span>
+        <input class="iphone-xhs__prof-input" type="text" inputmode="numeric" data-field="age" maxlength="3" placeholder="如：25" autocomplete="off">
+      </label>
       <label class="iphone-xhs__prof-row">
         <span class="iphone-xhs__prof-label">IP 属地</span>
         <input class="iphone-xhs__prof-input" type="text" data-field="ip" maxlength="16" placeholder="如：${IPHONE_XHS_ME.ip}" autocomplete="off">
@@ -2182,16 +2251,31 @@ function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
         <span class="iphone-xhs__prof-label">简介</span>
         <textarea class="iphone-xhs__prof-input iphone-xhs__prof-bio" data-field="bio" maxlength="120" rows="3" placeholder="介绍一下自己"></textarea>
       </label>
-      <p class="iphone-xhs__prof-foot">昵称留空时跟随酒馆当前人设名；小红书号与 IP 属地留空时用内置演示值。所有改动即时保存。</p>
+      <p class="iphone-xhs__prof-foot">昵称留空时跟随酒馆当前人设名；小红书号与 IP 属地留空时用内置演示值。性别与年龄显示在「我」页的标签行里（如「♀ 25岁」；年龄留空就只显示性别符号，选「保密」则不显示符号）。点右上角「保存」写回，头像选完即生效。</p>
     </div>
   `;
 
   const inputs = {
     name: view.querySelector('[data-field="name"]'),
     xhsId: view.querySelector('[data-field="xhsId"]'),
+    age: view.querySelector('[data-field="age"]'),
     ip: view.querySelector('[data-field="ip"]'),
     bio: view.querySelector('[data-field="bio"]'),
   };
+
+  // 性别是胶囊选择而不是输入框：与昵称 / 简介同一步，点「保存」才写回（不像头像
+  // 那样选完即生效）。当前选中值存在这个闭包里，refresh() 时按资料重新对齐。
+  const genderButtons = [...view.querySelectorAll('[data-field="gender"] [data-gender]')];
+  let gender = IPHONE_XHS_ME.gender;
+  const refreshGender = () => {
+    for (const btn of genderButtons) btn.classList.toggle('is-active', btn.dataset.gender === gender);
+  };
+  for (const btn of genderButtons) {
+    btn.addEventListener('click', () => {
+      gender = btn.dataset.gender;
+      refreshGender();
+    });
+  }
 
   // 头像选择浮层（小红书款式）：点保存才写回，返回丢弃
   const avatarPicker = iphoneXhsBuildAvatarPicker(icons, {
@@ -2207,13 +2291,18 @@ function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
 
   function refresh() {
     const profile = iphoneGetXhsProfile();
+    const stored = iphoneNormalizeXhsProfile(iphoneGetQqStorage().xhsProfile);
     iphoneRefreshXhsMeIdentity(view);
     inputs.name.value = iphoneGetXhsCustomNick() || '';
     inputs.name.placeholder = profile.name;
-    inputs.xhsId.value = iphoneNormalizeXhsProfile(iphoneGetQqStorage().xhsProfile).xhsId || '';
+    inputs.xhsId.value = stored.xhsId || '';
     inputs.xhsId.placeholder = IPHONE_XHS_ME.xhsId;
-    inputs.ip.value = iphoneNormalizeXhsProfile(iphoneGetQqStorage().xhsProfile).ip || '';
+    inputs.ip.value = stored.ip || '';
     inputs.ip.placeholder = IPHONE_XHS_ME.ip;
+    // 性别没填过时按默认值选中（与「我」页标签行显示的一致），年龄没填就留空
+    gender = profile.gender;
+    refreshGender();
+    inputs.age.value = stored.age ? String(stored.age) : '';
     inputs.bio.value = profile.bio;
   }
 
@@ -2222,6 +2311,8 @@ function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
       name: inputs.name.value.trim(),
       xhsId: inputs.xhsId.value.trim(),
       ip: inputs.ip.value.trim(),
+      gender,
+      age: inputs.age.value.trim(),
       bio: inputs.bio.value.trim(),
     });
     iphoneLog('info', '已保存小红书资料');
@@ -2229,6 +2320,11 @@ function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
   };
   view.querySelector('.iphone-xhs__prof-back').addEventListener('click', () => onClose?.());
   view.querySelector('.iphone-xhs__prof-save').addEventListener('click', save);
+  // 年龄只收数字（归一化还会兜一层，这里让输入当场就干净）
+  inputs.age.addEventListener('input', () => {
+    const clean = inputs.age.value.replace(/[^\d]/g, '').slice(0, 3);
+    if (clean !== inputs.age.value) inputs.age.value = clean;
+  });
   for (const input of Object.values(inputs)) {
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
@@ -2633,6 +2729,8 @@ function buildXhsAppScreen() {
       //   其余情况           → 灰字「关注」（切到关注流时变深并带下划线）
       // 三种元素（关注槽 / 发现 / 城市）在真机上是等距平铺的，发现正好落在屏幕
       // 中线上，所以整行用等宽三格平分；搜索绝对定位钉在最右。
+      // 右格的城市跟随「我 · 编辑资料 · IP 属地」（v0.40.0，同一个资料字段，
+      // 留空时回退占位演示值），太长时由 CSS 省略号收住、不换行不撑格。
       const data = iphoneGetXhsData();
       const unread = iphoneXhsUnreadTotal(data);
       const homeTab = header._homeTab || 'discover';
@@ -2652,7 +2750,7 @@ function buildXhsAppScreen() {
               <button type="button" class="iphone-xhs__hdtab${homeTab === 'discover' ? ' is-active' : ''}" data-htab="discover">发现</button>
             </span>
             <span class="iphone-xhs__hdcell">
-              <button type="button" class="iphone-xhs__hdcity" data-xhs-city>${IPHONE_XHS_CITY_DEFAULT}</button>
+              <button type="button" class="iphone-xhs__hdcity" data-xhs-city>${iphoneGetXhsProfile().ip}</button>
             </span>
           </div>
           <button type="button" class="iphone-xhs__hdsearch" aria-label="搜索">${icons.search}</button>

@@ -586,12 +586,24 @@ const IPHONE_XHS_PRESET_DEFAULT = Object.freeze({
   replyGuidance: IPHONE_XHS_REPLY_GUIDANCE,
   replyFormat: IPHONE_XHS_REPLY_FORMAT,
 });
-// 小红书「我」的资料占位演示值（小红书号 / 属地）：昵称默认跟随酒馆 {{user}}，
-// 头像与简介由玩家在「编辑资料」里改。
+// 小红书「我」的资料占位演示值（小红书号 / 属地 / 性别默认值）：昵称默认跟随酒馆
+// {{user}}，头像、性别、年龄与简介由玩家在「编辑资料」里改。
 const IPHONE_XHS_ME = Object.freeze({
   xhsId: '8823771906',
   ip: '上海',
+  // 性别没填过时的默认值（沿用旧版标签行里那个 ♀）；年龄没有默认，没填就只显示符号。
+  gender: 'female',
 });
+// 小红书「编辑资料」的性别选项（v0.39.0）：真机这一栏是「♀ 女 / ♂ 男 / 保密」，
+// 资料页的标签行取 symbol 与年龄拼成一个标签（如「♀ 25岁」）；保密没有符号，
+// 标签里就只剩年龄（年龄也没填时整个标签不显示）。空串 = 没填过，回退默认值。
+const IPHONE_XHS_GENDERS = Object.freeze([
+  { id: 'female', symbol: '♀', label: '女' },
+  { id: 'male', symbol: '♂', label: '男' },
+  { id: 'secret', symbol: '', label: '保密' },
+]);
+// 年龄的取值范围（归一化时按它截断）：0 = 没填。
+const IPHONE_XHS_AGE_MAX = 120;
 // 小红书「我」的头像款式：v0.31.0 起与 QQ / 微信共用同一份款式表
 //（IPHONE_ME_AVATAR_PRESETS，见上方「内置头像款式」段），不再是独立的一套。
 // 小红书笔记封面图库：模型在生成时报一个「题材」，插件从这里挑同题材的一张
@@ -647,8 +659,9 @@ const IPHONE_XHS_COVERS = Object.freeze([
 // 首页顶部的主频道（关注 / 发现）与「发现」下的题材横滑条（对照真实小红书首屏）：
 // 推荐 = 全部笔记；其余按话题与标题关键词过滤（见 iphoneXhsNoteMatchesChannel）。
 const IPHONE_XHS_CHANNELS = Object.freeze(['推荐', 'RED', '热点', '直播', '短剧', '穿搭']);
-// 首页右上角切换的城市（仅作展示，对照真实小红书的定位入口）。
-const IPHONE_XHS_CITY_DEFAULT = '上海';
+// 首页顶栏「发现」右侧的城市入口（v0.40.0 起跟随「我 · 编辑资料 · IP 属地」，
+// 与资料页同源；留空时用 IPHONE_XHS_ME.ip 那个占位演示值，所以不再单独设常量）。
+// 真机上它是定位入口，这里只作展示。
 // 底部标签栏：首页 / 市集 / 发布 / 消息 / 我（中间是红色圆形「+」发布钮）。
 const IPHONE_XHS_TABS = Object.freeze(['首页', '市集', '发布', '消息', '我']);
 // 笔记详情的默认演示数据：小红书号、点赞/收藏/评论的初始计数量级。
