@@ -1,7 +1,7 @@
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.35.0';
+const IPHONE_MODULE_VERSION = '0.37.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -45,6 +45,15 @@ const IPHONE_HOME_TAP_SPAN = 150;     // 点击生效的横向范围（设计稿
 // 判定「感应带内的这一下是不是压在页面自己的控件上」用（点击让给控件，
 // 上滑不受影响）：日志页底栏的下拉框就压在这条带里，靠它避免误返回。
 const IPHONE_HOME_SKIP_SELECTOR = 'button, a, input, textarea, select, label, [contenteditable], [role="button"], [role="tab"], [role="slider"], [role="switch"]';
+
+// ---------- 鼠标拖拽滚动 ----------
+// 桌面浏览器里 div 不认「按住拖动」——原生滚动只有触摸有，鼠标用户只剩滚轮；而
+// 滚轮落在卡片这类裁剪盒上还容易被吃掉（见 style.css 的 overscroll-behavior 注释）。
+// 这里补一套与触摸同感的拖拽滚动：内容跟手，往上拖看下面的内容。
+// 位移超过阈值才接管：阈值内仍算点击（短按卡片要能打开笔记）。
+const IPHONE_DRAG_SCROLL_SLOP = 4;
+// 在输入框里拖拽是选字，不接管。
+const IPHONE_DRAG_SCROLL_SKIP_SELECTOR = 'input, textarea, [contenteditable]';
 
 // ---------- 悬浮球 ----------
 const IPHONE_BALL_SIZE = 46;
@@ -528,7 +537,7 @@ const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区�
   + '- 「昵称」是发布者：写已有网友名单里的名字，或新造一位网友。\n'
   + '- 「小红书号」「IP」「简介」只有新造网友时才有意义（已有网友沿用 TA 原来的资料），写不写都行。\n'
   + '- 「封面」从这些题材里挑一个最贴合的（只能填题材名）｜'
-  + '美食、宠物、旅行、家居、数码、穿搭、探店。\n'
+  + '美食、宠物、旅行、家居、数码、穿搭、探店、美妆、健身、学习。\n'
   + '- 「标题」一行写完，不要换行；「正文」一行写完，不要换行（可以用逗号分句）。\n'
   + '- 「话题」用 # 开头，2~4 个，用空格分隔。\n'
   + '- 「位置」写城市名（可省略）。\n'
@@ -606,6 +615,34 @@ const IPHONE_XHS_COVERS = Object.freeze([
   { id: 'c14', topic: '穿搭', ratio: 0.75, video: true },
   { id: 'c15', topic: '探店', ratio: 1.3333 },
   { id: 'c16', topic: '探店', ratio: 1 },
+  // v0.36.0 扩库：c17 起新增 26 张，题材从 7 类铺到 11 类——补上小红书生态里
+  // 最高频的美妆 / 健身 / 学习（原来只能落到「随机挑一张」，图文容易对不上）。
+  { id: 'c17', topic: '美妆', ratio: 1 },
+  { id: 'c18', topic: '美妆', ratio: 1 },
+  { id: 'c19', topic: '美妆', ratio: 0.75, video: true },
+  { id: 'c20', topic: '健身', ratio: 1.3333 },
+  { id: 'c21', topic: '健身', ratio: 0.8, video: true },
+  { id: 'c22', topic: '健身', ratio: 1.3333 },
+  { id: 'c23', topic: '学习', ratio: 1 },
+  { id: 'c24', topic: '学习', ratio: 1.3333 },
+  { id: 'c25', topic: '学习', ratio: 0.75, video: true },
+  { id: 'c26', topic: '宠物', ratio: 0.75 },
+  { id: 'c27', topic: '宠物', ratio: 0.8 },
+  { id: 'c28', topic: '宠物', ratio: 1.3333, video: true },
+  { id: 'c29', topic: '旅行', ratio: 1.3333 },
+  { id: 'c30', topic: '旅行', ratio: 1.3333, video: true },
+  { id: 'c31', topic: '旅行', ratio: 1.3333 },
+  { id: 'c32', topic: '家居', ratio: 1 },
+  { id: 'c33', topic: '家居', ratio: 1 },
+  { id: 'c34', topic: '家居', ratio: 1, video: true },
+  { id: 'c35', topic: '数码', ratio: 1.3333, video: true },
+  { id: 'c36', topic: '数码', ratio: 1 },
+  { id: 'c37', topic: '数码', ratio: 0.8, video: true },
+  { id: 'c38', topic: '穿搭', ratio: 0.75, video: true },
+  { id: 'c39', topic: '穿搭', ratio: 1.3333 },
+  { id: 'c40', topic: '探店', ratio: 0.8, video: true },
+  { id: 'c41', topic: '美食', ratio: 0.75 },
+  { id: 'c42', topic: '美食', ratio: 1 },
 ]);
 // 首页顶部的主频道（关注 / 发现）与「发现」下的题材横滑条（对照真实小红书首屏）：
 // 推荐 = 全部笔记；其余按话题与标题关键词过滤（见 iphoneXhsNoteMatchesChannel）。
@@ -633,6 +670,8 @@ const IPHONE_XHS_MSG_ENTRIES = Object.freeze([
   { id: 'follows', label: '新增关注', tone: 'blue' },
   { id: 'comments', label: '评论和@', tone: 'green' },
 ]);
+// 每条入口各存一份「已看过的通知 id」，上限按单类最多 30 条（收集时截断）留足余量。
+const IPHONE_XHS_MSG_READ_CAP = 200;
 // ---------- 淘宝（v0.28.0） ----------
 // 与小红书的异同：同是「下拉刷新调 API 生成内容、点进去看详情」，但淘宝的内容是
 // 商品（价格 / 销量 / 店铺 / 库存属性），详情页带「购买」动作——下单走的是本插件

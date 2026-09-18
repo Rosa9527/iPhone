@@ -1,11 +1,11 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-18 09:15:54 · 文件数: 12 · 指纹: 7790e88c
+// 构建时间: 2026-09-18 14:14:24 · 文件数: 12 · 指纹: 08e7a3f4
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
 const IPHONE_MODULE_NAME = 'iPhone';
 const IPHONE_MODULE_DISPLAY_NAME = 'iPhone';
-const IPHONE_MODULE_VERSION = '0.35.0';
+const IPHONE_MODULE_VERSION = '0.37.0';
 
 // ---------- DOM ID ----------
 // 全部加 iphone- 前缀，避免与宿主（SillyTavern / TauriTavern）或其他扩展冲突。
@@ -49,6 +49,15 @@ const IPHONE_HOME_TAP_SPAN = 150;     // 点击生效的横向范围（设计稿
 // 判定「感应带内的这一下是不是压在页面自己的控件上」用（点击让给控件，
 // 上滑不受影响）：日志页底栏的下拉框就压在这条带里，靠它避免误返回。
 const IPHONE_HOME_SKIP_SELECTOR = 'button, a, input, textarea, select, label, [contenteditable], [role="button"], [role="tab"], [role="slider"], [role="switch"]';
+
+// ---------- 鼠标拖拽滚动 ----------
+// 桌面浏览器里 div 不认「按住拖动」——原生滚动只有触摸有，鼠标用户只剩滚轮；而
+// 滚轮落在卡片这类裁剪盒上还容易被吃掉（见 style.css 的 overscroll-behavior 注释）。
+// 这里补一套与触摸同感的拖拽滚动：内容跟手，往上拖看下面的内容。
+// 位移超过阈值才接管：阈值内仍算点击（短按卡片要能打开笔记）。
+const IPHONE_DRAG_SCROLL_SLOP = 4;
+// 在输入框里拖拽是选字，不接管。
+const IPHONE_DRAG_SCROLL_SKIP_SELECTOR = 'input, textarea, [contenteditable]';
 
 // ---------- 悬浮球 ----------
 const IPHONE_BALL_SIZE = 46;
@@ -532,7 +541,7 @@ const IPHONE_XHS_NOTE_FORMAT = '每篇笔记占一个区块，输出 1~3 个区�
   + '- 「昵称」是发布者：写已有网友名单里的名字，或新造一位网友。\n'
   + '- 「小红书号」「IP」「简介」只有新造网友时才有意义（已有网友沿用 TA 原来的资料），写不写都行。\n'
   + '- 「封面」从这些题材里挑一个最贴合的（只能填题材名）｜'
-  + '美食、宠物、旅行、家居、数码、穿搭、探店。\n'
+  + '美食、宠物、旅行、家居、数码、穿搭、探店、美妆、健身、学习。\n'
   + '- 「标题」一行写完，不要换行；「正文」一行写完，不要换行（可以用逗号分句）。\n'
   + '- 「话题」用 # 开头，2~4 个，用空格分隔。\n'
   + '- 「位置」写城市名（可省略）。\n'
@@ -610,6 +619,34 @@ const IPHONE_XHS_COVERS = Object.freeze([
   { id: 'c14', topic: '穿搭', ratio: 0.75, video: true },
   { id: 'c15', topic: '探店', ratio: 1.3333 },
   { id: 'c16', topic: '探店', ratio: 1 },
+  // v0.36.0 扩库：c17 起新增 26 张，题材从 7 类铺到 11 类——补上小红书生态里
+  // 最高频的美妆 / 健身 / 学习（原来只能落到「随机挑一张」，图文容易对不上）。
+  { id: 'c17', topic: '美妆', ratio: 1 },
+  { id: 'c18', topic: '美妆', ratio: 1 },
+  { id: 'c19', topic: '美妆', ratio: 0.75, video: true },
+  { id: 'c20', topic: '健身', ratio: 1.3333 },
+  { id: 'c21', topic: '健身', ratio: 0.8, video: true },
+  { id: 'c22', topic: '健身', ratio: 1.3333 },
+  { id: 'c23', topic: '学习', ratio: 1 },
+  { id: 'c24', topic: '学习', ratio: 1.3333 },
+  { id: 'c25', topic: '学习', ratio: 0.75, video: true },
+  { id: 'c26', topic: '宠物', ratio: 0.75 },
+  { id: 'c27', topic: '宠物', ratio: 0.8 },
+  { id: 'c28', topic: '宠物', ratio: 1.3333, video: true },
+  { id: 'c29', topic: '旅行', ratio: 1.3333 },
+  { id: 'c30', topic: '旅行', ratio: 1.3333, video: true },
+  { id: 'c31', topic: '旅行', ratio: 1.3333 },
+  { id: 'c32', topic: '家居', ratio: 1 },
+  { id: 'c33', topic: '家居', ratio: 1 },
+  { id: 'c34', topic: '家居', ratio: 1, video: true },
+  { id: 'c35', topic: '数码', ratio: 1.3333, video: true },
+  { id: 'c36', topic: '数码', ratio: 1 },
+  { id: 'c37', topic: '数码', ratio: 0.8, video: true },
+  { id: 'c38', topic: '穿搭', ratio: 0.75, video: true },
+  { id: 'c39', topic: '穿搭', ratio: 1.3333 },
+  { id: 'c40', topic: '探店', ratio: 0.8, video: true },
+  { id: 'c41', topic: '美食', ratio: 0.75 },
+  { id: 'c42', topic: '美食', ratio: 1 },
 ]);
 // 首页顶部的主频道（关注 / 发现）与「发现」下的题材横滑条（对照真实小红书首屏）：
 // 推荐 = 全部笔记；其余按话题与标题关键词过滤（见 iphoneXhsNoteMatchesChannel）。
@@ -637,6 +674,8 @@ const IPHONE_XHS_MSG_ENTRIES = Object.freeze([
   { id: 'follows', label: '新增关注', tone: 'blue' },
   { id: 'comments', label: '评论和@', tone: 'green' },
 ]);
+// 每条入口各存一份「已看过的通知 id」，上限按单类最多 30 条（收集时截断）留足余量。
+const IPHONE_XHS_MSG_READ_CAP = 200;
 // ---------- 淘宝（v0.28.0） ----------
 // 与小红书的异同：同是「下拉刷新调 API 生成内容、点进去看详情」，但淘宝的内容是
 // 商品（价格 / 销量 / 店铺 / 库存属性），详情页带「购买」动作——下单走的是本插件
@@ -13959,12 +13998,57 @@ function iphoneNormalizeXhsData(raw) {
   const following = [...new Set((Array.isArray(source.following) ? source.following : [])
     .map((id) => String(id || '').trim())
     .filter(Boolean))];
+  // 消息未读态：三条聚合入口各自记一串「已点进去看过的通知 id」。通知本身是从
+  // 真实数据（赞 / 收藏 / 关注 / 评论）派生出来的、没有独立实体，所以「已读」只能
+  // 按 id 记账——派生出来的 id 稳定（见 iphoneXhsCollectNotifications），新出现的
+  // 通知不在名单里，于是一眼就能算出未读数。
+  const msgReadSource = source.msgRead && typeof source.msgRead === 'object' ? source.msgRead : {};
+  const msgRead = {};
+  for (const entry of IPHONE_XHS_MSG_ENTRIES) {
+    const list = Array.isArray(msgReadSource[entry.id]) ? msgReadSource[entry.id] : [];
+    msgRead[entry.id] = [...new Set(list.map((id) => String(id || '').trim()).filter(Boolean))]
+      .slice(-IPHONE_XHS_MSG_READ_CAP);
+  }
   return {
     netizens: iphoneXhsPruneNetizens(netizens, notes),
     notes,
     following,
+    msgRead,
     notesFloorSynced: Math.max(0, Math.floor(Number(source.notesFloorSynced) || 0)),
   };
+}
+
+// 未读列表：按类型过滤掉看过的 id（顺序沿用收集时的时序）。没有 msgRead 的老存档
+// 视为全部未读——装上插件时的未读数是真实数据推出来的，不该凭空清零。
+function iphoneXhsUnreadOf(inbox, msgRead, type) {
+  const seen = new Set(msgRead?.[type] || []);
+  return (inbox[type] || []).filter((item) => !seen.has(item.id));
+}
+
+// 未读总数：底栏「消息」数字气泡与首页头像角标都用它。三类都清零 → 0 →
+// 两个气泡一起消失（这就是「三个都点过看了，右下角红点也该消失」）。
+function iphoneXhsUnreadTotal(data) {
+  const inbox = iphoneXhsCollectNotifications(data);
+  return IPHONE_XHS_MSG_ENTRIES
+    .reduce((sum, entry) => sum + iphoneXhsUnreadOf(inbox, data.msgRead, entry.id).length, 0);
+}
+
+// 把某个入口当前的全部通知标记成已读并落盘。返回是否有变化（没变化就不必重渲染）。
+// 在「点开子页」这一刻记账而不是关闭时：真机点进去红点当场就没了。
+function iphoneXhsMarkInboxRead(type) {
+  const data = iphoneGetXhsData();
+  const seen = new Set(data.msgRead[type] || []);
+  const ids = (iphoneXhsCollectNotifications(data)[type] || [])
+    .map((item) => item.id)
+    .filter((id) => !seen.has(id));
+  if (!ids.length) return false;
+  const next = {
+    ...data,
+    msgRead: { ...data.msgRead, [type]: [...(data.msgRead[type] || []), ...ids].slice(-IPHONE_XHS_MSG_READ_CAP) },
+  };
+  iphoneGetQqStorage().xhsData = iphoneNormalizeXhsData(next);
+  iphoneSaveQqStorage();
+  return true;
 }
 
 function iphoneGetXhsData() {
@@ -14173,6 +14257,7 @@ function iphoneXhsCardEstimate(note) {
 
 const IPHONE_XHS_COVER_TOPIC_LABEL = Object.freeze({
   美食: '美食', 宠物: '萌宠', 旅行: '旅行', 家居: '家居', 数码: '数码', 穿搭: '穿搭', 探店: '探店',
+  美妆: '美妆', 健身: '健身', 学习: '学习',
 });
 
 function iphoneXhsCoverTopicLabel(cover) {
@@ -15445,11 +15530,12 @@ function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'iphone-xhs__msg-entry';
-      const count = inbox[entry.id]?.length || 0;
+      // 红点看的是**未读**：这条入口点进去看过之后，红点就没了
+      const unread = iphoneXhsUnreadOf(inbox, data.msgRead, entry.id).length;
       row.innerHTML = `
         <span class="iphone-xhs__msg-icowrap">
           <span class="iphone-xhs__msg-ico ${toneClass[entry.tone] || ''}" aria-hidden="true">${entryIcon[entry.id] || ''}</span>
-          ${count ? `<span class="iphone-xhs__msg-dot"></span>` : ''}
+          ${unread ? `<span class="iphone-xhs__msg-dot"></span>` : ''}
         </span>
         <span class="iphone-xhs__msg-label">${entry.label}</span>
       `;
@@ -15927,6 +16013,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       <button type="button" class="iphone-xhs__prof-save iphone-xhs__compose-pub">发布</button>
     </header>
     <div class="iphone-xhs__compose-body">
+      <div class="iphone-xhs__compose-topics-bar" data-topics></div>
       <div class="iphone-xhs__compose-covers" data-covers></div>
       <div class="iphone-xhs__compose-fields">
         <input class="iphone-xhs__compose-title" type="text" maxlength="${IPHONE_XHS_TITLE_CAP}" placeholder="填写标题会有更多赞哦～" autocomplete="off">
@@ -15939,26 +16026,55 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
         <span>仅自己可见</span>
         <i>${icons.lock}</i>
       </label>
-      <p class="iphone-xhs__compose-foot">封面从内置图库挑选，与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
+      <p class="iphone-xhs__compose-foot">封面从内置图库挑选（42 张，按题材筛选），与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
     </div>
   `;
 
+  // 封面选择：图库扩到 42 张后一次铺满会看花眼，加一排题材筛选（「全部」+ 图库
+  // 里出现过的题材，按首次出现顺序）。筛选只影响显示，选中的那张跨题材保留。
   const coversWrap = view.querySelector('[data-covers]');
+  const topicsWrap = view.querySelector('[data-topics]');
   let coverId = IPHONE_XHS_COVERS[0].id;
+  const coverTopics = [];
   for (const cover of IPHONE_XHS_COVERS) {
+    if (!coverTopics.includes(cover.topic)) coverTopics.push(cover.topic);
+  }
+
+  const coverButtons = IPHONE_XHS_COVERS.map((cover) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `iphone-xhs__compose-cover ${iphoneXhsCoverClass(cover)}${cover.id === coverId ? ' is-active' : ''}`;
     btn.dataset.coverId = cover.id;
-    btn.setAttribute('aria-label', `封面 ${cover.topic}`);
+    btn.dataset.coverTopic = cover.topic;
+    btn.setAttribute('aria-label', `封面 ${iphoneXhsCoverTopicLabel(cover)}`);
     btn.addEventListener('click', () => {
       coverId = cover.id;
-      coversWrap.querySelectorAll('.iphone-xhs__compose-cover').forEach((el) => {
-        el.classList.toggle('is-active', el.dataset.coverId === coverId);
-      });
+      for (const el of coverButtons) el.classList.toggle('is-active', el.dataset.coverId === coverId);
     });
-    coversWrap.appendChild(btn);
+    return btn;
+  });
+
+  const applyTopicFilter = (topic) => {
+    for (const btn of coverButtons) {
+      btn.hidden = Boolean(topic) && btn.dataset.coverTopic !== topic;
+    }
+  };
+
+  for (const topic of ['全部', ...coverTopics]) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `iphone-xhs__compose-topics-chip${topic === '全部' ? ' is-active' : ''}`;
+    chip.textContent = IPHONE_XHS_COVER_TOPIC_LABEL[topic] || topic;
+    chip.dataset.topic = topic;
+    chip.addEventListener('click', () => {
+      topicsWrap.querySelectorAll('.iphone-xhs__compose-topics-chip').forEach((el) => {
+        el.classList.toggle('is-active', el === chip);
+      });
+      applyTopicFilter(topic === '全部' ? '' : topic);
+    });
+    topicsWrap.appendChild(chip);
   }
+  for (const btn of coverButtons) coversWrap.appendChild(btn);
 
   const titleInput = view.querySelector('.iphone-xhs__compose-title');
   const textInput = view.querySelector('.iphone-xhs__compose-text');
@@ -16173,6 +16289,10 @@ function buildXhsAppScreen() {
     icons,
     onOpenNote: openNote,
     onOpenInbox: (type, label) => {
+      // 点进去即算看过：三条聚合入口各自的红点、底栏「消息」的数字气泡、
+      // 首页头像上的「更新」角标都跟着重算（三个都看过 → 底栏红点消失）
+      iphoneXhsMarkInboxRead(type);
+      renderHeaderBadges();
       inboxView._open(type, label);
       inboxView.classList.add('is-open');
       setOverlay(true);
@@ -16226,14 +16346,15 @@ function buildXhsAppScreen() {
   function renderHeader(mode) {
     if (header._mode === mode) return;
     header._mode = mode;
+    header._lastMode = mode;
     if (mode === 'home') {
       // 顶栏左侧那一格（真机 = 「关注」所在的定位点）有两种形态，互斥：
       //   发现流 + 有未读互动 → 我的圆头像，右上角压一枚红色「更新」气泡
       //   其余情况           → 灰字「关注」（切到关注流时变深并带下划线）
       // 三种元素（关注槽 / 发现 / 城市）在真机上是等距平铺的，发现正好落在屏幕
       // 中线上，所以整行用等宽三格平分；搜索绝对定位钉在最右。
-      const notify = iphoneXhsCollectNotifications(iphoneGetXhsData());
-      const unread = (notify.likes?.length || 0) + (notify.follows?.length || 0) + (notify.comments?.length || 0);
+      const data = iphoneGetXhsData();
+      const unread = iphoneXhsUnreadTotal(data);
       const homeTab = header._homeTab || 'discover';
       const showAvatar = unread > 0 && homeTab === 'discover';
       header.innerHTML = `
@@ -16289,31 +16410,38 @@ function buildXhsAppScreen() {
     header.innerHTML = `<p class="iphone-xhs__hdtitle">${mode === 'market' ? '市集' : '消息'}</p>`;
   }
 
+  // 未读数变了（点开某条聚合入口看过、或新通知进来）就重算三处红点：
+  // 首页头像的「更新」角标 / 关注槽的数字气泡 / 底栏「消息」的数字气泡。
+  // 头部的渲染带 _mode 缓存，得先清掉才会真重画。
+  function renderHeaderBadges() {
+    pageMessages._render();
+    header._mode = null;
+    renderHeader(header._lastMode || 'home');
+    refreshMsgBadge();
+  }
+
   // 底部标签栏：真机是纯文字标签（首页 / 市集 / ＋ / 消息 / 我），中间是红色圆角
-  // 方块加号；「消息」有未读时右上角挂一个红色数字气泡
-  const msgUnread = (() => {
-    const inbox = iphoneXhsCollectNotifications(iphoneGetXhsData());
-    return (inbox.likes?.length || 0) + (inbox.follows?.length || 0) + (inbox.comments?.length || 0);
-  })();
+  // 方块加号；「消息」有未读时右上角挂一个红色数字气泡。气泡可增可减（点开某条
+  // 聚合入口就少一批），所以不进 innerHTML、由 refreshMsgBadge 单独维护。
   const tabs = [
     { key: 'home', label: '首页', page: pageHome, head: 'home' },
     { key: 'market', label: '市集', page: pageMarket, head: 'market' },
     { key: 'compose', label: '', icon: icons.plus, page: null, head: '' },
-    { key: 'messages', label: '消息', badge: msgUnread, page: pageMessages, head: 'messages' },
+    { key: 'messages', label: '消息', page: pageMessages, head: 'messages' },
     { key: 'me', label: '我', page: pageMe, head: 'me' },
   ];
   const tabbar = document.createElement('nav');
   tabbar.className = 'iphone-xhs__tabbar';
   const tabButtons = [];
+  let msgTabEl = null;
   tabs.forEach((tab, i) => {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = `iphone-xhs__tab${tab.key === 'compose' ? ' iphone-xhs__tab--compose' : ''}${i === 0 ? ' is-active' : ''}`;
     el.innerHTML = tab.key === 'compose'
       ? `<span class="iphone-xhs__tab-plus" aria-hidden="true">${tab.icon}</span>`
-      : `<span class="iphone-xhs__tab-label">${tab.label}</span>${
-        tab.badge ? `<span class="iphone-xhs__tab-badge">${tab.badge > 99 ? '99+' : tab.badge}</span>` : ''
-      }`;
+      : `<span class="iphone-xhs__tab-label">${tab.label}</span>`;
+    if (tab.key === 'messages') msgTabEl = el;
     el.addEventListener('click', () => {
       if (tab.key === 'compose') {
         composeView._open();
@@ -16334,6 +16462,23 @@ function buildXhsAppScreen() {
     tabbar.appendChild(el);
   });
 
+  // 「消息」数字气泡：未读为 0 就整个摘掉（三类都点进去看过之后，底栏红点跟着消失）
+  function refreshMsgBadge() {
+    if (!msgTabEl) return;
+    const unread = iphoneXhsUnreadTotal(iphoneGetXhsData());
+    let badge = msgTabEl.querySelector('.iphone-xhs__tab-badge');
+    if (!unread) {
+      badge?.remove();
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'iphone-xhs__tab-badge';
+      msgTabEl.appendChild(badge);
+    }
+    badge.textContent = unread > 99 ? '99+' : String(unread);
+  }
+
   function switchXhsTab(index) {
     if (tabButtons[index]) tabButtons[index].click();
   }
@@ -16351,9 +16496,10 @@ function buildXhsAppScreen() {
 
   screen._renderXhs = () => {
     pageHome._render();
-    pageMessages._render();
     pageMe._render();
     noteView._render();
+    // 消息页与三处红点都随数据（含未读态）走，一并在这里刷新
+    renderHeaderBadges();
   };
   // 给本地测试台（test.html）的深链用：切 Tab / 打开第 N 篇笔记 / 各覆盖层
   screen._switchXhsTab = switchXhsTab;
@@ -16376,6 +16522,9 @@ function buildXhsAppScreen() {
   };
   screen._openXhsInbox = (type) => {
     const entry = IPHONE_XHS_MSG_ENTRIES.find((e) => e.id === type) || IPHONE_XHS_MSG_ENTRIES[0];
+    // 与真点一次聚合入口同一条路径：看过了 → 该入口红点清掉
+    iphoneXhsMarkInboxRead(entry.id);
+    renderHeaderBadges();
     inboxView._open(entry.id, entry.label);
     inboxView.classList.add('is-open');
     setOverlay(true);
@@ -16383,6 +16532,7 @@ function buildXhsAppScreen() {
 
   renderHeader('home');
   pageHome._render();
+  refreshMsgBadge();
   pageMessages._render();
   pageMe._render();
   iphoneRefreshXhsMeIdentity(screen);
@@ -16430,13 +16580,21 @@ function iphoneTaobaoIcons() {
     plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.4v13.2M5.4 12h13.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.6 4.6 4.4L19 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     share: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6v11.2"/><path d="m8.2 7.2 3.8-3.6 3.8 3.6"/><path d="M5.4 13.4v5.4a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8v-5.4"/></g></svg>',
-    // 服务行：店铺 / 客服 / 收藏 / 足迹 / 退款 / 物流 / 待付款 / 待收货 / 评价 / 红包
+    // 服务行：店铺 / 客服 / 收藏 / 足迹 / 退款（￥圆，兼作五格的「退款/售后」）/ 物流
+    // / 待付款 / 待收货 / 评价 / 红包
     shop: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3.8 9.4 5.4 4.6h13.2l1.6 4.8"/><path d="M4.8 9.4v9.2a1 1 0 0 0 1 1h12.4a1 1 0 0 0 1-1V9.4"/><path d="M9.6 19.6v-5.4h4.8v5.4"/></g></svg>',
     service: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.6 14.6v-3a7.4 7.4 0 0 1 14.8 0v3"/><rect x="2.8" y="12.6" width="3.6" height="5.6" rx="1.6"/><rect x="17.6" y="12.6" width="3.6" height="5.6" rx="1.6"/><path d="M19.4 18.2v.8a2.4 2.4 0 0 1-2.4 2.4h-2.6"/></g></svg>',
     star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.2l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     history: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 12a8.2 8.2 0 1 0 2.4-5.8"/><path d="M3.6 4.6v3.6h3.6"/><path d="M12 7.8V12l3 1.8"/></g></svg>',
-    refund: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 12a8.2 8.2 0 1 0 2.4-5.8"/><path d="M3.6 4.6v3.6h3.6"/><path d="m9.4 12.2 1.9 1.9 3.5-3.7"/></g></svg>',
+    refund: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.8"/><path d="M9.28 7.65 11.82 10.2l2.54-2.55"/><path d="M11.82 10.2v6.15"/><path d="M9.46 11.46h4.72"/><path d="M9.46 14.36h4.72"/></g></svg>',
     truck: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 6.4h10.4v9.2H2.8z"/><path d="M13.2 9.2h3.6l3 3.2v3.2h-6.6z"/><circle cx="6.6" cy="18" r="1.7"/><circle cx="16.4" cy="18" r="1.7"/></g></svg>',
+    // 「我的订单」五档（v0.37.0 起照真机截图逐像素重定）：钱夹 / 纸箱 / 货车 /
+    // 对话框 / ￥圆。五张都按同一口径画：线宽 1.8，墨迹落在 viewBox 的 1.3~22.7
+    // （真机量得 58.7 截图像素 ≈ 21.4 设计像素），所以 CSS 里给 24px 就是真机大小。
+    orderUnpaid: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.85" stroke-linejoin="round"><rect x="2.2" y="2.2" width="19.6" height="19.6" rx="2.85"/><path d="M21.8 8.62h-5.33a3.38 3.38 0 0 0 0 6.76h5.33"/></g></svg>',
+    orderPaid: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.85" stroke-linejoin="round"><rect x="2.2" y="2.2" width="19.6" height="19.6" rx="2.85"/><path d="M8.62 2.2v8.3l3.19-1.85 3.19 1.85V2.2"/></g></svg>',
+    orderShipped: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.72 2.07H7.4a1.35 1.35 0 0 0-1 1.53l-4.33 2.45v11.25a2.5 2.5 0 0 0 2.5 2.5"/><path d="M21.72 3.07v14.23a2.5 2.5 0 0 1-2.5 2.5"/><path d="M7.13 3.4v7.88H2.07"/><circle cx="7.31" cy="18.5" r="2.53" fill="#fff"/><circle cx="16.43" cy="18.5" r="2.53" fill="#fff"/><path d="M7.31 18.5h9.12"/></g></svg>',
+    orderReview: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2.21 14.89V6.21a4 4 0 0 1 4-4h11.22a4 4 0 0 1 4 4v8.68a4 4 0 0 1-4 4h-4.16l-1.45 1.81-1.82-1.81H6.21a4 4 0 0 1-4-4z"/><g fill="currentColor" stroke="none"><circle cx="6.74" cy="11.09" r="1.27"/><circle cx="11.82" cy="11.09" r="1.27"/><circle cx="16.9" cy="11.09" r="1.27"/></g></g></svg>',
     wallet: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 7.6a2.6 2.6 0 0 1 2.6-2.6h9.8a1.6 1.6 0 0 1 1.6 1.6v1.4"/><rect x="3.6" y="7.4" width="16.8" height="12.2" rx="2.6"/><path d="M15.4 13.5h1.6"/></g></svg>',
     // 空态：购物袋
     bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4.6 8h14.8l-1.2 11.2a1.8 1.8 0 0 1-1.8 1.6H7.6a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.6 10.4V6.6a3.4 3.4 0 0 1 6.8 0v3.8"/></g></svg>',
@@ -18091,18 +18249,22 @@ function iphoneTaobaoBuildMePage({ icons, screen, onOpenOrders, onOpenWallet, on
     walletCard.addEventListener('click', () => onOpenWallet?.());
     scroll.appendChild(walletCard);
 
-    // 订单状态行：待付款 / 待发货 / 待收货 / 评价（计数从订单里派生）
+    // 订单状态行：待付款 / 待发货 / 待收货 / 待评价 / 退款售后 五格（计数从订单里
+    // 派生）。v0.37.0 起照真机截图补上每格的图标，标签也跟着真机改成「待评价」
+    // 与「退款/售后」（斜杠两侧真机不留空格）——退款售后没有自己的数据，点进去
+    // 是订单页的一张说明卡（真机上它也是独立的售后单列表，这里只做入口）。
     const states = [
-      { key: 'unpaid', label: '待付款', count: 0 },
-      { key: 'paid', label: '待发货', count: data.orders.filter((o) => o.status === 'paid').length },
-      { key: 'shipped', label: '待收货', count: data.orders.filter((o) => o.status === 'shipped').length },
-      { key: 'review', label: '评价', count: data.orders.filter((o) => o.status === 'done').length },
+      { key: 'unpaid', icon: 'orderUnpaid', label: '待付款', count: 0 },
+      { key: 'paid', icon: 'orderPaid', label: '待发货', count: data.orders.filter((o) => o.status === 'paid').length },
+      { key: 'shipped', icon: 'orderShipped', label: '待收货', count: data.orders.filter((o) => o.status === 'shipped').length },
+      { key: 'review', icon: 'orderReview', label: '待评价', count: data.orders.filter((o) => o.status === 'done').length },
+      { key: 'afterSale', icon: 'refund', label: '退款/售后', count: 0 },
     ];
     const orderCard = document.createElement('section');
     orderCard.className = 'iphone-tb__me-orders';
     const orderHead = document.createElement('p');
     orderHead.className = 'iphone-tb__me-orders-head';
-    orderHead.innerHTML = `<span>我的订单</span><button type="button" class="iphone-tb__me-more">查看全部 ${icons.chevronRight}</button>`;
+    orderHead.innerHTML = `<span>我的订单</span><button type="button" class="iphone-tb__me-more">全部 ${icons.chevronRight}</button>`;
     orderCard.appendChild(orderHead);
     const orderGrid = document.createElement('div');
     orderGrid.className = 'iphone-tb__me-order-grid';
@@ -18110,7 +18272,10 @@ function iphoneTaobaoBuildMePage({ icons, screen, onOpenOrders, onOpenWallet, on
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'iphone-tb__me-order-cell';
-      cell.innerHTML = `<span>${state.label}</span>${state.count ? `<i>${state.count}</i>` : ''}`;
+      // 角标只挂在图标右上（真机如此）：有计数才渲染，没有就不占位。
+      cell.innerHTML = `<span class="iphone-tb__me-order-ico" aria-hidden="true">${icons[state.icon]}`
+        + `${state.count ? `<i>${state.count}</i>` : ''}</span>`
+        + `<span class="iphone-tb__me-order-label">${state.label}</span>`;
       cell.addEventListener('click', () => onOpenOrders?.(state.key));
       orderGrid.appendChild(cell);
     }
@@ -18147,8 +18312,8 @@ function iphoneTaobaoBuildMePage({ icons, screen, onOpenOrders, onOpenWallet, on
 }
 
 // ---------- 订单列表（子页） ----------
-// 待付款 / 待发货 / 待收货 / 评价 / 全部 + 收藏 / 足迹视图：同一个列表骨架，
-// 按 key 换数据源。订单行可以「确认收货」（就地改状态并同步楼层）。
+// 全部 / 待付款 / 待发货 / 待收货 / 待评价 / 退款售后 + 收藏 / 足迹 / 购物车视图：
+// 同一个列表骨架，按 key 换数据源。订单行可以「确认收货」（就地改状态并同步楼层）。
 function iphoneTaobaoBuildOrdersView({ icons, screen, onClose, onOpenProduct }) {
   const view = document.createElement('div');
   view.className = 'iphone-tb__orders';
@@ -18163,7 +18328,7 @@ function iphoneTaobaoBuildOrdersView({ icons, screen, onClose, onOpenProduct }) 
   const scrollEl = view.querySelector('.iphone-tb__orders-scroll');
   const KEY_LABEL = {
     all: '全部订单', unpaid: '待付款', paid: '待发货', shipped: '待收货', review: '待评价',
-    star: '我的收藏', history: '我的足迹', cart: '购物车',
+    afterSale: '退款/售后', star: '我的收藏', history: '我的足迹', cart: '购物车',
   };
 
   function render() {
@@ -18171,6 +18336,16 @@ function iphoneTaobaoBuildOrdersView({ icons, screen, onClose, onOpenProduct }) 
     titleEl.textContent = KEY_LABEL[key] || '订单';
     const data = iphoneGetTaobaoData();
     scrollEl.innerHTML = '';
+    // 退款 / 售后：本插件没有真实的售后单（退款要动微信零钱余额，属于剧情事件，
+    // 交给模型在对话里推进），所以这一格给张说明卡，不假装有数据。
+    if (key === 'afterSale') {
+      const card = document.createElement('div');
+      card.className = 'iphone-tb__aftersale';
+      card.innerHTML = `${icons.refund}<p>还没有退款 / 售后中的订单</p>`
+        + '<em>要退哪笔订单，先在对话里说一声——退款会从微信零钱原路退回。</em>';
+      scrollEl.appendChild(card);
+      return;
+    }
     if (key === 'star' || key === 'history') {
       const list = key === 'star'
         ? data.products.filter((p) => p.starMine)
@@ -18620,6 +18795,7 @@ function createIphoneUi() {
   initIphoneClock();
   initIphoneBattery();
   initIphoneGestures(overlay);
+  initIphoneDragScroll(overlay);
   return overlay;
 }
 
@@ -18701,13 +18877,20 @@ function initIphoneBattery() {
 // ---------- 缩放适配 ----------
 // stage 是 flex 居中的定位盒，尺寸 = 设计稿外框 × scale；device 以左上角为原点
 // 缩放，避免 transform scale 后布局盒仍占原尺寸导致溢出。
+//
+// 可用空间取遮罩自身的盒子而不是 window.innerWidth / innerHeight：遮罩由 CSS 按
+// 视口单位铺满（见 style.css 的 .iphone-overlay），量它才与整机实际所在的容器
+// 一致——移动端地址栏收放、宿主给 body 设 fixed 等情况下 innerHeight 与遮罩
+// 高度不总是相等，按 innerHeight 算会让整机比遮罩略大、上下被裁掉一截。
 function fitIphoneStage() {
   const stage = getIphoneStage();
   if (!stage) return;
   const outerW = IPHONE_DESIGN_W + IPHONE_FRAME_PADDING * 2;
   const outerH = IPHONE_DESIGN_H + IPHONE_FRAME_PADDING * 2;
-  const availW = window.innerWidth - IPHONE_EDGE_GAP * 2;
-  const availH = window.innerHeight - IPHONE_EDGE_GAP * 2;
+  // 遮罩未装配 / 尚未布局（宽高为 0）时回退到窗口尺寸。
+  const box = getIphoneOverlay()?.getBoundingClientRect?.();
+  const availW = (box?.width || window.innerWidth) - IPHONE_EDGE_GAP * 2;
+  const availH = (box?.height || window.innerHeight) - IPHONE_EDGE_GAP * 2;
   const scale = Math.min(availW / outerW, availH / outerH, IPHONE_SCALE_MAX);
   iphoneScale = scale;
   stage.style.width = `${outerW * scale}px`;
@@ -18849,6 +19032,113 @@ function iphoneRebuildActiveApp() {
   iphoneLog('info', `聊天已切换，重建应用: ${iphoneActiveApp.name}`);
 }
 
+// ---------- 鼠标拖拽滚动 ----------
+// 触摸端的上下滑动是浏览器原生的（滚动容器 + touchmove 默认行为），桌面端缺的
+// 就是这一条：鼠标按住拖动在 div 上什么也不做，用户于是「长按拖动滑不动」。
+// 这里给鼠标补上：按下后位移超过阈值即接管这一段拖动，按指针位移反向滚动最近的
+// 可滚动祖先，松手释放。阈值以内仍算点击（短按卡片要能打开笔记），所以只在真正
+// 动起来之后才吞掉随后的 click。
+//
+// 三种情况不接管，否则会跟别人抢手势：
+// - 触摸 / 手写笔：原生滚动就够，重复处理反而打架，只认 pointerType === 'mouse'；
+// - 起点在屏幕底部感应带（Home 条那一带）：真机从那儿上滑是返回主屏，
+//   手势归 phone.js 的 Home 手势，鼠标不该例外；
+// - 落点在自己管拖动的地方（输入框选字、`touch-action: none` 的自绘拖动区，
+//   如头像裁剪舞台、悬浮球）：那些元素自带指针逻辑。
+// 从落点往上找最近的可滚动祖先。搜索范围**止于屏幕**：走到机身之外就可能摸到
+// 宿主页面自己的滚动容器，鼠标在手机里拖一下会把酒馆的聊天记录一起拖走。
+function iphoneFindScrollable(node) {
+  for (let el = node; el && el.id !== IPHONE_SCREEN_ID; el = el.parentElement) {
+    const style = globalThis.getComputedStyle?.(el);
+    if (!style) return null;
+    if (style.overflowY !== 'auto' && style.overflowY !== 'scroll') continue;
+    if (el.scrollHeight - el.clientHeight > 1) return el;
+  }
+  return null;
+}
+
+function initIphoneDragScroll(overlay) {
+  const screen = getIphoneScreen();
+  let drag = null;
+
+  // 起点是否落在 Home 感应带里（与 Home 手势同一套换算，见 initIphoneGestures）。
+  const inHomeZone = (y) => {
+    if (!screen) return false;
+    const rect = screen.getBoundingClientRect();
+    if (!rect.height) return false;
+    const zone = Math.max(IPHONE_HOME_ZONE_H * (iphoneScale || 1), IPHONE_HOME_ZONE_H_MIN);
+    return rect.bottom - y <= zone;
+  };
+
+  // 自己管拖动的元素（`touch-action: none` 的自绘拖动区，如头像裁剪舞台）：
+  // 往祖辈查，落点常是舞台里的图片而不是舞台本身。
+  const ownsItsDrag = (node) => {
+    for (let el = node; el && el !== screen; el = el.parentElement) {
+      if (globalThis.getComputedStyle?.(el)?.touchAction === 'none') return true;
+    }
+    return false;
+  };
+
+  const onPointerDown = (event) => {
+    drag = null;
+    if (event.button !== 0 || event.pointerType !== 'mouse') return;
+    if (!isIphoneOpen()) return;
+    const target = event.target;
+    if (!target || target.nodeType !== 1) return;
+    // 只认屏幕内的按下：机身之外（遮罩空白）拖动不该带动任何东西。
+    if (!screen?.contains?.(target)) return;
+    if (target.closest?.(IPHONE_DRAG_SCROLL_SKIP_SELECTOR)) return;
+    if (ownsItsDrag(target) || inHomeZone(event.clientY)) return;
+    drag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      // 按「起手点」找滚动区，而不是拖动途中的落点：从底栏 / 顶栏这种不滚动的
+      // 地方起手就什么也不滚（真机同款），拖出滚动区之后也还是原来那个列表在滚。
+      target,
+      scroller: null,
+      scrollTop: 0,
+      active: false,
+    };
+  };
+
+  const onPointerMove = (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const dy = event.clientY - drag.startY;
+    const dx = event.clientX - drag.startX;
+    if (!drag.active) {
+      // 竖直位移还不够（或横向更大）时不接管：留给点开卡片 / 横向滑频道条。
+      if (Math.abs(dy) < IPHONE_DRAG_SCROLL_SLOP || Math.abs(dy) <= Math.abs(dx)) return;
+      drag.scroller = iphoneFindScrollable(drag.target);
+      if (!drag.scroller) { drag = null; return; }
+      drag.active = true;
+      drag.scrollTop = drag.scroller.scrollTop;
+      drag.scroller.classList.add('is-drag-scrolling');
+    }
+    // 内容跟手：往上拖（dy < 0）看下面的内容，滚动量取反。
+    const want = drag.scrollTop - dy;
+    drag.scroller.scrollTop = want;
+    // 撞到顶 / 底之后把基准跟着走，回拖时不用先把空走的那段补回来。
+    if (drag.scroller.scrollTop !== want) drag.scrollTop = drag.scroller.scrollTop + dy;
+    event.preventDefault();
+  };
+
+  const endDrag = (event) => {
+    if (!drag || (event?.pointerId != null && event.pointerId !== drag.pointerId)) return;
+    const wasActive = drag.active;
+    drag.scroller?.classList.remove('is-drag-scrolling');
+    drag = null;
+    // 真正拖动过才吞掉随后的 click：阈值内的短按是点击，不能拦。
+    if (wasActive) iphoneSwallowClickUntil = Date.now() + 350;
+  };
+
+  overlay.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+  window.addEventListener('blur', () => endDrag(null));
+}
+
 // ---------- 手势 ----------
 // 交互入口统一收口：应用内 Home 条 → 返回主屏；主屏 Home 条 / 遮罩空白 / Esc → 收起整机。
 //
@@ -18870,6 +19160,11 @@ function iphoneRebuildActiveApp() {
 //   先接住这次滑动并派发 pointercancel，手势在中途被系统收走——触屏上「滑不动」
 //   的根因。被系统中断（来电、切换应用）走 pointercancel 复位，状态不会留到
 //   下一次抬手造成误触发。
+// 手势触发后短时间内吞掉紧跟的 click：返回主屏时手指落点下（应用关闭动画里还挂
+// 着的）底栏按钮 / 主屏图标不该被顺手点一次；鼠标拖拽滚动松手时落点下的卡片
+// 也不该被当成一次点击点开。两处手势共用这一个截止时刻。
+let iphoneSwallowClickUntil = 0;
+
 function isIphoneControlTarget(target) {
   if (!target || target.nodeType !== 1) return false;
   if (target.closest?.(IPHONE_HOME_SKIP_SELECTOR)) return true;
@@ -18903,9 +19198,6 @@ function initIphoneGestures(overlay) {
 
   // tracking 一次只跟一条指针：第二个指头按下即取消，多指拖拽不误判。
   let tracking = null;
-  // 手势触发后短时间内吞掉紧跟的 click：避免「返回主屏」的同时又把手指
-  // 落点下的卡片 / 图标也点了一次（鼠标拖拽与触屏甩动都可能补发 click）。
-  let swallowClickUntil = 0;
 
   const resetTracking = () => {
     tracking = null;
@@ -18963,7 +19255,7 @@ function initIphoneGestures(overlay) {
       Date.now() - tracking.startedAt <= IPHONE_HOME_FLICK_MS;
     if (up >= designPx(IPHONE_HOME_SWIPE_UP, IPHONE_HOME_SWIPE_UP_MIN) || flick) {
       tracking.triggered = true;
-      swallowClickUntil = Date.now() + 350;
+      iphoneSwallowClickUntil = Date.now() + 350;
       handleHomeAction();
     }
   };
@@ -18977,7 +19269,7 @@ function initIphoneGestures(overlay) {
     // 位移在容差内、时长够短、起点在指示条中段且没压着控件 → 算点击
     // （按住不放不触发）。
     if (state.canTap && moved <= designPx(IPHONE_HOME_TAP_SLOP, IPHONE_HOME_TAP_SLOP_MIN) && Date.now() - state.startedAt <= IPHONE_HOME_TAP_MS) {
-      swallowClickUntil = Date.now() + 350;
+      iphoneSwallowClickUntil = Date.now() + 350;
       handleHomeAction();
     }
   };
@@ -18996,14 +19288,15 @@ function initIphoneGestures(overlay) {
     if (tracking.startY - touch.clientY > 2) event.preventDefault();
   };
 
-  // 捕获阶段吞掉手势后的那次 click（见 swallowClickUntil）。
+  // 捕获阶段吞掉手势后的那次 click：返回主屏与拖拽滚动都可能紧接着补发一次
+  // click，落点下的卡片 / 图标不该被顺手点开。两处手势共用一个截止时刻。
   const onClickCapture = (event) => {
-    if (!swallowClickUntil) return;
-    if (Date.now() > swallowClickUntil) {
-      swallowClickUntil = 0;
+    if (!iphoneSwallowClickUntil) return;
+    if (Date.now() > iphoneSwallowClickUntil) {
+      iphoneSwallowClickUntil = 0;
       return;
     }
-    swallowClickUntil = 0;
+    iphoneSwallowClickUntil = 0;
     event.stopPropagation();
     event.preventDefault();
   };
@@ -19028,6 +19321,13 @@ function initIphoneGestures(overlay) {
   }
 
   window.addEventListener('resize', () => {
+    if (!isIphoneOpen()) return;
+    fitIphoneStage();
+  });
+
+  // 移动端旋转屏幕、软键盘收放与地址栏伸缩都可能只改视觉视口而不派发 resize：
+  // 补一条 visualViewport 监听（老浏览器没有这个对象就只留 resize）。
+  globalThis.visualViewport?.addEventListener?.('resize', () => {
     if (!isIphoneOpen()) return;
     fitIphoneStage();
   });

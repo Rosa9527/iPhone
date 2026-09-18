@@ -37,13 +37,21 @@ function iphoneTaobaoIcons() {
     plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.4v13.2M5.4 12h13.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.6 4.6 4.4L19 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     share: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6v11.2"/><path d="m8.2 7.2 3.8-3.6 3.8 3.6"/><path d="M5.4 13.4v5.4a1.8 1.8 0 0 0 1.8 1.8h9.6a1.8 1.8 0 0 0 1.8-1.8v-5.4"/></g></svg>',
-    // 服务行：店铺 / 客服 / 收藏 / 足迹 / 退款 / 物流 / 待付款 / 待收货 / 评价 / 红包
+    // 服务行：店铺 / 客服 / 收藏 / 足迹 / 退款（￥圆，兼作五格的「退款/售后」）/ 物流
+    // / 待付款 / 待收货 / 评价 / 红包
     shop: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3.8 9.4 5.4 4.6h13.2l1.6 4.8"/><path d="M4.8 9.4v9.2a1 1 0 0 0 1 1h12.4a1 1 0 0 0 1-1V9.4"/><path d="M9.6 19.6v-5.4h4.8v5.4"/></g></svg>',
     service: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.6 14.6v-3a7.4 7.4 0 0 1 14.8 0v3"/><rect x="2.8" y="12.6" width="3.6" height="5.6" rx="1.6"/><rect x="17.6" y="12.6" width="3.6" height="5.6" rx="1.6"/><path d="M19.4 18.2v.8a2.4 2.4 0 0 1-2.4 2.4h-2.6"/></g></svg>',
     star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.2l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.2l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     history: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 12a8.2 8.2 0 1 0 2.4-5.8"/><path d="M3.6 4.6v3.6h3.6"/><path d="M12 7.8V12l3 1.8"/></g></svg>',
-    refund: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 12a8.2 8.2 0 1 0 2.4-5.8"/><path d="M3.6 4.6v3.6h3.6"/><path d="m9.4 12.2 1.9 1.9 3.5-3.7"/></g></svg>',
+    refund: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.8"/><path d="M9.28 7.65 11.82 10.2l2.54-2.55"/><path d="M11.82 10.2v6.15"/><path d="M9.46 11.46h4.72"/><path d="M9.46 14.36h4.72"/></g></svg>',
     truck: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 6.4h10.4v9.2H2.8z"/><path d="M13.2 9.2h3.6l3 3.2v3.2h-6.6z"/><circle cx="6.6" cy="18" r="1.7"/><circle cx="16.4" cy="18" r="1.7"/></g></svg>',
+    // 「我的订单」五档（v0.37.0 起照真机截图逐像素重定）：钱夹 / 纸箱 / 货车 /
+    // 对话框 / ￥圆。五张都按同一口径画：线宽 1.8，墨迹落在 viewBox 的 1.3~22.7
+    // （真机量得 58.7 截图像素 ≈ 21.4 设计像素），所以 CSS 里给 24px 就是真机大小。
+    orderUnpaid: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.85" stroke-linejoin="round"><rect x="2.2" y="2.2" width="19.6" height="19.6" rx="2.85"/><path d="M21.8 8.62h-5.33a3.38 3.38 0 0 0 0 6.76h5.33"/></g></svg>',
+    orderPaid: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.85" stroke-linejoin="round"><rect x="2.2" y="2.2" width="19.6" height="19.6" rx="2.85"/><path d="M8.62 2.2v8.3l3.19-1.85 3.19 1.85V2.2"/></g></svg>',
+    orderShipped: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.72 2.07H7.4a1.35 1.35 0 0 0-1 1.53l-4.33 2.45v11.25a2.5 2.5 0 0 0 2.5 2.5"/><path d="M21.72 3.07v14.23a2.5 2.5 0 0 1-2.5 2.5"/><path d="M7.13 3.4v7.88H2.07"/><circle cx="7.31" cy="18.5" r="2.53" fill="#fff"/><circle cx="16.43" cy="18.5" r="2.53" fill="#fff"/><path d="M7.31 18.5h9.12"/></g></svg>',
+    orderReview: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2.21 14.89V6.21a4 4 0 0 1 4-4h11.22a4 4 0 0 1 4 4v8.68a4 4 0 0 1-4 4h-4.16l-1.45 1.81-1.82-1.81H6.21a4 4 0 0 1-4-4z"/><g fill="currentColor" stroke="none"><circle cx="6.74" cy="11.09" r="1.27"/><circle cx="11.82" cy="11.09" r="1.27"/><circle cx="16.9" cy="11.09" r="1.27"/></g></g></svg>',
     wallet: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 7.6a2.6 2.6 0 0 1 2.6-2.6h9.8a1.6 1.6 0 0 1 1.6 1.6v1.4"/><rect x="3.6" y="7.4" width="16.8" height="12.2" rx="2.6"/><path d="M15.4 13.5h1.6"/></g></svg>',
     // 空态：购物袋
     bag: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4.6 8h14.8l-1.2 11.2a1.8 1.8 0 0 1-1.8 1.6H7.6a1.8 1.8 0 0 1-1.8-1.6z"/><path d="M8.6 10.4V6.6a3.4 3.4 0 0 1 6.8 0v3.8"/></g></svg>',
@@ -1698,18 +1706,22 @@ function iphoneTaobaoBuildMePage({ icons, screen, onOpenOrders, onOpenWallet, on
     walletCard.addEventListener('click', () => onOpenWallet?.());
     scroll.appendChild(walletCard);
 
-    // 订单状态行：待付款 / 待发货 / 待收货 / 评价（计数从订单里派生）
+    // 订单状态行：待付款 / 待发货 / 待收货 / 待评价 / 退款售后 五格（计数从订单里
+    // 派生）。v0.37.0 起照真机截图补上每格的图标，标签也跟着真机改成「待评价」
+    // 与「退款/售后」（斜杠两侧真机不留空格）——退款售后没有自己的数据，点进去
+    // 是订单页的一张说明卡（真机上它也是独立的售后单列表，这里只做入口）。
     const states = [
-      { key: 'unpaid', label: '待付款', count: 0 },
-      { key: 'paid', label: '待发货', count: data.orders.filter((o) => o.status === 'paid').length },
-      { key: 'shipped', label: '待收货', count: data.orders.filter((o) => o.status === 'shipped').length },
-      { key: 'review', label: '评价', count: data.orders.filter((o) => o.status === 'done').length },
+      { key: 'unpaid', icon: 'orderUnpaid', label: '待付款', count: 0 },
+      { key: 'paid', icon: 'orderPaid', label: '待发货', count: data.orders.filter((o) => o.status === 'paid').length },
+      { key: 'shipped', icon: 'orderShipped', label: '待收货', count: data.orders.filter((o) => o.status === 'shipped').length },
+      { key: 'review', icon: 'orderReview', label: '待评价', count: data.orders.filter((o) => o.status === 'done').length },
+      { key: 'afterSale', icon: 'refund', label: '退款/售后', count: 0 },
     ];
     const orderCard = document.createElement('section');
     orderCard.className = 'iphone-tb__me-orders';
     const orderHead = document.createElement('p');
     orderHead.className = 'iphone-tb__me-orders-head';
-    orderHead.innerHTML = `<span>我的订单</span><button type="button" class="iphone-tb__me-more">查看全部 ${icons.chevronRight}</button>`;
+    orderHead.innerHTML = `<span>我的订单</span><button type="button" class="iphone-tb__me-more">全部 ${icons.chevronRight}</button>`;
     orderCard.appendChild(orderHead);
     const orderGrid = document.createElement('div');
     orderGrid.className = 'iphone-tb__me-order-grid';
@@ -1717,7 +1729,10 @@ function iphoneTaobaoBuildMePage({ icons, screen, onOpenOrders, onOpenWallet, on
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'iphone-tb__me-order-cell';
-      cell.innerHTML = `<span>${state.label}</span>${state.count ? `<i>${state.count}</i>` : ''}`;
+      // 角标只挂在图标右上（真机如此）：有计数才渲染，没有就不占位。
+      cell.innerHTML = `<span class="iphone-tb__me-order-ico" aria-hidden="true">${icons[state.icon]}`
+        + `${state.count ? `<i>${state.count}</i>` : ''}</span>`
+        + `<span class="iphone-tb__me-order-label">${state.label}</span>`;
       cell.addEventListener('click', () => onOpenOrders?.(state.key));
       orderGrid.appendChild(cell);
     }
@@ -1754,8 +1769,8 @@ function iphoneTaobaoBuildMePage({ icons, screen, onOpenOrders, onOpenWallet, on
 }
 
 // ---------- 订单列表（子页） ----------
-// 待付款 / 待发货 / 待收货 / 评价 / 全部 + 收藏 / 足迹视图：同一个列表骨架，
-// 按 key 换数据源。订单行可以「确认收货」（就地改状态并同步楼层）。
+// 全部 / 待付款 / 待发货 / 待收货 / 待评价 / 退款售后 + 收藏 / 足迹 / 购物车视图：
+// 同一个列表骨架，按 key 换数据源。订单行可以「确认收货」（就地改状态并同步楼层）。
 function iphoneTaobaoBuildOrdersView({ icons, screen, onClose, onOpenProduct }) {
   const view = document.createElement('div');
   view.className = 'iphone-tb__orders';
@@ -1770,7 +1785,7 @@ function iphoneTaobaoBuildOrdersView({ icons, screen, onClose, onOpenProduct }) 
   const scrollEl = view.querySelector('.iphone-tb__orders-scroll');
   const KEY_LABEL = {
     all: '全部订单', unpaid: '待付款', paid: '待发货', shipped: '待收货', review: '待评价',
-    star: '我的收藏', history: '我的足迹', cart: '购物车',
+    afterSale: '退款/售后', star: '我的收藏', history: '我的足迹', cart: '购物车',
   };
 
   function render() {
@@ -1778,6 +1793,16 @@ function iphoneTaobaoBuildOrdersView({ icons, screen, onClose, onOpenProduct }) 
     titleEl.textContent = KEY_LABEL[key] || '订单';
     const data = iphoneGetTaobaoData();
     scrollEl.innerHTML = '';
+    // 退款 / 售后：本插件没有真实的售后单（退款要动微信零钱余额，属于剧情事件，
+    // 交给模型在对话里推进），所以这一格给张说明卡，不假装有数据。
+    if (key === 'afterSale') {
+      const card = document.createElement('div');
+      card.className = 'iphone-tb__aftersale';
+      card.innerHTML = `${icons.refund}<p>还没有退款 / 售后中的订单</p>`
+        + '<em>要退哪笔订单，先在对话里说一声——退款会从微信零钱原路退回。</em>';
+      scrollEl.appendChild(card);
+      return;
+    }
     if (key === 'star' || key === 'history') {
       const list = key === 'star'
         ? data.products.filter((p) => p.starMine)

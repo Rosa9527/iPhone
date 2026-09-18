@@ -40,9 +40,24 @@
 }
 
 /* ---------- 全屏遮罩 ---------- */
+/* 宽高写视口单位，**不要用 inset: 0**：宿主酒馆在 ≤1000px 宽度下把 body 设成
+   position: fixed（public/css/mobile-styles.css 的 body 规则），<html> 因此没有
+   在流内的子内容、自动高度塌成 0；而宿主又给 <html> 加了
+   -webkit-transform: translateZ(0)（public/style.css 的 html 规则），
+   <html> 于是成了 fixed 元素的包含块——inset: 0 的 bottom 按它的高度（0）解析，
+   整个遮罩高度归零，flex 居中的整机被顶到屏幕上沿之外、只露出下半截。
+   手机端「手机只能看到一部分」的根因就在这（桌面端 body 不是 fixed，
+   <html> 高度恰好等于视口，所以一直没暴露）。高度用视口单位解析、与包含块
+   无关，包含块塌陷时仍能铺满可见区域；宽度仍用 100%（包含块宽度正常，
+   且比 100vw 安全——视口单位不含滚动条宽度，页面有纵向滚动条时 100vw
+   会多出一条横向滚动条）。 */
 .iphone-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
   z-index: 21000;
   display: flex;
   align-items: center;
@@ -405,6 +420,15 @@
   -webkit-user-select: none;
 }
 
+/* 鼠标拖拽滚动进行中（见 phone.js 的 initIphoneDragScroll）：按住拖动时压掉
+   文本选择与原生图片拖拽——否则鼠标一动就选出一片蓝、图片还会被拖出虚影。 */
+.iphone-app-layer .is-drag-scrolling,
+.iphone-app-layer .is-drag-scrolling * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
 /* ---------- 应用层 ---------- */
 .iphone-app-layer {
   position: absolute;
@@ -417,10 +441,13 @@
 }
 
 /* 应用内滚到列表尽头继续滑时不把滚动链甩给宿主页面（整页跟着跑 / 触发宿主
-   的滚动）。overscroll-behavior 只对滚动容器本身生效，父层设了没用，所以按
-   后代逐个铺——新加的滚动容器不用再单独补。 */
-.iphone-app-layer,
-.iphone-app-layer * {
+   的滚动）。只在机身与图层这两层咬住，**不能往下铺**：overscroll-behavior 由
+   内向外找最近的滚动容器，而 overflow: hidden 的裁剪盒（卡片、列表行…）也是
+   滚动容器——早先按 `.iphone-app-layer *` 逐后代铺时，滚轮压在卡片上就被它
+   就地吃掉，只有卡片之间的缝能滚（小红书「滚轮 / 拖动滑不动」的根因）。
+   机身是最外层：内层列表还能滚时轮不到它，滚不动了才在这里落地，宿主收不到。 */
+.iphone-screen,
+.iphone-app-layer {
   overscroll-behavior: contain;
 }
 
@@ -7968,7 +7995,7 @@
 }
 
 
-/* ---------- 笔记封面图库（16 张，题材见 IPHONE_XHS_COVERS） ---------- */
+/* ---------- 笔记封面图库（42 张，题材见 IPHONE_XHS_COVERS） ---------- */
 .iphone-xhs__note-image {
   position: relative;
   width: 100%;
@@ -8040,6 +8067,110 @@
 
 .iphone-xhs__cover--c16 {
   background-image: url('assets/xhs-cover-16.jpg');
+}
+
+.iphone-xhs__cover--c17 {
+  background-image: url('assets/xhs-cover-17.jpg');
+}
+
+.iphone-xhs__cover--c18 {
+  background-image: url('assets/xhs-cover-18.jpg');
+}
+
+.iphone-xhs__cover--c19 {
+  background-image: url('assets/xhs-cover-19.jpg');
+}
+
+.iphone-xhs__cover--c20 {
+  background-image: url('assets/xhs-cover-20.jpg');
+}
+
+.iphone-xhs__cover--c21 {
+  background-image: url('assets/xhs-cover-21.jpg');
+}
+
+.iphone-xhs__cover--c22 {
+  background-image: url('assets/xhs-cover-22.jpg');
+}
+
+.iphone-xhs__cover--c23 {
+  background-image: url('assets/xhs-cover-23.jpg');
+}
+
+.iphone-xhs__cover--c24 {
+  background-image: url('assets/xhs-cover-24.jpg');
+}
+
+.iphone-xhs__cover--c25 {
+  background-image: url('assets/xhs-cover-25.jpg');
+}
+
+.iphone-xhs__cover--c26 {
+  background-image: url('assets/xhs-cover-26.jpg');
+}
+
+.iphone-xhs__cover--c27 {
+  background-image: url('assets/xhs-cover-27.jpg');
+}
+
+.iphone-xhs__cover--c28 {
+  background-image: url('assets/xhs-cover-28.jpg');
+}
+
+.iphone-xhs__cover--c29 {
+  background-image: url('assets/xhs-cover-29.jpg');
+}
+
+.iphone-xhs__cover--c30 {
+  background-image: url('assets/xhs-cover-30.jpg');
+}
+
+.iphone-xhs__cover--c31 {
+  background-image: url('assets/xhs-cover-31.jpg');
+}
+
+.iphone-xhs__cover--c32 {
+  background-image: url('assets/xhs-cover-32.jpg');
+}
+
+.iphone-xhs__cover--c33 {
+  background-image: url('assets/xhs-cover-33.jpg');
+}
+
+.iphone-xhs__cover--c34 {
+  background-image: url('assets/xhs-cover-34.jpg');
+}
+
+.iphone-xhs__cover--c35 {
+  background-image: url('assets/xhs-cover-35.jpg');
+}
+
+.iphone-xhs__cover--c36 {
+  background-image: url('assets/xhs-cover-36.jpg');
+}
+
+.iphone-xhs__cover--c37 {
+  background-image: url('assets/xhs-cover-37.jpg');
+}
+
+.iphone-xhs__cover--c38 {
+  background-image: url('assets/xhs-cover-38.jpg');
+}
+
+.iphone-xhs__cover--c39 {
+  background-image: url('assets/xhs-cover-39.jpg');
+}
+
+.iphone-xhs__cover--c40 {
+  background-image: url('assets/xhs-cover-40.jpg');
+}
+
+.iphone-xhs__cover--c41 {
+  background-image: url('assets/xhs-cover-41.jpg');
+}
+
+.iphone-xhs__cover--c42 {
+  background-image: url('assets/xhs-cover-42.jpg');
 }
 
 
@@ -9366,6 +9497,37 @@
 }
 
 /* 发布页：封面四列图库 + 标题 / 正文 / 话题 / 位置 */
+/* 图库扩到 42 张后加的一排题材筛选（v0.36.0）：横向可滑，选中态用小红书红 */
+.iphone-xhs__compose-topics-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.iphone-xhs__compose-topics-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.iphone-xhs__compose-topics-chip {
+  flex: none;
+  padding: 4px 11px;
+  border: none;
+  border-radius: 999px;
+  background: #f4f4f6;
+  color: #565656;
+  font-size: 12.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.iphone-xhs__compose-topics-chip.is-active {
+  background: #ffe9ec;
+  color: #ff2442;
+  font-weight: 600;
+}
+
 .iphone-xhs__compose-covers {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -11588,10 +11750,11 @@
   height: 13px;
 }
 
-/* 订单卡：状态行 4 格 */
+/* 订单卡：状态行 5 格（真机量得：图标墨迹 21.4px、标签 12px、角标 15.3px 橙圆、
+   格距 70.3px、整卡墨迹高 76.9px——下列数值即按此折算） */
 .iphone-tb__me-orders {
   margin: 10px 10px 0;
-  padding: 12px;
+  padding: 12px 10.5px 10px;
   border-radius: 10px;
   background: #fff;
 }
@@ -11600,10 +11763,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0 11px;
+  margin: 0 3px 10px;
   color: #1a1a1a;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
 }
 
 .iphone-tb__me-more {
@@ -11616,44 +11780,96 @@
   color: #9a9aa0;
   cursor: pointer;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 400;
 }
 
 .iphone-tb__me-more svg {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
 }
 
 .iphone-tb__me-order-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .iphone-tb__me-order-cell {
-  position: relative;
-  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 2px;
   border: none;
   background: none;
-  color: #3c3c43;
+  color: #1c2434;
   cursor: pointer;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
-.iphone-tb__me-order-cell i {
+.iphone-tb__me-order-ico {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.iphone-tb__me-order-ico svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* 角标挂在图标右上角（真机量得：15.3px 橙圆、圆心在图标中线右 11.3px / 上 8.7px） */
+.iphone-tb__me-order-ico i {
   position: absolute;
-  top: 2px;
-  left: 56%;
+  top: -4px;
+  left: 15.5px;
   min-width: 15px;
   padding: 0 4px;
   border-radius: 8px;
-  background: #ff3b30;
+  background: #ff5000;
   color: #fff;
   font-style: normal;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 15px;
+  text-align: center;
+}
+
+.iphone-tb__me-order-label {
+  white-space: nowrap;
+}
+
+/* 退款 / 售后：本插件没有售后单数据，给一张说明卡 */
+.iphone-tb__aftersale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 40px 16px;
+  color: #9a9aa0;
+  text-align: center;
+}
+
+.iphone-tb__aftersale svg {
+  width: 44px;
+  height: 44px;
+  color: #d8d8dd;
+}
+
+.iphone-tb__aftersale p {
+  margin: 0;
+  color: #3c3c43;
+  font-size: 14px;
+}
+
+.iphone-tb__aftersale em {
+  color: #9a9aa0;
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 /* 工具行 */

@@ -34,7 +34,7 @@
            test.html?app=taobao&tbproduct=N → 进淘宝后点开首页第 N 个商品（1 起）
            test.html?app=taobao&tbsearch=关键词 → 直达搜索页并直接搜这个词
            test.html?app=taobao&tbsearch=1 → 直达搜索页空态（热搜榜 / 搜索历史）
-           test.html?app=taobao&tborders=all|paid|shipped|review|star|history
+           test.html?app=taobao&tborders=all|paid|shipped|review|afterSale|star|history
                                               → 直达「我的淘宝」的订单 / 收藏子页
            test.html?app=settings&taobaopreset=1 → 再推入「淘宝提示词」子页
            test.html?app=settings&inject=1 → 再推入「第三方注入」子页（配 &st=1
@@ -53,8 +53,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iPhone 扩展 · 本地测试台</title>
-<link rel="stylesheet" href="style.css?v=0.35.0">
+<link rel="stylesheet" href="style.css?v=0.37.0">
 <style>
+  /* 与宿主对齐的全局重置：酒馆的 style.css 里有 `* { box-sizing: border-box }`，
+     而插件是按这个前提写的（多处以「固定 px 尺寸 + padding」排版，见 README
+     设计要点）。测试台缺了这条，整机边框会被 padding 撑大 24px、与真机不符，
+     因此这里显式补上——测试台的观感必须与宿主一致，否则本地看不出真实问题。 */
+  * { box-sizing: border-box; }
   body {
     margin: 0;
     min-height: 100vh;
@@ -231,7 +236,7 @@
       };
     }
   </script>
-  <script src="index.js?v=0.35.0"></script>
+  <script src="index.js?v=0.37.0"></script>
   <script>
     const params = new URLSearchParams(location.search);
     /* ?seed=1：注入一批演示网友 / 笔记 / 评论，以及演示淘宝商品 / 购物车 / 订单。
@@ -889,7 +894,7 @@
             setTimeout(() => openTbSearchWhenReady(20), 1500);
           }
           if (params.has('tborders')) {
-            // ?tborders=all|paid|shipped|review|star|history：先切「我的淘宝」，
+            // ?tborders=all|paid|shipped|review|afterSale|star|history：先切「我的淘宝」，
             // 再进订单列表子页（收藏 / 足迹也在这个子页里换数据源）。
             const openTbOrdersWhenReady = (retries) => {
               const tb = tbScreen();

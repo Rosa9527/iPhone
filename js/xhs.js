@@ -218,12 +218,57 @@ function iphoneNormalizeXhsData(raw) {
   const following = [...new Set((Array.isArray(source.following) ? source.following : [])
     .map((id) => String(id || '').trim())
     .filter(Boolean))];
+  // 消息未读态：三条聚合入口各自记一串「已点进去看过的通知 id」。通知本身是从
+  // 真实数据（赞 / 收藏 / 关注 / 评论）派生出来的、没有独立实体，所以「已读」只能
+  // 按 id 记账——派生出来的 id 稳定（见 iphoneXhsCollectNotifications），新出现的
+  // 通知不在名单里，于是一眼就能算出未读数。
+  const msgReadSource = source.msgRead && typeof source.msgRead === 'object' ? source.msgRead : {};
+  const msgRead = {};
+  for (const entry of IPHONE_XHS_MSG_ENTRIES) {
+    const list = Array.isArray(msgReadSource[entry.id]) ? msgReadSource[entry.id] : [];
+    msgRead[entry.id] = [...new Set(list.map((id) => String(id || '').trim()).filter(Boolean))]
+      .slice(-IPHONE_XHS_MSG_READ_CAP);
+  }
   return {
     netizens: iphoneXhsPruneNetizens(netizens, notes),
     notes,
     following,
+    msgRead,
     notesFloorSynced: Math.max(0, Math.floor(Number(source.notesFloorSynced) || 0)),
   };
+}
+
+// 未读列表：按类型过滤掉看过的 id（顺序沿用收集时的时序）。没有 msgRead 的老存档
+// 视为全部未读——装上插件时的未读数是真实数据推出来的，不该凭空清零。
+function iphoneXhsUnreadOf(inbox, msgRead, type) {
+  const seen = new Set(msgRead?.[type] || []);
+  return (inbox[type] || []).filter((item) => !seen.has(item.id));
+}
+
+// 未读总数：底栏「消息」数字气泡与首页头像角标都用它。三类都清零 → 0 →
+// 两个气泡一起消失（这就是「三个都点过看了，右下角红点也该消失」）。
+function iphoneXhsUnreadTotal(data) {
+  const inbox = iphoneXhsCollectNotifications(data);
+  return IPHONE_XHS_MSG_ENTRIES
+    .reduce((sum, entry) => sum + iphoneXhsUnreadOf(inbox, data.msgRead, entry.id).length, 0);
+}
+
+// 把某个入口当前的全部通知标记成已读并落盘。返回是否有变化（没变化就不必重渲染）。
+// 在「点开子页」这一刻记账而不是关闭时：真机点进去红点当场就没了。
+function iphoneXhsMarkInboxRead(type) {
+  const data = iphoneGetXhsData();
+  const seen = new Set(data.msgRead[type] || []);
+  const ids = (iphoneXhsCollectNotifications(data)[type] || [])
+    .map((item) => item.id)
+    .filter((id) => !seen.has(id));
+  if (!ids.length) return false;
+  const next = {
+    ...data,
+    msgRead: { ...data.msgRead, [type]: [...(data.msgRead[type] || []), ...ids].slice(-IPHONE_XHS_MSG_READ_CAP) },
+  };
+  iphoneGetQqStorage().xhsData = iphoneNormalizeXhsData(next);
+  iphoneSaveQqStorage();
+  return true;
 }
 
 function iphoneGetXhsData() {
@@ -432,6 +477,7 @@ function iphoneXhsCardEstimate(note) {
 
 const IPHONE_XHS_COVER_TOPIC_LABEL = Object.freeze({
   美食: '美食', 宠物: '萌宠', 旅行: '旅行', 家居: '家居', 数码: '数码', 穿搭: '穿搭', 探店: '探店',
+  美妆: '美妆', 健身: '健身', 学习: '学习',
 });
 
 function iphoneXhsCoverTopicLabel(cover) {
@@ -1704,11 +1750,12 @@ function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'iphone-xhs__msg-entry';
-      const count = inbox[entry.id]?.length || 0;
+      // 红点看的是**未读**：这条入口点进去看过之后，红点就没了
+      const unread = iphoneXhsUnreadOf(inbox, data.msgRead, entry.id).length;
       row.innerHTML = `
         <span class="iphone-xhs__msg-icowrap">
           <span class="iphone-xhs__msg-ico ${toneClass[entry.tone] || ''}" aria-hidden="true">${entryIcon[entry.id] || ''}</span>
-          ${count ? `<span class="iphone-xhs__msg-dot"></span>` : ''}
+          ${unread ? `<span class="iphone-xhs__msg-dot"></span>` : ''}
         </span>
         <span class="iphone-xhs__msg-label">${entry.label}</span>
       `;
@@ -2186,6 +2233,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       <button type="button" class="iphone-xhs__prof-save iphone-xhs__compose-pub">发布</button>
     </header>
     <div class="iphone-xhs__compose-body">
+      <div class="iphone-xhs__compose-topics-bar" data-topics></div>
       <div class="iphone-xhs__compose-covers" data-covers></div>
       <div class="iphone-xhs__compose-fields">
         <input class="iphone-xhs__compose-title" type="text" maxlength="${IPHONE_XHS_TITLE_CAP}" placeholder="填写标题会有更多赞哦～" autocomplete="off">
@@ -2198,26 +2246,55 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
         <span>仅自己可见</span>
         <i>${icons.lock}</i>
       </label>
-      <p class="iphone-xhs__compose-foot">封面从内置图库挑选，与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
+      <p class="iphone-xhs__compose-foot">封面从内置图库挑选（42 张，按题材筛选），与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
     </div>
   `;
 
+  // 封面选择：图库扩到 42 张后一次铺满会看花眼，加一排题材筛选（「全部」+ 图库
+  // 里出现过的题材，按首次出现顺序）。筛选只影响显示，选中的那张跨题材保留。
   const coversWrap = view.querySelector('[data-covers]');
+  const topicsWrap = view.querySelector('[data-topics]');
   let coverId = IPHONE_XHS_COVERS[0].id;
+  const coverTopics = [];
   for (const cover of IPHONE_XHS_COVERS) {
+    if (!coverTopics.includes(cover.topic)) coverTopics.push(cover.topic);
+  }
+
+  const coverButtons = IPHONE_XHS_COVERS.map((cover) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `iphone-xhs__compose-cover ${iphoneXhsCoverClass(cover)}${cover.id === coverId ? ' is-active' : ''}`;
     btn.dataset.coverId = cover.id;
-    btn.setAttribute('aria-label', `封面 ${cover.topic}`);
+    btn.dataset.coverTopic = cover.topic;
+    btn.setAttribute('aria-label', `封面 ${iphoneXhsCoverTopicLabel(cover)}`);
     btn.addEventListener('click', () => {
       coverId = cover.id;
-      coversWrap.querySelectorAll('.iphone-xhs__compose-cover').forEach((el) => {
-        el.classList.toggle('is-active', el.dataset.coverId === coverId);
-      });
+      for (const el of coverButtons) el.classList.toggle('is-active', el.dataset.coverId === coverId);
     });
-    coversWrap.appendChild(btn);
+    return btn;
+  });
+
+  const applyTopicFilter = (topic) => {
+    for (const btn of coverButtons) {
+      btn.hidden = Boolean(topic) && btn.dataset.coverTopic !== topic;
+    }
+  };
+
+  for (const topic of ['全部', ...coverTopics]) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `iphone-xhs__compose-topics-chip${topic === '全部' ? ' is-active' : ''}`;
+    chip.textContent = IPHONE_XHS_COVER_TOPIC_LABEL[topic] || topic;
+    chip.dataset.topic = topic;
+    chip.addEventListener('click', () => {
+      topicsWrap.querySelectorAll('.iphone-xhs__compose-topics-chip').forEach((el) => {
+        el.classList.toggle('is-active', el === chip);
+      });
+      applyTopicFilter(topic === '全部' ? '' : topic);
+    });
+    topicsWrap.appendChild(chip);
   }
+  for (const btn of coverButtons) coversWrap.appendChild(btn);
 
   const titleInput = view.querySelector('.iphone-xhs__compose-title');
   const textInput = view.querySelector('.iphone-xhs__compose-text');
@@ -2432,6 +2509,10 @@ function buildXhsAppScreen() {
     icons,
     onOpenNote: openNote,
     onOpenInbox: (type, label) => {
+      // 点进去即算看过：三条聚合入口各自的红点、底栏「消息」的数字气泡、
+      // 首页头像上的「更新」角标都跟着重算（三个都看过 → 底栏红点消失）
+      iphoneXhsMarkInboxRead(type);
+      renderHeaderBadges();
       inboxView._open(type, label);
       inboxView.classList.add('is-open');
       setOverlay(true);
@@ -2485,14 +2566,15 @@ function buildXhsAppScreen() {
   function renderHeader(mode) {
     if (header._mode === mode) return;
     header._mode = mode;
+    header._lastMode = mode;
     if (mode === 'home') {
       // 顶栏左侧那一格（真机 = 「关注」所在的定位点）有两种形态，互斥：
       //   发现流 + 有未读互动 → 我的圆头像，右上角压一枚红色「更新」气泡
       //   其余情况           → 灰字「关注」（切到关注流时变深并带下划线）
       // 三种元素（关注槽 / 发现 / 城市）在真机上是等距平铺的，发现正好落在屏幕
       // 中线上，所以整行用等宽三格平分；搜索绝对定位钉在最右。
-      const notify = iphoneXhsCollectNotifications(iphoneGetXhsData());
-      const unread = (notify.likes?.length || 0) + (notify.follows?.length || 0) + (notify.comments?.length || 0);
+      const data = iphoneGetXhsData();
+      const unread = iphoneXhsUnreadTotal(data);
       const homeTab = header._homeTab || 'discover';
       const showAvatar = unread > 0 && homeTab === 'discover';
       header.innerHTML = `
@@ -2548,31 +2630,38 @@ function buildXhsAppScreen() {
     header.innerHTML = `<p class="iphone-xhs__hdtitle">${mode === 'market' ? '市集' : '消息'}</p>`;
   }
 
+  // 未读数变了（点开某条聚合入口看过、或新通知进来）就重算三处红点：
+  // 首页头像的「更新」角标 / 关注槽的数字气泡 / 底栏「消息」的数字气泡。
+  // 头部的渲染带 _mode 缓存，得先清掉才会真重画。
+  function renderHeaderBadges() {
+    pageMessages._render();
+    header._mode = null;
+    renderHeader(header._lastMode || 'home');
+    refreshMsgBadge();
+  }
+
   // 底部标签栏：真机是纯文字标签（首页 / 市集 / ＋ / 消息 / 我），中间是红色圆角
-  // 方块加号；「消息」有未读时右上角挂一个红色数字气泡
-  const msgUnread = (() => {
-    const inbox = iphoneXhsCollectNotifications(iphoneGetXhsData());
-    return (inbox.likes?.length || 0) + (inbox.follows?.length || 0) + (inbox.comments?.length || 0);
-  })();
+  // 方块加号；「消息」有未读时右上角挂一个红色数字气泡。气泡可增可减（点开某条
+  // 聚合入口就少一批），所以不进 innerHTML、由 refreshMsgBadge 单独维护。
   const tabs = [
     { key: 'home', label: '首页', page: pageHome, head: 'home' },
     { key: 'market', label: '市集', page: pageMarket, head: 'market' },
     { key: 'compose', label: '', icon: icons.plus, page: null, head: '' },
-    { key: 'messages', label: '消息', badge: msgUnread, page: pageMessages, head: 'messages' },
+    { key: 'messages', label: '消息', page: pageMessages, head: 'messages' },
     { key: 'me', label: '我', page: pageMe, head: 'me' },
   ];
   const tabbar = document.createElement('nav');
   tabbar.className = 'iphone-xhs__tabbar';
   const tabButtons = [];
+  let msgTabEl = null;
   tabs.forEach((tab, i) => {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = `iphone-xhs__tab${tab.key === 'compose' ? ' iphone-xhs__tab--compose' : ''}${i === 0 ? ' is-active' : ''}`;
     el.innerHTML = tab.key === 'compose'
       ? `<span class="iphone-xhs__tab-plus" aria-hidden="true">${tab.icon}</span>`
-      : `<span class="iphone-xhs__tab-label">${tab.label}</span>${
-        tab.badge ? `<span class="iphone-xhs__tab-badge">${tab.badge > 99 ? '99+' : tab.badge}</span>` : ''
-      }`;
+      : `<span class="iphone-xhs__tab-label">${tab.label}</span>`;
+    if (tab.key === 'messages') msgTabEl = el;
     el.addEventListener('click', () => {
       if (tab.key === 'compose') {
         composeView._open();
@@ -2593,6 +2682,23 @@ function buildXhsAppScreen() {
     tabbar.appendChild(el);
   });
 
+  // 「消息」数字气泡：未读为 0 就整个摘掉（三类都点进去看过之后，底栏红点跟着消失）
+  function refreshMsgBadge() {
+    if (!msgTabEl) return;
+    const unread = iphoneXhsUnreadTotal(iphoneGetXhsData());
+    let badge = msgTabEl.querySelector('.iphone-xhs__tab-badge');
+    if (!unread) {
+      badge?.remove();
+      return;
+    }
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'iphone-xhs__tab-badge';
+      msgTabEl.appendChild(badge);
+    }
+    badge.textContent = unread > 99 ? '99+' : String(unread);
+  }
+
   function switchXhsTab(index) {
     if (tabButtons[index]) tabButtons[index].click();
   }
@@ -2610,9 +2716,10 @@ function buildXhsAppScreen() {
 
   screen._renderXhs = () => {
     pageHome._render();
-    pageMessages._render();
     pageMe._render();
     noteView._render();
+    // 消息页与三处红点都随数据（含未读态）走，一并在这里刷新
+    renderHeaderBadges();
   };
   // 给本地测试台（test.html）的深链用：切 Tab / 打开第 N 篇笔记 / 各覆盖层
   screen._switchXhsTab = switchXhsTab;
@@ -2635,6 +2742,9 @@ function buildXhsAppScreen() {
   };
   screen._openXhsInbox = (type) => {
     const entry = IPHONE_XHS_MSG_ENTRIES.find((e) => e.id === type) || IPHONE_XHS_MSG_ENTRIES[0];
+    // 与真点一次聚合入口同一条路径：看过了 → 该入口红点清掉
+    iphoneXhsMarkInboxRead(entry.id);
+    renderHeaderBadges();
     inboxView._open(entry.id, entry.label);
     inboxView.classList.add('is-open');
     setOverlay(true);
@@ -2642,6 +2752,7 @@ function buildXhsAppScreen() {
 
   renderHeader('home');
   pageHome._render();
+  refreshMsgBadge();
   pageMessages._render();
   pageMe._render();
   iphoneRefreshXhsMeIdentity(screen);

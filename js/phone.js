@@ -85,6 +85,7 @@ function createIphoneUi() {
   initIphoneClock();
   initIphoneBattery();
   initIphoneGestures(overlay);
+  initIphoneDragScroll(overlay);
   return overlay;
 }
 
@@ -166,13 +167,20 @@ function initIphoneBattery() {
 // ---------- 缩放适配 ----------
 // stage 是 flex 居中的定位盒，尺寸 = 设计稿外框 × scale；device 以左上角为原点
 // 缩放，避免 transform scale 后布局盒仍占原尺寸导致溢出。
+//
+// 可用空间取遮罩自身的盒子而不是 window.innerWidth / innerHeight：遮罩由 CSS 按
+// 视口单位铺满（见 style.css 的 .iphone-overlay），量它才与整机实际所在的容器
+// 一致——移动端地址栏收放、宿主给 body 设 fixed 等情况下 innerHeight 与遮罩
+// 高度不总是相等，按 innerHeight 算会让整机比遮罩略大、上下被裁掉一截。
 function fitIphoneStage() {
   const stage = getIphoneStage();
   if (!stage) return;
   const outerW = IPHONE_DESIGN_W + IPHONE_FRAME_PADDING * 2;
   const outerH = IPHONE_DESIGN_H + IPHONE_FRAME_PADDING * 2;
-  const availW = window.innerWidth - IPHONE_EDGE_GAP * 2;
-  const availH = window.innerHeight - IPHONE_EDGE_GAP * 2;
+  // 遮罩未装配 / 尚未布局（宽高为 0）时回退到窗口尺寸。
+  const box = getIphoneOverlay()?.getBoundingClientRect?.();
+  const availW = (box?.width || window.innerWidth) - IPHONE_EDGE_GAP * 2;
+  const availH = (box?.height || window.innerHeight) - IPHONE_EDGE_GAP * 2;
   const scale = Math.min(availW / outerW, availH / outerH, IPHONE_SCALE_MAX);
   iphoneScale = scale;
   stage.style.width = `${outerW * scale}px`;
@@ -314,6 +322,113 @@ function iphoneRebuildActiveApp() {
   iphoneLog('info', `聊天已切换，重建应用: ${iphoneActiveApp.name}`);
 }
 
+// ---------- 鼠标拖拽滚动 ----------
+// 触摸端的上下滑动是浏览器原生的（滚动容器 + touchmove 默认行为），桌面端缺的
+// 就是这一条：鼠标按住拖动在 div 上什么也不做，用户于是「长按拖动滑不动」。
+// 这里给鼠标补上：按下后位移超过阈值即接管这一段拖动，按指针位移反向滚动最近的
+// 可滚动祖先，松手释放。阈值以内仍算点击（短按卡片要能打开笔记），所以只在真正
+// 动起来之后才吞掉随后的 click。
+//
+// 三种情况不接管，否则会跟别人抢手势：
+// - 触摸 / 手写笔：原生滚动就够，重复处理反而打架，只认 pointerType === 'mouse'；
+// - 起点在屏幕底部感应带（Home 条那一带）：真机从那儿上滑是返回主屏，
+//   手势归 phone.js 的 Home 手势，鼠标不该例外；
+// - 落点在自己管拖动的地方（输入框选字、`touch-action: none` 的自绘拖动区，
+//   如头像裁剪舞台、悬浮球）：那些元素自带指针逻辑。
+// 从落点往上找最近的可滚动祖先。搜索范围**止于屏幕**：走到机身之外就可能摸到
+// 宿主页面自己的滚动容器，鼠标在手机里拖一下会把酒馆的聊天记录一起拖走。
+function iphoneFindScrollable(node) {
+  for (let el = node; el && el.id !== IPHONE_SCREEN_ID; el = el.parentElement) {
+    const style = globalThis.getComputedStyle?.(el);
+    if (!style) return null;
+    if (style.overflowY !== 'auto' && style.overflowY !== 'scroll') continue;
+    if (el.scrollHeight - el.clientHeight > 1) return el;
+  }
+  return null;
+}
+
+function initIphoneDragScroll(overlay) {
+  const screen = getIphoneScreen();
+  let drag = null;
+
+  // 起点是否落在 Home 感应带里（与 Home 手势同一套换算，见 initIphoneGestures）。
+  const inHomeZone = (y) => {
+    if (!screen) return false;
+    const rect = screen.getBoundingClientRect();
+    if (!rect.height) return false;
+    const zone = Math.max(IPHONE_HOME_ZONE_H * (iphoneScale || 1), IPHONE_HOME_ZONE_H_MIN);
+    return rect.bottom - y <= zone;
+  };
+
+  // 自己管拖动的元素（`touch-action: none` 的自绘拖动区，如头像裁剪舞台）：
+  // 往祖辈查，落点常是舞台里的图片而不是舞台本身。
+  const ownsItsDrag = (node) => {
+    for (let el = node; el && el !== screen; el = el.parentElement) {
+      if (globalThis.getComputedStyle?.(el)?.touchAction === 'none') return true;
+    }
+    return false;
+  };
+
+  const onPointerDown = (event) => {
+    drag = null;
+    if (event.button !== 0 || event.pointerType !== 'mouse') return;
+    if (!isIphoneOpen()) return;
+    const target = event.target;
+    if (!target || target.nodeType !== 1) return;
+    // 只认屏幕内的按下：机身之外（遮罩空白）拖动不该带动任何东西。
+    if (!screen?.contains?.(target)) return;
+    if (target.closest?.(IPHONE_DRAG_SCROLL_SKIP_SELECTOR)) return;
+    if (ownsItsDrag(target) || inHomeZone(event.clientY)) return;
+    drag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      // 按「起手点」找滚动区，而不是拖动途中的落点：从底栏 / 顶栏这种不滚动的
+      // 地方起手就什么也不滚（真机同款），拖出滚动区之后也还是原来那个列表在滚。
+      target,
+      scroller: null,
+      scrollTop: 0,
+      active: false,
+    };
+  };
+
+  const onPointerMove = (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const dy = event.clientY - drag.startY;
+    const dx = event.clientX - drag.startX;
+    if (!drag.active) {
+      // 竖直位移还不够（或横向更大）时不接管：留给点开卡片 / 横向滑频道条。
+      if (Math.abs(dy) < IPHONE_DRAG_SCROLL_SLOP || Math.abs(dy) <= Math.abs(dx)) return;
+      drag.scroller = iphoneFindScrollable(drag.target);
+      if (!drag.scroller) { drag = null; return; }
+      drag.active = true;
+      drag.scrollTop = drag.scroller.scrollTop;
+      drag.scroller.classList.add('is-drag-scrolling');
+    }
+    // 内容跟手：往上拖（dy < 0）看下面的内容，滚动量取反。
+    const want = drag.scrollTop - dy;
+    drag.scroller.scrollTop = want;
+    // 撞到顶 / 底之后把基准跟着走，回拖时不用先把空走的那段补回来。
+    if (drag.scroller.scrollTop !== want) drag.scrollTop = drag.scroller.scrollTop + dy;
+    event.preventDefault();
+  };
+
+  const endDrag = (event) => {
+    if (!drag || (event?.pointerId != null && event.pointerId !== drag.pointerId)) return;
+    const wasActive = drag.active;
+    drag.scroller?.classList.remove('is-drag-scrolling');
+    drag = null;
+    // 真正拖动过才吞掉随后的 click：阈值内的短按是点击，不能拦。
+    if (wasActive) iphoneSwallowClickUntil = Date.now() + 350;
+  };
+
+  overlay.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+  window.addEventListener('blur', () => endDrag(null));
+}
+
 // ---------- 手势 ----------
 // 交互入口统一收口：应用内 Home 条 → 返回主屏；主屏 Home 条 / 遮罩空白 / Esc → 收起整机。
 //
@@ -335,6 +450,11 @@ function iphoneRebuildActiveApp() {
 //   先接住这次滑动并派发 pointercancel，手势在中途被系统收走——触屏上「滑不动」
 //   的根因。被系统中断（来电、切换应用）走 pointercancel 复位，状态不会留到
 //   下一次抬手造成误触发。
+// 手势触发后短时间内吞掉紧跟的 click：返回主屏时手指落点下（应用关闭动画里还挂
+// 着的）底栏按钮 / 主屏图标不该被顺手点一次；鼠标拖拽滚动松手时落点下的卡片
+// 也不该被当成一次点击点开。两处手势共用这一个截止时刻。
+let iphoneSwallowClickUntil = 0;
+
 function isIphoneControlTarget(target) {
   if (!target || target.nodeType !== 1) return false;
   if (target.closest?.(IPHONE_HOME_SKIP_SELECTOR)) return true;
@@ -368,9 +488,6 @@ function initIphoneGestures(overlay) {
 
   // tracking 一次只跟一条指针：第二个指头按下即取消，多指拖拽不误判。
   let tracking = null;
-  // 手势触发后短时间内吞掉紧跟的 click：避免「返回主屏」的同时又把手指
-  // 落点下的卡片 / 图标也点了一次（鼠标拖拽与触屏甩动都可能补发 click）。
-  let swallowClickUntil = 0;
 
   const resetTracking = () => {
     tracking = null;
@@ -428,7 +545,7 @@ function initIphoneGestures(overlay) {
       Date.now() - tracking.startedAt <= IPHONE_HOME_FLICK_MS;
     if (up >= designPx(IPHONE_HOME_SWIPE_UP, IPHONE_HOME_SWIPE_UP_MIN) || flick) {
       tracking.triggered = true;
-      swallowClickUntil = Date.now() + 350;
+      iphoneSwallowClickUntil = Date.now() + 350;
       handleHomeAction();
     }
   };
@@ -442,7 +559,7 @@ function initIphoneGestures(overlay) {
     // 位移在容差内、时长够短、起点在指示条中段且没压着控件 → 算点击
     // （按住不放不触发）。
     if (state.canTap && moved <= designPx(IPHONE_HOME_TAP_SLOP, IPHONE_HOME_TAP_SLOP_MIN) && Date.now() - state.startedAt <= IPHONE_HOME_TAP_MS) {
-      swallowClickUntil = Date.now() + 350;
+      iphoneSwallowClickUntil = Date.now() + 350;
       handleHomeAction();
     }
   };
@@ -461,14 +578,15 @@ function initIphoneGestures(overlay) {
     if (tracking.startY - touch.clientY > 2) event.preventDefault();
   };
 
-  // 捕获阶段吞掉手势后的那次 click（见 swallowClickUntil）。
+  // 捕获阶段吞掉手势后的那次 click：返回主屏与拖拽滚动都可能紧接着补发一次
+  // click，落点下的卡片 / 图标不该被顺手点开。两处手势共用一个截止时刻。
   const onClickCapture = (event) => {
-    if (!swallowClickUntil) return;
-    if (Date.now() > swallowClickUntil) {
-      swallowClickUntil = 0;
+    if (!iphoneSwallowClickUntil) return;
+    if (Date.now() > iphoneSwallowClickUntil) {
+      iphoneSwallowClickUntil = 0;
       return;
     }
-    swallowClickUntil = 0;
+    iphoneSwallowClickUntil = 0;
     event.stopPropagation();
     event.preventDefault();
   };
@@ -493,6 +611,13 @@ function initIphoneGestures(overlay) {
   }
 
   window.addEventListener('resize', () => {
+    if (!isIphoneOpen()) return;
+    fitIphoneStage();
+  });
+
+  // 移动端旋转屏幕、软键盘收放与地址栏伸缩都可能只改视觉视口而不派发 resize：
+  // 补一条 visualViewport 监听（老浏览器没有这个对象就只留 resize）。
+  globalThis.visualViewport?.addEventListener?.('resize', () => {
     if (!isIphoneOpen()) return;
     fitIphoneStage();
   });
