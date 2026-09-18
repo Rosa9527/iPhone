@@ -1912,12 +1912,13 @@ function iphoneXhsBuildMessagesPage({ icons, onOpenNote, onOpenInbox }) {
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'iphone-xhs__msg-entry';
-      // 红点看的是**未读**：这条入口点进去看过之后，红点就没了
+      // 角标看的是**未读**：这条入口点进去看过之后，角标整个摘掉。挂的是未读
+      // **数**（99+ 封顶，与底栏气泡同一套账），一眼能看出攒了几条
       const unread = iphoneXhsUnreadOf(inbox, data.msgRead, entry.id).length;
       row.innerHTML = `
         <span class="iphone-xhs__msg-icowrap">
           <span class="iphone-xhs__msg-ico ${toneClass[entry.tone] || ''}" aria-hidden="true">${entryIcon[entry.id] || ''}</span>
-          ${unread ? `<span class="iphone-xhs__msg-dot"></span>` : ''}
+          ${unread ? `<span class="iphone-xhs__msg-num">${unread > 99 ? '99+' : unread}</span>` : ''}
         </span>
         <span class="iphone-xhs__msg-label">${entry.label}</span>
       `;
