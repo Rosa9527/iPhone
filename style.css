@@ -7809,6 +7809,32 @@
   word-break: break-word;
 }
 
+/* 紧凑版引言卡：「我」页三列图墙的格子只有 ~110px 宽，信息流的 28px 字号与
+   27.5px 内边距会撑爆，这里等比缩到能塞下两三行摘录（格子本身是正方形，由
+   卡片自己的行内 aspect-ratio 定，不跟信息流那张 190.5/250 走）。
+   瀑布流走的是信息流版式。 */
+.iphone-xhs__card-cover--quote-sm {
+  padding: 9px 11px 0;
+}
+
+.iphone-xhs__card-cover--quote-sm::before {
+  width: 9px;
+  height: 7.5px;
+  margin-bottom: 8px;
+}
+
+.iphone-xhs__card-cover--quote-sm::after {
+  width: 9px;
+  height: 2.5px;
+  margin-bottom: 9px;
+}
+
+.iphone-xhs__card-cover--quote-sm .iphone-xhs__card-quote {
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-line-clamp: 4;
+}
+
 /* 正文块（标题 + 作者行）在封面下方，自己带内边距。真机：标题 15px、行高约
    1.55（两行 ink 起止相差 22.9px），作者名与点赞数 13px、颜色 #565656 */
 .iphone-xhs__card-title {
@@ -9560,6 +9586,37 @@
   color: #fff;
   font-size: 13px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* 「不带图」格：不是图库里的一张封面（没有位图背景），用虚线框和文字跟封面区分 */
+.iphone-xhs__compose-cover--none {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  border-color: #d6d6da;
+  background: #fafafa;
+  color: #8a8b90;
+  font-size: 12px;
+}
+
+.iphone-xhs__compose-cover--none i {
+  font-style: normal;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.iphone-xhs__compose-cover--none.is-active {
+  border-color: #ff2442;
+  background: #ffe9ec;
+  color: #ff2442;
+  font-weight: 600;
+}
+
+/* 勾号在这格上用红字（白字在浅色底上看不出来） */
+.iphone-xhs__compose-cover--none.is-active::after {
+  color: #ff2442;
+  text-shadow: none;
 }
 
 .iphone-xhs__compose-fields {

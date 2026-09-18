@@ -152,7 +152,8 @@ function iphoneXhsTopicList(raw) {
 }
 
 // 笔记：作者是 '__me__'（玩家自己发的）或网友池里的 id；作者名另存一份，网友池
-// 满了被裁掉时笔记照常显示。封面存图库 id（c01~c16），展示时算回题材与宽高比。
+// 满了被裁掉时笔记照常显示。封面存图库 id（c01…），展示时算回题材与宽高比；
+// textOnly 是「不带图」的纯文字笔记（正文就是首图）。
 function iphoneNormalizeXhsNote(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
   const authorId = String(source.authorId || '').trim();
@@ -163,6 +164,8 @@ function iphoneNormalizeXhsNote(raw) {
   const text = String(source.text || '').trim().slice(0, IPHONE_XHS_TEXT_CAP);
   if (!title && !text) return null;
   const coverId = IPHONE_XHS_COVERS.some((c) => c.id === source.coverId) ? source.coverId : '';
+  // 玩家在发布页选「不带图」时打的标记：正文空着就没有首图可铺，标记一并丢掉
+  const textOnly = Boolean(source.textOnly) && Boolean(text);
   const comments = (Array.isArray(source.comments) ? source.comments : [])
     .map(iphoneNormalizeXhsComment)
     .filter(Boolean)
@@ -173,6 +176,7 @@ function iphoneNormalizeXhsNote(raw) {
     authorName,
     ts: Math.max(0, Math.floor(Number(source.ts) || Date.now())),
     coverId,
+    textOnly,
     title,
     text,
     topics: iphoneXhsTopicList(source.topics),
@@ -439,8 +443,10 @@ function iphoneXhsPickCover(topic, seed) {
   return pool[hash % pool.length];
 }
 
-// 笔记封面（含宽高比）：没存封面时按标题哈希现挑一张，展示永远有图。
+// 笔记封面（含宽高比）：没存封面时按标题哈希现挑一张，展示永远有图。纯文字笔记
+// 没有首图，这里返回 null——渲染方一律先问 iphoneXhsIsTextNote 再取封面。
 function iphoneXhsCoverFor(note) {
+  if (iphoneXhsIsTextNote(note)) return null;
   const saved = note && note.coverId ? iphoneXhsCoverById(note.coverId) : null;
   return saved || iphoneXhsPickCover('', `${note?.id || ''}${note?.title || ''}`);
 }
@@ -449,10 +455,11 @@ function iphoneXhsCoverClass(cover) {
   return `iphone-xhs__cover--${cover.id}`;
 }
 
-// 纯文字笔记（对照真实小红书的文字卡）：按 id 哈希稳定决定，约四成笔记不配图，
-// 首页瀑布流才有真实的长短错落。玩家自己发的总是带图（封面是手选的）。
+// 纯文字笔记（对照真实小红书的文字卡）：玩家在发布页选「不带图」的笔记，
+// 或网友笔记里约四成不配图（按 id 哈希稳定决定，首页瀑布流才有真实的长短错落）。
 function iphoneXhsIsTextNote(note) {
   if (!note) return false;
+  if (note.textOnly) return true;
   if (note.authorId === '__me__') return false;
   const text = String(note.id || '');
   let hash = 0;
@@ -788,10 +795,11 @@ async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } 
     ? data.netizens.map((n) => `- ${n.name}`).join('\n')
     : '（暂无，可以新造）';
   const inline = (value) => String(value || '').replace(/[\r\n]+/g, ' ').trim();
-  const cover = iphoneXhsCoverFor(post);
+  const textOnly = iphoneXhsIsTextNote(post);
+  const cover = textOnly ? null : iphoneXhsCoverFor(post);
   const postLines = [
     `作者：${inline(author.name)}${author.xhsId ? `（小红书号 ${inline(author.xhsId)}）` : ''}`,
-    `封面题材：${cover.topic}`,
+    textOnly ? '形式：纯文字笔记（没有配图，正文就是首图）' : `封面题材：${cover.topic}`,
     `标题：${inline(post.title)}`,
     `正文：${inline(post.text)}`,
   ];
@@ -830,8 +838,8 @@ async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } 
   if (tavernText) outlineItems.push('<tavern_context>…</tavern_context>：酒馆主线的最近对话（时间旧→新），是当前正在发生的剧情背景；');
   if (floorLogText) outlineItems.push('<xhs_chat_log>…</xhs_chat_log>：最近一次同步到酒馆楼层的手机记录，供你了解最近的动态；');
   outlineItems.push(published
-    ? '<xhs_note>…</xhs_note>：玩家「{{user}}」刚发布的那篇笔记——作者就是玩家本人，含封面题材、标题、正文、话题与评论区（一般还空着）；'
-    : '<xhs_note>…</xhs_note>：玩家正在评论的那篇笔记——作者、封面题材、标题、正文、话题与完整评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
+    ? '<xhs_note>…</xhs_note>：玩家「{{user}}」刚发布的那篇笔记——作者就是玩家本人，含形式（配图 / 纯文字）与封面题材、标题、正文、话题与评论区（一般还空着）；'
+    : '<xhs_note>…</xhs_note>：玩家正在评论的那篇笔记——作者、形式（配图 / 纯文字）与封面题材、标题、正文、话题与完整评论区（时间旧→新，最后一条是玩家本人留下的新评论）；');
   if (replyGuidance) outlineItems.push('<reply_guidance>…</reply_guidance>：评论回复的写作指导；');
   if (replyFormat) outlineItems.push('<output_format>…</output_format>：回复格式要求，位于提示词末尾，必须严格遵守；');
   sysParts.push('【提示词结构说明】本次请求的提示词由以下部分组成，均已用 XML 标签包裹并附介绍：\n'
@@ -1090,6 +1098,17 @@ function iphoneXhsBuildAvatarPicker(icons, { getCurrent, onPick, commit }) {
   });
 }
 
+// 纯文字笔记的首图位：米黄引言卡（首页信息流 / 「我」页图墙与瀑布流共用）。
+// compact 是「我」页那种小格子版：三列图墙一格才 ~110px，信息流的大字号会撑爆。
+function iphoneXhsFillQuoteCard(el, note, compact = false) {
+  el.className = `iphone-xhs__card-cover iphone-xhs__card-cover--quote${compact ? ' iphone-xhs__card-cover--quote-sm' : ''}`;
+  const quote = document.createElement('p');
+  quote.className = 'iphone-xhs__card-quote';
+  quote.textContent = note.text;
+  el.appendChild(quote);
+  return el;
+}
+
 // ---------- 首页瀑布流 ----------
 // 卡片：封面（纯文字笔记是黄底引言卡）+ 标题 + 作者行（头像 / 昵称 / 小心心数）。
 // 两列高度用封面宽高比估算，逐张丢进当前更矮的一列——真机的错落感就是这么来的。
@@ -1098,15 +1117,9 @@ function iphoneXhsBuildNoteCard(data, note, icons, onOpen) {
   card.className = 'iphone-xhs__card';
   card.dataset.noteId = note.id;
 
-  const textOnly = iphoneXhsIsTextNote(note);
   const cover = document.createElement('div');
-  if (textOnly) {
-    // 纯文字笔记在首图位放一张黄底引言卡（对照真机：米黄底 + 大引号 + 大字摘录 + 短横）
-    cover.className = 'iphone-xhs__card-cover iphone-xhs__card-cover--quote';
-    const quote = document.createElement('p');
-    quote.className = 'iphone-xhs__card-quote';
-    quote.textContent = note.text;
-    cover.appendChild(quote);
+  if (iphoneXhsIsTextNote(note)) {
+    iphoneXhsFillQuoteCard(cover, note);
   } else {
     const coverInfo = iphoneXhsCoverFor(note);
     cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(coverInfo)}`;
@@ -1448,7 +1461,6 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
     }
     const data = iphoneGetXhsData();
     const author = iphoneXhsAuthorOf(data, note);
-    const cover = iphoneXhsCoverFor(note);
     renderNav();
 
     scroll.innerHTML = '';
@@ -1462,6 +1474,7 @@ function iphoneXhsBuildNoteView({ icons, screen, onClose, onChanged }) {
       quote.appendChild(text);
       scroll.appendChild(quote);
     } else {
+      const cover = iphoneXhsCoverFor(note);
       const image = document.createElement('div');
       image.className = `iphone-xhs__note-image ${iphoneXhsCoverClass(cover)}`;
       image.style.aspectRatio = String(cover.ratio);
@@ -2001,7 +2014,12 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
     const card = document.createElement('article');
     card.className = 'iphone-xhs__me-card';
     const cover = document.createElement('div');
-    cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(iphoneXhsCoverFor(note))}`;
+    if (iphoneXhsIsTextNote(note)) {
+      // 纯文字笔记在正方形图格里也铺引言卡（格子本身是方的，走紧凑版式）
+      iphoneXhsFillQuoteCard(cover, note, true);
+    } else {
+      cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(iphoneXhsCoverFor(note))}`;
+    }
     cover.style.aspectRatio = '1';
     if (note.private) {
       const lock = document.createElement('span');
@@ -2024,9 +2042,13 @@ function iphoneXhsBuildMePage({ icons, onOpenNote, onEditProfile }) {
     const card = document.createElement('article');
     card.className = 'iphone-xhs__me-waterfall-card';
     const cover = document.createElement('div');
-    const coverInfo = iphoneXhsCoverFor(note);
-    cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(coverInfo)}`;
-    cover.style.aspectRatio = String(coverInfo.ratio);
+    if (iphoneXhsIsTextNote(note)) {
+      iphoneXhsFillQuoteCard(cover, note);
+    } else {
+      const coverInfo = iphoneXhsCoverFor(note);
+      cover.className = `iphone-xhs__card-cover ${iphoneXhsCoverClass(coverInfo)}`;
+      cover.style.aspectRatio = String(coverInfo.ratio);
+    }
     card.appendChild(cover);
     const title = document.createElement('p');
     title.className = 'iphone-xhs__card-title';
@@ -2246,33 +2268,55 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
         <span>仅自己可见</span>
         <i>${icons.lock}</i>
       </label>
-      <p class="iphone-xhs__compose-foot">封面从内置图库挑选（42 张，按题材筛选），与网友笔记同一套素材；发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
+      <p class="iphone-xhs__compose-foot">封面从内置图库挑选（42 张，按题材筛选），与网友笔记同一套素材；第一格「不带图」发纯文字笔记（正文就是首图，真机的文字帖）。发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布后还会调一次对话 API 让网友来评论（勾选「仅自己可见」不调）。</p>
     </div>
   `;
 
   // 封面选择：图库扩到 42 张后一次铺满会看花眼，加一排题材筛选（「全部」+ 图库
   // 里出现过的题材，按首次出现顺序）。筛选只影响显示，选中的那张跨题材保留。
+  // 第一格是「不带图」：不选任何封面，发一篇纯文字笔记（真机的文字帖）。
   const coversWrap = view.querySelector('[data-covers]');
   const topicsWrap = view.querySelector('[data-topics]');
   let coverId = IPHONE_XHS_COVERS[0].id;
+  let textOnly = false;
   const coverTopics = [];
   for (const cover of IPHONE_XHS_COVERS) {
     if (!coverTopics.includes(cover.topic)) coverTopics.push(cover.topic);
   }
 
+  const noneBtn = document.createElement('button');
+  noneBtn.type = 'button';
+  noneBtn.className = 'iphone-xhs__compose-cover iphone-xhs__compose-cover--none';
+  noneBtn.dataset.coverId = '';
+  noneBtn.setAttribute('aria-label', '不带图（纯文字笔记）');
+  noneBtn.innerHTML = '<i>不带图</i>';
+  noneBtn.addEventListener('click', () => {
+    textOnly = true;
+    coverId = '';
+    refreshCoverSelection();
+  });
+
   const coverButtons = IPHONE_XHS_COVERS.map((cover) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `iphone-xhs__compose-cover ${iphoneXhsCoverClass(cover)}${cover.id === coverId ? ' is-active' : ''}`;
+    btn.className = `iphone-xhs__compose-cover ${iphoneXhsCoverClass(cover)}`;
     btn.dataset.coverId = cover.id;
     btn.dataset.coverTopic = cover.topic;
     btn.setAttribute('aria-label', `封面 ${iphoneXhsCoverTopicLabel(cover)}`);
     btn.addEventListener('click', () => {
+      textOnly = false;
       coverId = cover.id;
-      for (const el of coverButtons) el.classList.toggle('is-active', el.dataset.coverId === coverId);
+      refreshCoverSelection();
     });
     return btn;
   });
+
+  // 「不带图」不参与题材筛选（它不是一个封面），但和其他格一样跟着选中态走
+  function refreshCoverSelection() {
+    noneBtn.classList.toggle('is-active', textOnly);
+    for (const el of coverButtons) el.classList.toggle('is-active', !textOnly && el.dataset.coverId === coverId);
+  }
+  refreshCoverSelection();
 
   const applyTopicFilter = (topic) => {
     for (const btn of coverButtons) {
@@ -2294,6 +2338,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     });
     topicsWrap.appendChild(chip);
   }
+  coversWrap.appendChild(noneBtn);
   for (const btn of coverButtons) coversWrap.appendChild(btn);
 
   const titleInput = view.querySelector('.iphone-xhs__compose-title');
@@ -2343,6 +2388,12 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       errRow.textContent = '标题或正文至少写一样。';
       return;
     }
+    // 纯文字笔记没有首图，正文就是首图：只有标题的话详情页会是一张空引言卡
+    if (textOnly && !text) {
+      errRow.hidden = false;
+      errRow.textContent = '选「不带图」时正文不能空着——纯文字笔记的正文就是首图。';
+      return;
+    }
     const profile = iphoneGetXhsProfile();
     const data = iphoneGetXhsData();
     const note = iphoneNormalizeXhsNote({
@@ -2350,6 +2401,7 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       authorId: '__me__',
       ts: Date.now(),
       coverId,
+      textOnly,
       title,
       text,
       topics: iphoneXhsTopicList(topicInput.value),
@@ -2386,6 +2438,14 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     topicInput.value = '';
     privateBox.checked = false;
     errRow.hidden = true;
+    // 每次重新打开都回到「图库第一张」，免得上一轮选的「不带图」粘到下一篇
+    coverId = IPHONE_XHS_COVERS[0].id;
+    textOnly = false;
+    refreshCoverSelection();
+    applyTopicFilter('');
+    topicsWrap.querySelectorAll('.iphone-xhs__compose-topics-chip').forEach((el) => {
+      el.classList.toggle('is-active', el.dataset.topic === '全部');
+    });
     refreshSend();
   };
   return view;
