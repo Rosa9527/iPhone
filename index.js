@@ -1,5 +1,5 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-18 22:26:15 · 文件数: 12 · 指纹: cf1000e6
+// 构建时间: 2026-09-18 22:59:54 · 文件数: 12 · 指纹: 4fb7554a
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
@@ -16230,17 +16230,19 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
         <span>仅自己可见</span>
         <i>${icons.lock}</i>
       </label>
-      <p class="iphone-xhs__compose-foot">封面从内置图库挑选（42 张，按题材筛选），与网友笔记同一套素材；第一格「不带图」发纯文字笔记（正文就是首图，真机的文字帖）。发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布时按你的粉丝数给这条笔记起量（赞 / 藏），粉丝数也跟着涨；随后调一次对话 API 让网友来评论——粉丝越多，来评论区的人越多（勾选「仅自己可见」则不给互动、也不调）。</p>
+      <p class="iphone-xhs__compose-foot">默认发「不带图」的纯文字笔记（正文就是首图，真机的文字帖）；想配图就从下面图库里挑一张（42 张，与网友笔记同一套素材，可按题材筛选）。发布后可在「我」里看到，并同步进酒馆楼层的 [小红书笔记] 记录段。发布时按你的粉丝数给这条笔记起量（赞 / 藏），粉丝数也跟着涨；随后调一次对话 API 让网友来评论——粉丝越多，来评论区的人越多（勾选「仅自己可见」则不给互动、也不调）。</p>
     </div>
   `;
 
   // 封面选择：图库扩到 42 张后一次铺满会看花眼，加一排题材筛选（「全部」+ 图库
   // 里出现过的题材，按首次出现顺序）。筛选只影响显示，选中的那张跨题材保留。
   // 第一格是「不带图」：不选任何封面，发一篇纯文字笔记（真机的文字帖）。
+  // v0.42.0 起它也是**默认选中**的那一格——真机上发文字帖就是默认路径，想配图再
+  // 从下面的图库挑一张；此前默认选的是图库第一张（美食封面）。
   const coversWrap = view.querySelector('[data-covers]');
   const topicsWrap = view.querySelector('[data-topics]');
-  let coverId = IPHONE_XHS_COVERS[0].id;
-  let textOnly = false;
+  let coverId = '';
+  let textOnly = true;
   const coverTopics = [];
   for (const cover of IPHONE_XHS_COVERS) {
     if (!coverTopics.includes(cover.topic)) coverTopics.push(cover.topic);
@@ -16353,10 +16355,11 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
       errRow.textContent = '标题或正文至少写一样。';
       return;
     }
-    // 纯文字笔记没有首图，正文就是首图：只有标题的话详情页会是一张空引言卡
+    // 纯文字笔记没有首图，正文就是首图：只有标题的话详情页会是一张空引言卡。
+    // 默认就是「不带图」（v0.42.0），所以这句提示要顺带告诉玩家还有另一条路。
     if (textOnly && !text) {
       errRow.hidden = false;
-      errRow.textContent = '选「不带图」时正文不能空着——纯文字笔记的正文就是首图。';
+      errRow.textContent = '默认是「不带图」的纯文字笔记，正文不能空着——写上正文，或从上面挑一张封面。';
       return;
     }
     const profile = iphoneGetXhsProfile();
@@ -16408,9 +16411,10 @@ function iphoneXhsBuildComposeView({ icons, screen, onClose, onPublished }) {
     topicInput.value = '';
     privateBox.checked = false;
     errRow.hidden = true;
-    // 每次重新打开都回到「图库第一张」，免得上一轮选的「不带图」粘到下一篇
-    coverId = IPHONE_XHS_COVERS[0].id;
-    textOnly = false;
+    // 每次重新打开都回到「不带图」的默认态，免得上一轮选的封面粘到下一篇
+    //（v0.42.0 前这里回到的是图库第一张）
+    coverId = '';
+    textOnly = true;
     refreshCoverSelection();
     applyTopicFilter('');
     topicsWrap.querySelectorAll('.iphone-xhs__compose-topics-chip').forEach((el) => {
