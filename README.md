@@ -713,7 +713,7 @@ iPhone/
 │   ├── wechat-icon.jpg    # App Store 官方微信图标位图（主屏图标）
 │   ├── xhs-icon.jpg       # App Store 官方小红书图标位图（主屏图标）
 │   ├── settings-icon.png  # 苹果设置应用真实图标（Wikimedia Commons，256px，已裁为全出血）
-│   ├── settings-avatar-pikachu.png # 设置页账户头像（PokeAPI 皮卡丘官方立绘）
+│   ├── settings-avatar.png     # 设置页账户头像（微信默认头像：浅灰底 + 灰色人形剪影，程序化生成）
 │   ├── avatar-NN.jpg      # 内置头像款式 ×21（动漫 / 插画头像，QQ / 微信 / 小红书共用）
 │   ├── qq-zone-*.jpg      # 空间横幅与动态配图 ×5（网络 CC 授权照片）
 │   ├── qq-dyn-*.png       # 动态页入口缩略图 ×3（GitHub fluent-emoji，MIT）

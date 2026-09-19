@@ -3249,7 +3249,7 @@
   height: 44px;
   margin: 7px 0;
   border-radius: 50%;
-  background: url('assets/settings-avatar-pikachu.png') center / cover no-repeat #fff7d6;
+  background: url('assets/settings-avatar.png') center / cover no-repeat #e6e6e6;
 }
 .iphone-st__account-main {
   flex: 1;
