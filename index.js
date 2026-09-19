@@ -1,5 +1,5 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-19 00:13:59 · 文件数: 12 · 指纹: c1ade475
+// 构建时间: 2026-09-19 11:53:13 · 文件数: 12 · 指纹: 24dafa93
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
@@ -517,10 +517,14 @@ const IPHONE_XHS_ME_REACH = Object.freeze({
   collectRate: Object.freeze([0.25, 0.55]),
   fansDivisor: 12,
   // 玩家发帖后请网友来评论的条数：粉丝越多、愿意来评论区的人越多。3 条起步，
-  // 每 350 个粉丝大约多一条，最多 12 条（一次请求能稳定写出来的量）。
+  // 每 350 个粉丝大约多一条，最多 12 条（一次请求能稳定写出来的量）。给请求的是
+  // 一个区间而不是定数——窗口宽度由 commentSpread 兜底：0 粉的新号也有 3~7 可写
+  // （v0.43.0 起；此前 0~174 粉的区间塌缩成「恰好 3 条」，篇篇固定三条），粉丝
+  // 涨上去整个窗口随之上移（350 粉 → 4~8、700 粉 → 5~9……1750 粉起封顶 8~12）。
   commentBase: 3,
   commentPerFans: 350,
   commentMax: 12,
+  commentSpread: 4,
 });
 const IPHONE_XHS_NOTE_GUIDANCE = `# 任务
 - 你要为「小红书」首页生成新的网友笔记：每次写 1~3 篇，像真实社区的信息流那样题材各异、长短不一。
@@ -14537,11 +14541,15 @@ function iphoneXhsRollMeNoteStats(fans) {
 }
 
 // 玩家发帖后请网友来评论的条数区间：粉丝越多，愿意来评论区围观的人越多（3 条起步、
-// 最多 12 条，每 350 个粉丝大约多一条）。
+// 最多 12 条，每 350 个粉丝大约多一条）。给请求的是区间而不是定数，且窗口永远不塌缩
+// （v0.43.0）：此前 hi = 3 + 粉丝加成、lo = max(3, hi-3)，0~174 粉的新号算出 [3,3]，
+// 请求里就写成「请生成 3 条新评论」——玩家发帖篇篇恰好三条评论就是这么来的。现在
+// 上限先垫一层 commentSpread 的浮动（0 粉也有 3~7，与首页刷新同款区间），粉丝涨上去
+// 整个窗口随之上移，封顶 [8,12]。
 function iphoneXhsMeCommentRange(fans) {
-  const { commentBase, commentPerFans, commentMax } = IPHONE_XHS_ME_REACH;
-  const hi = Math.min(commentMax, commentBase + Math.round(Math.max(0, fans) / commentPerFans));
-  return [Math.max(commentBase, hi - 3), hi];
+  const { commentBase, commentPerFans, commentMax, commentSpread } = IPHONE_XHS_ME_REACH;
+  const hi = Math.min(commentMax, commentBase + commentSpread + Math.round(Math.max(0, fans) / commentPerFans));
+  return [Math.max(commentBase, hi - commentSpread), hi];
 }
 
 // ---------- 首页频道筛选 ----------
@@ -14876,6 +14884,7 @@ async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } 
     const countText = lo === hi ? `${lo} 条` : `${lo}~${hi} 条`;
     sysParts.push(`补充要求：这篇笔记是玩家自己的账号发的，TA 在小红书上有 ${fans} 个粉丝。`
       + `请生成 ${countText}新评论（这个条数覆盖上面格式说明里的条数限制，仍然每行一条「评论人：内容」）。`
+      + `具体条数按这篇笔记的热度在区间里拿捏，不要每次都取同一档。`
       + `粉丝越多、笔记的赞越多，来评论区的人就越多：有人抢首评、有人追问细节、有人抬杠挑刺、有人跑题闲聊，不要条条都是捧场话。`);
   }
 
