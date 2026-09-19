@@ -8670,6 +8670,10 @@
   font-size: 13.5px;
 }
 
+.iphone-xhs__note-input::placeholder {
+  color: #c0c4cc;
+}
+
 .iphone-xhs__note-send {
   display: none;
   flex: none;
@@ -9609,6 +9613,13 @@
   text-align: right;
 }
 
+/* 占位符（小红书号 / IP 属地放的就是内置演示值）必须明写浅灰：没有这条会继承
+   本体的 #17181a，「上海」「8823771906」看着就像已经填了值（QQ / 微信资料页
+   同款规则，v0.43.0 起） */
+.iphone-xhs__prof-input::placeholder {
+  color: #c0c4cc;
+}
+
 /* 性别（v0.39.0）：不是输入框，是小号胶囊选择（♀ 女 / ♂ 男 / 保密），
    选中态用小红书红——与右上角「保存」同一套粉底红字 */
 .iphone-xhs__prof-seg {
@@ -9795,6 +9806,14 @@
   color: #17181a;
   font-family: inherit;
   font-size: 14.5px;
+}
+
+/* 发布页的引导词同样别继承本体近黑色（「填写标题会有更多赞哦～」不是已填的标题） */
+.iphone-xhs__compose-title::placeholder,
+.iphone-xhs__compose-text::placeholder,
+.iphone-xhs__compose-topics::placeholder,
+.iphone-xhs__compose-loc::placeholder {
+  color: #c0c4cc;
 }
 
 .iphone-xhs__compose-loc {
