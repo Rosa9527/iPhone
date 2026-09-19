@@ -52,6 +52,13 @@
 // ——快照每轮都在换、内容也在变，键才是扩展的稳定身份；某个扩展本轮没跑，它的
 // 键留在表里不碍事，下次注入进来照样是排除状态。见 iphoneInjectAttachableEntries。
 //
+// 默认排除（v1.0.1）：个别条目不必等玩家动手，检测到键名就直接按排除算——名单
+// 在 IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS（首个 baibai_book_time_tag：时间标签，
+// 本插件的手机请求已自带「当前时间」上下文，再带一份属于重复背景）。玩家在设置
+// 里取消勾选即恢复附带，选择记在 settings.injectIncludeOverrides（只收名单里的
+// 键）覆盖出厂默认；「全部恢复附带」也按「全部都附带」处理，连默认排除的一并
+// 恢复。
+//
 // 降级：宿主不暴露 extensionPrompts（本地 test.html 预览、或将来版本换了形状）时
 // 静默跳过——快照为空，各请求与从前完全一样。
 
@@ -86,6 +93,16 @@ const IPHONE_INJECT_HOST_KEY_PREFIXES = Object.freeze([
   'customDepthWI',
   'customWIOutlet',
   'DEPTH_PROMPT',
+]);
+
+// 默认排除的条目键（v1.0.1）：检测到这些键的注入一律不随手机请求附带，不必等
+// 玩家逐条勾选。首个 baibai_book_time_tag——时间标签，本插件的手机请求已自带
+// 「当前时间」上下文（见 apps.js 各请求的「当前时间：…」），再带一份属于重复
+// 背景。玩家仍可在「设置 · 第三方注入」里取消勾选恢复附带（选择记在
+// settings.injectIncludeOverrides，覆盖这里的默认）；以后要新增默认排除项，
+// 往这个数组里加键名即可。
+const IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS = Object.freeze([
+  'baibai_book_time_tag',
 ]);
 
 // 单条注入的保留上限：变量表这类内容通常几 KB，给足余量；离谱的大块（整本世界书
@@ -246,11 +263,21 @@ function iphoneInjectClearSnapshot() {
   iphoneInjectSnapshot = null;
 }
 
-// ---------- 逐条排除（v0.32.0） ----------
+// ---------- 逐条排除（v0.32.0）+ 默认排除（v1.0.1） ----------
 //
 // 设置页每条前的勾选框写这里：勾中 = 这条不随手机请求附带。
 // 存的是条目键名数组（不是实时条目），键由各扩展自己决定、不随内容变，
 // 所以扩展重开 / 内容更新后排除状态都还在。
+//
+// 排除状态有两个来源，逐条判定时合并（见 iphoneInjectIsExcluded）：
+//   - settings.injectExcluded：玩家手动勾选的（任意键）；
+//   - IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS：出厂默认排除的键，玩家没有显式
+//     恢复附带（settings.injectIncludeOverrides 里没有它）就按排除算。
+
+// 是否属于默认排除名单。
+function iphoneInjectIsDefaultExcludedKey(key) {
+  return IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS.includes(String(key));
+}
 
 // 排除键集合（设置里的数组 → Set，便于逐条查询）。
 function iphoneInjectExcludedKeys() {
@@ -258,40 +285,80 @@ function iphoneInjectExcludedKeys() {
   return new Set(Array.isArray(list) ? list.map((key) => String(key)) : []);
 }
 
-function iphoneInjectIsExcluded(key, excludedKeys) {
-  const set = excludedKeys || iphoneInjectExcludedKeys();
-  return set.has(String(key));
+// 玩家显式恢复附带的默认排除键集合（settings.injectIncludeOverrides → Set）。
+// 只在「键属于默认名单」时有意义；普通条目排除与否只看 injectExcluded。
+function iphoneInjectIncludeOverrides() {
+  const list = iphoneGetSettings().injectIncludeOverrides;
+  return new Set(Array.isArray(list) ? list.map((key) => String(key)) : []);
+}
+
+// 逐条判定：玩家排除表命中，或属于默认名单且未被显式恢复附带。
+// excludedKeys / includeOverrides 可由调用方传入（同一批条目复用同一份 Set，
+// 省得每条各建一次）；不传就现场读设置。
+function iphoneInjectIsExcluded(key, excludedKeys, includeOverrides) {
+  const name = String(key);
+  if ((excludedKeys || iphoneInjectExcludedKeys()).has(name)) return true;
+  if (!iphoneInjectIsDefaultExcludedKey(name)) return false;
+  return !(includeOverrides || iphoneInjectIncludeOverrides()).has(name);
 }
 
 // 勾选 / 取消勾选一条（设置页调用）。excluded = true 表示不附带这条。
+// 默认名单里的键两边都可能沾：勾选 = 记进排除表 + 从恢复表撤掉；
+// 取消勾选 = 从排除表撤掉 + 记进恢复表（不然下次判定仍按默认排除算）。
+// 两张表互斥，同一键不会同时存在于两边，计数也不会重复。
 function iphoneInjectSetExcluded(key, excluded) {
   const settings = iphoneGetSettings();
   const list = Array.isArray(settings.injectExcluded) ? settings.injectExcluded.slice() : [];
+  const included = Array.isArray(settings.injectIncludeOverrides) ? settings.injectIncludeOverrides.slice() : [];
   const name = String(key);
-  const index = list.indexOf(name);
-  if (excluded && index < 0) list.push(name);
-  if (!excluded && index >= 0) list.splice(index, 1);
+  const listIndex = list.indexOf(name);
+  const includedIndex = included.indexOf(name);
+  if (excluded) {
+    if (listIndex < 0) list.push(name);
+    if (includedIndex >= 0) included.splice(includedIndex, 1);
+  } else {
+    if (listIndex >= 0) list.splice(listIndex, 1);
+    if (iphoneInjectIsDefaultExcludedKey(name) && includedIndex < 0) included.push(name);
+  }
   settings.injectExcluded = list;
+  settings.injectIncludeOverrides = included;
   iphoneSaveSettings(settings);
 }
 
+// 当前处于排除状态的键总数（设置页计数用）：
+//   - 玩家排除表里的键，含幽灵键（扩展卸载后遗留的）——「全部恢复附带」按钮
+//     的可见性以它为准，不然幽灵键就没法清掉了；
+//   - 默认名单里未被恢复附带、且本轮真出现在合并列表里的键。没装对应扩展的
+//     玩家不该看到凭空的「排除 1」，所以不出现在列表里的默认键不计。
+// 与逐条判定同源（用户排除过的默认键只算一次）。
 function iphoneInjectCountExcluded() {
-  return iphoneInjectExcludedKeys().size;
+  const names = iphoneInjectExcludedKeys();
+  const included = iphoneInjectIncludeOverrides();
+  const present = new Set(iphoneInjectEffectiveEntries().map((entry) => String(entry?.key ?? '')));
+  for (const key of IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS) {
+    if (present.has(key) && !included.has(key)) names.add(key);
+  }
+  return names.size;
 }
 
-// 清掉全部排除（「全部恢复附带」按钮）。
+// 清掉全部排除（「全部恢复附带」按钮）。按钮叫「全部」恢复附带，点了之后列表里
+// 不该再有划掉的名字：玩家排除表清空之外，默认名单也整体记入恢复表（覆盖出厂
+// 默认）。之后想恢复某条的默认排除，在列表里重新勾上即可。
 function iphoneInjectClearExcluded() {
   const settings = iphoneGetSettings();
   settings.injectExcluded = [];
+  settings.injectIncludeOverrides = IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS.slice();
   iphoneSaveSettings(settings);
 }
 
-// 本次请求「将要附带」的条目：实时 + 快照合并的结果，再减去玩家逐条排除的。
+// 本次请求「将要附带」的条目：实时 + 快照合并的结果，再减去被排除的
+// （玩家逐条排除 + 未被恢复附带的默认排除项）。
 // 设置页预览与各请求拼段都走这里，两边看到的永远是同一份。
 function iphoneInjectAttachableEntries() {
-  const excluded = iphoneInjectExcludedKeys();
-  if (!excluded.size) return iphoneInjectEffectiveEntries();
-  return iphoneInjectEffectiveEntries().filter((entry) => !excluded.has(String(entry?.key ?? '')));
+  const excludedKeys = iphoneInjectExcludedKeys();
+  const includeOverrides = iphoneInjectIncludeOverrides();
+  return iphoneInjectEffectiveEntries()
+    .filter((entry) => !iphoneInjectIsExcluded(String(entry?.key ?? ''), excludedKeys, includeOverrides));
 }
 
 // ---------- 拼段 ----------

@@ -1111,6 +1111,11 @@ const IPHONE_DEFAULT_SETTINGS = Object.freeze({
   // 稳定身份；某个扩展本轮没跑，它的键留在表里不碍事，下次注入进来照样排除。
   // 空数组 = 全都附带。纯配置，跨聊天共享（不像快照那样随聊天清空）。
   injectExcluded: [],
+  // 默认排除的恢复附带表（v1.0.1）：inject.js 的 IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS
+  // 里列出的键（如 baibai_book_time_tag）出厂就不附带，玩家在列表里取消勾选
+  // （想要它附带）时把键记到这里覆盖默认。只收默认名单里的键，普通条目的排除
+  // 仍走 injectExcluded；两张表互斥，同一键不同时存在于两边。
+  injectIncludeOverrides: [],
   // 提示词预设：各聊天场景的提示词组合（「设置 · 私聊提示词」/「群聊提示词」/
   // 「动态提示词」/「朋友圈提示词」/「小红书提示词」里编辑）。qqChat = QQ 联系人
   // 聊天；groupChat = QQ 群聊（v0.12.0 起）；qzone = QQ空间动态生成（v0.16.0 起）；

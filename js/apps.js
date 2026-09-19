@@ -5760,7 +5760,9 @@ function buildSettingsAppScreen() {
         const isExcluded = iphoneInjectIsExcluded(key);
         checkbox.checked = isExcluded;
         block.classList.toggle('is-excluded', isExcluded);
-        meta.textContent = `${text.length} 字 · ${entry?.live ? '实时' : '上一轮'}${isExcluded ? ' · 不附带' : ''}`;
+        // 默认排除的条目单独点名：方框默认是勾中的，不说明一句会像「自己勾的忘了」。
+        meta.textContent = `${text.length} 字 · ${entry?.live ? '实时' : '上一轮'}`
+          + `${iphoneInjectIsDefaultExcludedKey(key) ? ' · 默认排除' : ''}${isExcluded ? ' · 不附带' : ''}`;
       };
       checkbox.addEventListener('change', () => {
         iphoneInjectSetExcluded(key, checkbox.checked);
@@ -5823,7 +5825,9 @@ function buildSettingsAppScreen() {
     + '<context_injection> 段，其余照常发送；取消勾选即恢复。排除按插件名记着，换聊天、重启都还在，'
     + '列表里的条目仍会显示（不隐藏），随时可以取消。点条目展开原文。变量状态这类内容每轮都在变：'
     + '标「实时」的是插件此刻要注入的值，标「上一轮」的是扩展已清空、用酒馆上一轮组装时的快照补上的'
-    + '（要让这类内容变新，去酒馆里点一次发送即可）。切换聊天会清空快照。';
+    + '（要让这类内容变新，去酒馆里点一次发送即可）。切换聊天会清空快照。'
+    + '标「默认排除」的条目（如 baibai_book_time_tag）是本插件出厂就不附带的，方框默认勾中——'
+    + '取消勾选即恢复附带，再勾回去改回排除；「全部恢复附带」也会把它们一并恢复。';
   injectScroll.appendChild(injectListFoot);
 
   injectPage.appendChild(injectNav);
