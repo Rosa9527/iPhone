@@ -2381,13 +2381,15 @@ function iphoneXhsBuildProfileView({ icons, screen, onClose }) {
     });
   }
 
-  // 头像选择浮层（小红书款式）：点保存才写回，返回丢弃
+  // 头像选择浮层（小红书款式）：头像「选完即生效」当场落盘，其余行仍等右上角
+  // 「保存」。commit 里不能调 refresh()——那会拿存储里的旧资料重填所有输入框，
+  // 把还没点保存的手填草稿一并冲掉；头像预览由 iphoneUpdateXhsProfile 内部的
+  // iphoneRefreshXhsMeIdentity(screen) 顺带刷新（本视图就挂在 screen 下）。
   const avatarPicker = iphoneXhsBuildAvatarPicker(icons, {
     getCurrent: () => iphoneGetXhsProfile().avatar,
     onPick: () => {},
     commit: (avatar) => {
       iphoneUpdateXhsProfile(screen, { avatar });
-      refresh();
     },
   });
   view.appendChild(avatarPicker.el);
