@@ -507,8 +507,7 @@ async function iphoneAssessWechatWallet() {
   if (guidance) sysParts.push(`以下是资产评估的评定标准（决定你怎么评）：\n<assess_guidance>\n${resolve(guidance)}\n</assess_guidance>`);
   if (format) sysParts.push(`以下是输出格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
-  const userContent = `请评估「${playerName}」此刻的资产状况，给出 TA 微信零钱应有的余额。`
-    + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = `请评估「${playerName}」此刻的资产状况，给出 TA 微信零钱应有的余额。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -1344,8 +1343,8 @@ async function iphoneGenerateWechatMoments(ownerId) {
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
   const userContent = owner
-    ? `请根据以上信息，为 ${owner.name} 的微信朋友圈生成一条新的动态，只由 ${owner.name} 发布。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `请根据以上信息，为微信朋友圈生成新的动态。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `请根据以上信息，为 ${owner.name} 的微信朋友圈生成一条新的动态，只由 ${owner.name} 发布。`
+    : `请根据以上信息，为微信朋友圈生成新的动态。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -1526,7 +1525,7 @@ async function iphoneGenerateWechatMomentReply(moment) {
   if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
   if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
 
-  const userContent = `${playerDesc}在朋友圈评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = `${playerDesc}在朋友圈评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },

@@ -379,8 +379,8 @@ async function iphoneGenerateTaobaoProducts(taobaoScreen, keyword) {
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
   const userContent = query
-    ? `请根据以上信息，为淘宝生成与搜索词「${query}」相关的商品（1~6 个）。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `请根据以上信息，为淘宝首页生成新的推荐商品（1~6 个）。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `请根据以上信息，为淘宝生成与搜索词「${query}」相关的商品（1~6 个）。`
+    : `请根据以上信息，为淘宝首页生成新的推荐商品（1~6 个）。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },

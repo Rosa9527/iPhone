@@ -54,7 +54,7 @@
 //
 // 默认排除（v1.0.1）：个别条目不必等玩家动手，检测到键名就直接按排除算——名单
 // 在 IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS（首个 baibai_book_time_tag：时间标签，
-// 本插件的手机请求已自带「当前时间」上下文，再带一份属于重复背景）。玩家在设置
+// 手机各请求的生成任务不依赖具体时刻，默认不带）。玩家在设置
 // 里取消勾选即恢复附带，选择记在 settings.injectIncludeOverrides（只收名单里的
 // 键）覆盖出厂默认；「全部恢复附带」也按「全部都附带」处理，连默认排除的一并
 // 恢复。
@@ -96,9 +96,9 @@ const IPHONE_INJECT_HOST_KEY_PREFIXES = Object.freeze([
 ]);
 
 // 默认排除的条目键（v1.0.1）：检测到这些键的注入一律不随手机请求附带，不必等
-// 玩家逐条勾选。首个 baibai_book_time_tag——时间标签，本插件的手机请求已自带
-// 「当前时间」上下文（见 apps.js 各请求的「当前时间：…」），再带一份属于重复
-// 背景。玩家仍可在「设置 · 第三方注入」里取消勾选恢复附带（选择记在
+// 玩家逐条勾选。首个 baibai_book_time_tag——时间标签，手机各请求的生成任务
+// （发动态、写评论、生成商品）不依赖具体时刻，默认不带。玩家仍可在
+// 「设置 · 第三方注入」里取消勾选恢复附带（选择记在
 // settings.injectIncludeOverrides，覆盖这里的默认）；以后要新增默认排除项，
 // 往这个数组里加键名即可。
 const IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS = Object.freeze([

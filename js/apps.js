@@ -737,8 +737,8 @@ async function iphoneGenerateQqDynamics(ownerId) {
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
   const userContent = owner
-    ? `请根据以上信息，为 ${owner.name} 的 QQ 空间生成一条新的动态，只由 ${owner.name} 发布。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `请根据以上信息，为 QQ 空间生成新的动态。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `请根据以上信息，为 ${owner.name} 的 QQ 空间生成一条新的动态，只由 ${owner.name} 发布。`
+    : `请根据以上信息，为 QQ 空间生成新的动态。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -939,7 +939,7 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
   if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
 
-  const userContent = `${playerDesc}在评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = `${playerDesc}在评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },

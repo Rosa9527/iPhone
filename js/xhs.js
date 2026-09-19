@@ -824,8 +824,7 @@ async function iphoneGenerateXhsNotes(xhsScreen) {
   const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。`
     + `每篇都要与当前剧情或世界观设定相关联——直接相关 / 间接相关 / 背景与世界观三种写法里选一种，几篇之间分散开。`
     + `每篇的评论区都要写 ${IPHONE_XHS_NOTE_COMMENTS_MIN}~${IPHONE_XHS_NOTE_COMMENTS_MAX} 条评论（这个条数覆盖写作指导与格式说明里的条数限制）：`
-    + `点赞高的笔记多写几条、冷门的少写几条，几篇之间条数错开，不要每篇都一样。`
-    + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    + `点赞高的笔记多写几条、冷门的少写几条，几篇之间条数错开，不要每篇都一样。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -1007,8 +1006,8 @@ async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } 
   }
 
   const userContent = published
-    ? `${playerDesc}刚刚发布了这篇笔记（作者就是 TA 本人），请根据以上信息生成新的网友评论。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `${playerDesc}刚刚发布了这篇笔记（作者就是 TA 本人），请根据以上信息生成新的网友评论。`
+    : `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },

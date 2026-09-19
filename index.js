@@ -1,5 +1,5 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-19 23:34:49 · 文件数: 12 · 指纹: 959c4487
+// 构建时间: 2026-09-20 00:14:56 · 文件数: 12 · 指纹: e87a5a34
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
@@ -3140,7 +3140,7 @@ try {
 //
 // 默认排除（v1.0.1）：个别条目不必等玩家动手，检测到键名就直接按排除算——名单
 // 在 IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS（首个 baibai_book_time_tag：时间标签，
-// 本插件的手机请求已自带「当前时间」上下文，再带一份属于重复背景）。玩家在设置
+// 手机各请求的生成任务不依赖具体时刻，默认不带）。玩家在设置
 // 里取消勾选即恢复附带，选择记在 settings.injectIncludeOverrides（只收名单里的
 // 键）覆盖出厂默认；「全部恢复附带」也按「全部都附带」处理，连默认排除的一并
 // 恢复。
@@ -3182,9 +3182,9 @@ const IPHONE_INJECT_HOST_KEY_PREFIXES = Object.freeze([
 ]);
 
 // 默认排除的条目键（v1.0.1）：检测到这些键的注入一律不随手机请求附带，不必等
-// 玩家逐条勾选。首个 baibai_book_time_tag——时间标签，本插件的手机请求已自带
-// 「当前时间」上下文（见 apps.js 各请求的「当前时间：…」），再带一份属于重复
-// 背景。玩家仍可在「设置 · 第三方注入」里取消勾选恢复附带（选择记在
+// 玩家逐条勾选。首个 baibai_book_time_tag——时间标签，手机各请求的生成任务
+// （发动态、写评论、生成商品）不依赖具体时刻，默认不带。玩家仍可在
+// 「设置 · 第三方注入」里取消勾选恢复附带（选择记在
 // settings.injectIncludeOverrides，覆盖这里的默认）；以后要新增默认排除项，
 // 往这个数组里加键名即可。
 const IPHONE_INJECT_DEFAULT_EXCLUDED_KEYS = Object.freeze([
@@ -4286,8 +4286,8 @@ async function iphoneGenerateQqDynamics(ownerId) {
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
   const userContent = owner
-    ? `请根据以上信息，为 ${owner.name} 的 QQ 空间生成一条新的动态，只由 ${owner.name} 发布。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `请根据以上信息，为 QQ 空间生成新的动态。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `请根据以上信息，为 ${owner.name} 的 QQ 空间生成一条新的动态，只由 ${owner.name} 发布。`
+    : `请根据以上信息，为 QQ 空间生成新的动态。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -4488,7 +4488,7 @@ async function iphoneGenerateQqDynamicReply(dyn) {
   if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
   if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
 
-  const userContent = `${playerDesc}在评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = `${playerDesc}在评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -9954,8 +9954,7 @@ async function iphoneAssessWechatWallet() {
   if (guidance) sysParts.push(`以下是资产评估的评定标准（决定你怎么评）：\n<assess_guidance>\n${resolve(guidance)}\n</assess_guidance>`);
   if (format) sysParts.push(`以下是输出格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
-  const userContent = `请评估「${playerName}」此刻的资产状况，给出 TA 微信零钱应有的余额。`
-    + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = `请评估「${playerName}」此刻的资产状况，给出 TA 微信零钱应有的余额。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -10791,8 +10790,8 @@ async function iphoneGenerateWechatMoments(ownerId) {
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
   const userContent = owner
-    ? `请根据以上信息，为 ${owner.name} 的微信朋友圈生成一条新的动态，只由 ${owner.name} 发布。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `请根据以上信息，为微信朋友圈生成新的动态。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `请根据以上信息，为 ${owner.name} 的微信朋友圈生成一条新的动态，只由 ${owner.name} 发布。`
+    : `请根据以上信息，为微信朋友圈生成新的动态。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -10973,7 +10972,7 @@ async function iphoneGenerateWechatMomentReply(moment) {
   if (replyGuidance) sysParts.push(`以下是评论回复的写作指导：\n<reply_guidance>\n${resolve(replyGuidance)}\n</reply_guidance>`);
   if (replyFormat) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(replyFormat)}\n</output_format>`);
 
-  const userContent = `${playerDesc}在朋友圈评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+  const userContent = `${playerDesc}在朋友圈评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -14782,8 +14781,7 @@ async function iphoneGenerateXhsNotes(xhsScreen) {
   const userContent = `请根据以上信息，为小红书首页生成新的网友笔记（1~3 篇）。`
     + `每篇都要与当前剧情或世界观设定相关联——直接相关 / 间接相关 / 背景与世界观三种写法里选一种，几篇之间分散开。`
     + `每篇的评论区都要写 ${IPHONE_XHS_NOTE_COMMENTS_MIN}~${IPHONE_XHS_NOTE_COMMENTS_MAX} 条评论（这个条数覆盖写作指导与格式说明里的条数限制）：`
-    + `点赞高的笔记多写几条、冷门的少写几条，几篇之间条数错开，不要每篇都一样。`
-    + `当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    + `点赞高的笔记多写几条、冷门的少写几条，几篇之间条数错开，不要每篇都一样。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -14965,8 +14963,8 @@ async function iphoneGenerateXhsComments(note, xhsScreen, { published = false } 
   }
 
   const userContent = published
-    ? `${playerDesc}刚刚发布了这篇笔记（作者就是 TA 本人），请根据以上信息生成新的网友评论。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `${playerDesc}刚刚发布了这篇笔记（作者就是 TA 本人），请根据以上信息生成新的网友评论。`
+    : `${playerDesc}在这篇笔记的评论区留下了新评论（评论区最后一条），请根据以上信息生成新的评论回复。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
@@ -17418,8 +17416,8 @@ async function iphoneGenerateTaobaoProducts(taobaoScreen, keyword) {
   if (format) sysParts.push(`以下是回复格式要求，必须严格遵守：\n<output_format>\n${resolve(format)}\n</output_format>`);
 
   const userContent = query
-    ? `请根据以上信息，为淘宝生成与搜索词「${query}」相关的商品（1~6 个）。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`
-    : `请根据以上信息，为淘宝首页生成新的推荐商品（1~6 个）。当前时间：${new Date().toLocaleString('zh-CN', { hour12: false })}。`;
+    ? `请根据以上信息，为淘宝生成与搜索词「${query}」相关的商品（1~6 个）。`
+    : `请根据以上信息，为淘宝首页生成新的推荐商品（1~6 个）。`;
   const reply = await iphoneRequestChatCompletion(settings, [
     { role: 'system', content: sysParts.join('\n\n') },
     { role: 'user', content: userContent },
