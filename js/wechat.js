@@ -274,6 +274,31 @@ function iphoneChangeWechatBalance(delta) {
   return { ok: true, balance: next };
 }
 
+// 「银行转账」输入解析（v1.0.3）：吃掉千分位 / 空格 / 货币符号，只认数字与一个小数
+// 点；空串、字母、第二个小数点都算非法 → null（界面据此禁用「确认转入」并红字提示）。
+// 合法值按分归一，超上限按上限收住（与显示同一套收口）。
+function iphoneWechatParseManualAmount(raw) {
+  const text = String(raw ?? '').replace(/[,\s¥￥]/g, '');
+  if (!/^\d*(?:\.\d*)?$/.test(text) || !/\d/.test(text)) return null;
+  return iphoneWechatRoundMoney(Number(text), null);
+}
+
+// 直接设定零钱余额（v1.0.3「银行转账」用）：玩家自己填多少就是多少，**整体覆盖**
+// 而不是增减。与 iphoneSetWechatBalance（评估用）的区别在于**不写 assessedAt /
+// assessNote**——手填的余额跟模型评估无关，界面上不该留下「已评估」的痕迹。
+// 非法 / 空输入按 0 收住（清空即归零），负数同样收成 0（零钱不可能为负）。
+// 返回 { ok, balance, previous, changed }；changed 为 false 表示数值没变。
+function iphoneSetWechatBalanceManual(value) {
+  const wallet = iphoneGetWechatWallet();
+  const parsed = iphoneWechatParseManualAmount(value);
+  const next = parsed == null ? 0 : parsed;
+  if (next === wallet.balance) return { ok: true, balance: next, previous: wallet.balance, changed: false };
+  const storage = iphoneGetQqStorage();
+  storage.wechatWallet = { ...wallet, balance: next };
+  iphoneSaveQqStorage();
+  return { ok: true, balance: next, previous: wallet.balance, changed: true };
+}
+
 // 金额显示：两位小数 + 千分位（1288.5 → 1,288.50；32000 → 32,000.00），
 // 与微信钱包的「¥」大字同款；异常数据（非数字 / 超大数）按同规则收住。
 // 先按分归一再补零，避免 8888.005 直接 toFixed 显示成 8,888.00。
@@ -2816,14 +2841,17 @@ function iphoneWechatBuildWalletView(icons, svcIcons, onBack, onOpenChange) {
   return view;
 }
 
-// ---------- 微信「零钱」页（v0.27.0） ----------
+// ---------- 微信「零钱」页（v0.27.0；v1.0.3 加「银行转账」） ----------
 // 按真实微信「我 → 服务 → 钱包 → 零钱」复刻：导航栏右侧「零钱明细」、居中黄色
 // 圆形「¥」图标、灰色小字「我的零钱」与大号金额，下接一块圆角白卡的零钱通入口
 //（钻石图标 + 「转入零钱通，能赚又能花」+ 收益率小字），页面下方两枚大按钮。
-// 与真实微信的唯一差别（插件设定）：按钮不是「充值 / 提现」，而是**「评估」**——
-// 点它调一次对话 API，按玩家在剧情里的资产状况评估出一个合适的零钱余额（见
-// iphoneAssessWechatWallet）。评估中按钮转「评估中…」并禁用；失败在金额下方
-// 红字提示；成功后金额就地翻新并显示评估理由与时间。
+// 与真实微信的差别（插件设定）：按钮不是「充值 / 提现」，而是两枚自定义入口——
+// 上面绿色**「评估」**：调一次对话 API，按玩家在剧情里的资产状况评估出一个合适
+// 的零钱余额（见 iphoneAssessWechatWallet）。评估中按钮转「评估中…」并禁用；
+// 失败在金额下方红字提示；成功后金额就地翻新并显示评估理由与时间。
+// 下面白色**「银行转账」**（v1.0.3）：点开一张小卡自己填金额，确认后**直接把
+// 零钱余额设成这个数**（不是增量，也不写评估时间）——不想让模型估、只想自己
+// 说了算时用它（见 iphoneSetWechatBalanceManual）。
 function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
   const view = document.createElement('div');
   view.className = 'iphone-wx__svc';
@@ -2869,8 +2897,8 @@ function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
   `;
   body.appendChild(lct);
 
-  // 按钮区：评估（绿，主操作）。真实微信这里是「充值 / 提现」，本插件只保留
-  // 「评估」这一个入口——余额是评估出来的，没有充值 / 提现这回事。
+  // 按钮区：评估（绿，主操作）+ 银行转账（白，次操作）。真实微信这里是「充值 /
+  // 提现」，本插件换成这两个自定义入口——余额要么由模型评估，要么自己填。
   const actions = document.createElement('div');
   actions.className = 'iphone-wx__chg-actions';
   const assessBtn = document.createElement('button');
@@ -2878,6 +2906,13 @@ function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
   assessBtn.className = 'iphone-wx__chg-btn iphone-wx__chg-btn--primary';
   assessBtn.textContent = '评估';
   actions.appendChild(assessBtn);
+  // 「银行转账」（v1.0.3）：名字借真实微信的充值渠道，实际是**自定义零钱余额**
+  // 的入口——点开填多少就是多少（见下面的 transferBox 与 submitTransfer）。
+  const transferBtn = document.createElement('button');
+  transferBtn.type = 'button';
+  transferBtn.className = 'iphone-wx__chg-btn iphone-wx__chg-btn--ghost';
+  transferBtn.textContent = '银行转账';
+  actions.appendChild(transferBtn);
   body.appendChild(actions);
 
   const foot = document.createElement('p');
@@ -2885,11 +2920,17 @@ function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
   foot.textContent = '本服务由财付通提供';
   body.appendChild(foot);
 
-  // 金额与理由的就地刷新（评估成功后调用；返回按钮等外部触发也走它）
+  // 金额与理由的就地刷新（评估成功 / 转账确认后调用；返回按钮等外部触发也走它）。
+  // flashNote：刚刚手填过余额时先顶掉评估小字，免得旧评估理由跟新金额对不上。
+  let flashNote = '';
   const renderWallet = () => {
     const current = iphoneGetWechatWallet();
     amountEl.textContent = `¥ ${iphoneWechatMoney(current.balance)}`;
-    if (current.assessedAt && current.assessNote) {
+    if (flashNote) {
+      noteEl.hidden = false;
+      noteEl.dataset.state = 'note';
+      noteEl.textContent = flashNote;
+    } else if (current.assessedAt && current.assessNote) {
       noteEl.hidden = false;
       noteEl.dataset.state = 'note';
       noteEl.textContent = `${new Date(current.assessedAt).toLocaleString('zh-CN', { hour12: false })} 评估：${current.assessNote}`;
@@ -2900,7 +2941,7 @@ function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
     } else {
       noteEl.hidden = false;
       noteEl.dataset.state = 'note';
-      noteEl.textContent = '还没有评估过，点下面的「评估」按剧情给你的零钱定个数额。';
+      noteEl.textContent = '还没有评估过，点「评估」按剧情给你的零钱定个数额，或点「银行转账」自己填。';
     }
   };
   renderWallet();
@@ -2909,6 +2950,7 @@ function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
   const runAssess = async () => {
     if (assessing) return;
     assessing = true;
+    flashNote = '';
     assessBtn.disabled = true;
     assessBtn.textContent = '评估中…';
     noteEl.hidden = false;
@@ -2932,9 +2974,102 @@ function iphoneWechatBuildChangeView(icons, svcIcons, onBack, onChanged) {
   };
   assessBtn.addEventListener('click', () => { void runAssess(); });
 
+  // ---------- 「银行转账」浮层（v1.0.3） ----------
+  // 一张盖住整页的小卡：说明 + ¥ 金额输入 + 取消 / 确认转入。名字借真实微信的
+  // 充值渠道，实际用途是**自定义零钱余额**——确认后把余额设成输入值（覆盖而非
+  // 增量），关掉浮层并就地翻新金额。挂在 view 上而不是会滚动的 body 里，
+  // 靠 .iphone-wx__svc 的 position: relative 定位。
+  const transferBox = document.createElement('div');
+  transferBox.className = 'iphone-wx__chg-tf';
+  transferBox.hidden = true;
+  transferBox.innerHTML = `
+    <div class="iphone-wx__chg-tfcard">
+      <p class="iphone-wx__chg-tftitle">银行转账</p>
+      <p class="iphone-wx__chg-tftext">填写转入零钱的金额，确认后零钱余额就是它（当前 ¥<span data-tf-current></span>）。</p>
+      <label class="iphone-wx__chg-tffield">
+        <span class="iphone-wx__chg-tfyen" aria-hidden="true">¥</span>
+        <input type="text" class="iphone-wx__chg-tfinput" data-tf-input inputmode="decimal" placeholder="0.00" maxlength="20" autocomplete="off" aria-label="转入金额">
+      </label>
+      <p class="iphone-wx__chg-tfhint" data-tf-hint></p>
+      <div class="iphone-wx__chg-tfactions">
+        <button type="button" class="iphone-wx__chg-tfcancel" data-tf-cancel>取消</button>
+        <button type="button" class="iphone-wx__chg-tfok" data-tf-ok>确认转入</button>
+      </div>
+    </div>
+  `;
+  const tfInput = transferBox.querySelector('[data-tf-input]');
+  const tfHint = transferBox.querySelector('[data-tf-hint]');
+  const tfOk = transferBox.querySelector('[data-tf-ok]');
+  const tfCurrent = transferBox.querySelector('[data-tf-current]');
+
+  // 输入解析与实时校验：合法时预告确认后的余额，非法时红字说明（解析见
+  // iphoneWechatParseManualAmount：只认数字与一个小数点，千分位 / ¥ 都吃掉）
+  const parseTransferAmount = iphoneWechatParseManualAmount;
+  const refreshTransfer = () => {
+    const amount = parseTransferAmount(tfInput.value);
+    tfOk.disabled = amount == null;
+    if (amount == null) {
+      const filled = Boolean(tfInput.value.trim());
+      tfHint.dataset.state = filled ? 'error' : 'note';
+      tfHint.textContent = filled ? '请填写有效的金额（例如 1288.50）。' : '留空或填 0 即把零钱清零。';
+    } else {
+      tfHint.dataset.state = 'note';
+      tfHint.textContent = `确认后零钱余额：¥${iphoneWechatMoney(amount)}`;
+    }
+  };
+  const openTransfer = () => {
+    tfCurrent.textContent = iphoneWechatMoney(iphoneGetWechatWallet().balance);
+    tfInput.value = '';
+    refreshTransfer();
+    transferBox.hidden = false;
+    // 真机的银行转账页进来就落键盘，这里同样直接聚焦输入框
+    tfInput.focus();
+  };
+  const closeTransfer = () => {
+    transferBox.hidden = true;
+    tfInput.value = '';
+  };
+  // 确认转入：覆盖式写入余额 → 关浮层 → 就地翻新金额与小字 → 让外层也跟着刷新
+  const submitTransfer = () => {
+    const amount = parseTransferAmount(tfInput.value);
+    if (amount == null) return;
+    const result = iphoneSetWechatBalanceManual(amount);
+    closeTransfer();
+    flashNote = result.changed
+      ? '已通过「银行转账」设定零钱余额'
+      : `「银行转账」未改动余额（已是 ¥${iphoneWechatMoney(result.balance)}）`;
+    renderWallet();
+    if (result.changed) {
+      iphoneLog('info', `银行转账：零钱余额 ¥${iphoneWechatMoney(result.previous)} → ¥${iphoneWechatMoney(result.balance)}`);
+    }
+    onChanged?.(result);
+  };
+  transferBtn.addEventListener('click', openTransfer);
+  transferBox.querySelector('[data-tf-cancel]').addEventListener('click', closeTransfer);
+  tfOk.addEventListener('click', submitTransfer);
+  // 点遮罩空白处也能关（卡片内的点击不冒泡到遮罩上）
+  transferBox.addEventListener('click', (event) => {
+    if (event.target === transferBox) closeTransfer();
+  });
+  tfInput.addEventListener('input', () => {
+    // 输入时就挡掉非法字符（字母 / 第二个小数点），省得按确认才发现填错
+    const cleaned = tfInput.value.replace(/[^\d.]/g, '').replace(/^(\d*\.\d*).*$/, '$1');
+    if (cleaned !== tfInput.value) tfInput.value = cleaned;
+    refreshTransfer();
+  });
+  tfInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitTransfer();
+    } else if (event.key === 'Escape') {
+      closeTransfer();
+    }
+  });
+
   view.appendChild(nav);
   view.appendChild(body);
-  // 评估后金额变了：让外层（服务页绿卡 / 钱包页零钱行）也跟着刷新
+  view.appendChild(transferBox);
+  // 评估 / 转账后金额变了：让外层（服务页绿卡 / 钱包页零钱行）也跟着刷新
   view._refreshChangeView = renderWallet;
   return view;
 }

@@ -7064,7 +7064,8 @@
   font-size: 13px;
 }
 
-/* 按钮区：贴底居中，绿色主键（真实页是「充值」绿 +「提现」灰，这里只有评估） */
+/* 按钮区：贴底居中，绿色主键「评估」+ 白色次键「银行转账」（真实页是「充值」绿
+   +「提现」灰，这里换成评估与自定义余额两个入口） */
 .iphone-wx__chg-actions {
   display: flex;
   flex: none;
@@ -7101,6 +7102,17 @@
   cursor: default;
 }
 
+/* 次键「银行转账」（v1.0.3）：白底 + 灰描边，压在绿色「评估」下面 */
+.iphone-wx__chg-btn--ghost {
+  border: 1px solid #dcdcdc;
+  background: #fff;
+  color: #191919;
+}
+
+.iphone-wx__chg-btn--ghost:active {
+  background: #f2f2f2;
+}
+
 /* 底部「本服务由财付通提供」小字 */
 .iphone-wx__chg-foot {
   flex: none;
@@ -7109,6 +7121,134 @@
   color: #b2b2b2;
   font-size: 12.5px;
   text-align: center;
+}
+
+/* ---------- 微信零钱「银行转账」浮层（v1.0.3） ---------- */
+/* 盖住整页的半透明遮罩 + 居中白卡（说明 + ¥ 金额输入 + 取消 / 确认转入）。
+   卡片靠 .iphone-wx__svc 的 position: relative 定位，所以挂在 view 上而不是
+   会滚动的 .iphone-wx__svc-body 里。 */
+
+.iphone-wx__chg-tf {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.iphone-wx__chg-tf[hidden] {
+  display: none;
+}
+
+.iphone-wx__chg-tfcard {
+  width: 100%;
+  max-width: 300px;
+  padding: 20px 18px 16px;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+}
+
+.iphone-wx__chg-tftitle {
+  margin: 0 0 8px;
+  color: #191919;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.iphone-wx__chg-tftext {
+  margin: 0 0 14px;
+  color: #8a8f99;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 金额输入行：左侧 ¥ + 数字输入（真机银行转账页同款观感） */
+.iphone-wx__chg-tffield {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #f7f7f7;
+}
+
+.iphone-wx__chg-tfyen {
+  flex: none;
+  color: #191919;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.iphone-wx__chg-tfinput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: none;
+  color: #191919;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 500;
+  outline: none;
+}
+
+/* 输入行下方的提示：灰色是「确认后余额」预告，红色是格式错误 */
+.iphone-wx__chg-tfhint {
+  margin: 10px 0 0;
+  color: #9a9a9a;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.iphone-wx__chg-tfhint[data-state='error'] {
+  color: #fa5151;
+}
+
+.iphone-wx__chg-tfactions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.iphone-wx__chg-tfcancel,
+.iphone-wx__chg-tfok {
+  flex: 1;
+  min-height: 40px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.iphone-wx__chg-tfcancel {
+  background: #f2f2f2;
+  color: #4a4e57;
+}
+
+.iphone-wx__chg-tfcancel:active {
+  background: #e6e6e6;
+}
+
+.iphone-wx__chg-tfok {
+  background: #07c160;
+  color: #fff;
+}
+
+.iphone-wx__chg-tfok:active {
+  background: #06ad56;
+}
+
+.iphone-wx__chg-tfok:disabled {
+  background: #d8d8d8;
+  color: #f7f7f7;
+  cursor: default;
 }
 
 /* 创建群聊 / 添加成员 · 选择联系人卡 */

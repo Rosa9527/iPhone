@@ -19,6 +19,7 @@
            test.html?app=wechat&wxservice=1 → 切「我」Tab 后点「服务」行，进服务页
            test.html?app=wechat&wxwallet=1（配合 &wxservice=1）→ 再点「钱包」行进钱包页
            test.html?app=wechat&wxchange=1（配合 &wxservice=1&wxwallet=1）→ 再点「零钱」行进零钱页
+           test.html?app=wechat&wxbank=1（配合 &wxchange=1）→ 再点「银行转账」弹出自定义余额浮层
            test.html?app=qq&fqzone=1（配合 &chat=N）→ 经好友资料页直达她的QQ空间
            test.html?app=settings&wxpreset=1 → 再推入「微信私聊提示词」子页
            test.html?app=settings&wxassesspreset=1 → 再推入「零钱评估提示词」子页
@@ -53,7 +54,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>iPhone 扩展 · 本地测试台</title>
-<link rel="stylesheet" href="style.css?v=1.0.0">
+<link rel="stylesheet" href="style.css?v=1.0.3">
 <style>
   /* 与宿主对齐的全局重置：酒馆的 style.css 里有 `* { box-sizing: border-box }`，
      而插件是按这个前提写的（多处以「固定 px 尺寸 + padding」排版，见 README
@@ -236,7 +237,7 @@
       };
     }
   </script>
-  <script src="index.js?v=1.0.2"></script>
+  <script src="index.js?v=1.0.3"></script>
   <script>
     const params = new URLSearchParams(location.search);
     /* ?seed=1：注入一批演示网友 / 笔记 / 评论，以及演示淘宝商品 / 购物车 / 订单。
@@ -761,6 +762,16 @@
                 else if (retries > 0) setTimeout(() => openWxChangeWhenReady(retries - 1), 150);
               };
               setTimeout(() => openWxChangeWhenReady(40), 2100);
+            }
+            if (params.has('wxbank')) {
+              // &wxbank=1（v1.0.3）：零钱页里再点「银行转账」，弹出自定义余额浮层
+              const openWxBankWhenReady = (retries) => {
+                const btn = [...document.querySelectorAll('.iphone-wx__chg-btn')]
+                  .find((el) => el.textContent.includes('银行转账'));
+                if (btn) btn.click();
+                else if (retries > 0) setTimeout(() => openWxBankWhenReady(retries - 1), 150);
+              };
+              setTimeout(() => openWxBankWhenReady(60), 2500);
             }
           }
           if (params.has('wxpreset')) {
