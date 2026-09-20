@@ -4,7 +4,7 @@
 高度仿真的 iPhone（iPhone 15 Pro 尺寸，393×852 设计稿）：灵动岛、状态栏、
 主屏图标网格、Dock、Home 指示条与 iOS 式应用打开动画。
 
-当前为 **v1.0.1**：悬浮球是 Apple LOGO，主屏网格有 QQ、微信、小红书、淘宝四个应用，
+当前为 **v1.0.2**：悬浮球是 Apple LOGO，主屏网格有 QQ、微信、小红书、淘宝四个应用，
 屏幕下方的 Dock 里是三个常用应用（世界书、设置、日志）。QQ 内页按
 QQ NT 手机端（假设版本：安卓 QQ 9.0.x，界面还原以公开资料与旧版截图为参照）
 做**纯界面仿真 + 基础页面跳转**，不含真实业务功能：
@@ -179,6 +179,10 @@ QQ NT 手机端（假设版本：安卓 QQ 9.0.x，界面还原以公开资料�
     动作，拉取 OpenAI 兼容 `/models` 列表，状态以分组脚注小字实时显示（成功
     绿 / 失败红）。跨域地址优先经 TauriTavern 宿主代理
     （`/api/backends/chat-completions/status`）转发，失败自动回退直连。
+    Base URL 填 `https://opencode.ai/zen/go/v1`（OpenCode Go）时会自动附加该端点
+    强制要求的 `x-opencode-session` 请求头（v1.0.2，见 Roadmap）：会话 id 由当前
+    聊天派生、同一聊天恒定（利于提供方路由与 prompt 缓存），直连与宿主代理两条
+    路径都会带上；其他 Base URL 的请求不受影响。
   - **模型选择**：「模型」行推入 iOS 式勾选列表子页（选中项右侧蓝勾），也可在
     「自定义模型」行直接输入；主屏行尾灰字同步显示当前模型。
   - **请求控制**（功能同 Kaleidoscope 的 API 设置）：「并发限制」推入勾选子页，
@@ -699,7 +703,7 @@ iPhone/
 ├── js/
 │   ├── constants.js   # 常量 / DOM ID / 应用注册表 / Apple LOGO 路径 / 微信预设默认值
 │   ├── utils.js       # 日志 / 数值 / 电量读取
-│   ├── host.js        # 宿主适配：上下文 / 设置持久化 / API 模型列表拉取 / iPhone_Message 楼层读写与记录段标签解析拼装
+│   ├── host.js        # 宿主适配：上下文 / 设置持久化 / API 模型列表拉取（含 OpenCode 端点会话头，v1.0.2）/ iPhone_Message 楼层读写与记录段标签解析拼装
 │   ├── inject.js      # 第三方注入捕获：读宿主 extensionPrompts 注册表，在提示词就绪事件里抓快照，按条目键逐条排除（v0.32.0）与默认排除名单（v1.0.1），拼进各请求的 system（v0.26.0）
 │   ├── apps.js        # 应用图标渲染 + QQ 各页内页（消息/聊天/联系人/动态/空间/编辑资料/好友资料/加好友·建群）+ 头像选择浮层与裁剪编辑器（QQ/微信共用）+ QQ空间动态生成与楼层同步 + 设置（API 连接 / 提示词预设九页 / 第三方注入）
 │   ├── wechat.js      # 微信：数据模型 / 四 Tab / 聊天（私聊·群聊）/ 通讯录 / 朋友圈（全局与 TA 的朋友圈）/ 资料与群管理 / 服务·钱包·零钱页与资产「评估」 / 楼层同步（段标签与 QQ 同构）
@@ -1735,6 +1739,35 @@ python -m http.server 8377
       幽灵键计数 / 全部恢复 / 默认键不出现不计数）全过；test.html 起本地服务
       实测注册表写入 `baibai_book_time_tag` 后列表默认勾中、计数与「全部恢复」
       交互正常；`node build.js --check` 通过。
+- [x] OpenCode Go 端点（Base URL = `https://opencode.ai/zen/go/v1`）调用被拒签
+      （v1.0.2）：报错「Failed to generate chat completion: Validation error:
+      Error from provider (Console Go): Request is missing x-opencode-session and
+      cannot be routed efficiently.」。查 OpenCode 官方文档
+      （https://opencode.ai/docs/go/#where-can-i-use-it）：客户端应为每个会话带一个
+      **稳定的** `x-opencode-session`（提供方据此做路由与 prompt 缓存），缺这个头
+      就被直接拒。宿主只在自家 LLM 连接 / agent 配置里注入该头，而本插件走的是
+      `/api/backends/chat-completions/generate` 的 `chat_completion_source: 'custom'`
+      代理，宿主不会补——所以必须由插件自己带。改法：`js/constants.js` 新增
+      `IPHONE_OPENCODE_SESSION_API_BASES`（目前只有 `https://opencode.ai/zen/go/v1`，
+      要支持 Zen 等端点加一行即可）与 `IPHONE_OPENCODE_SESSION_HEADER`；`js/host.js`
+      把 `iphoneGetApiBase` 抽出 `iphoneNormalizeApiBase`（去空白 / 末尾斜杠 / 误带的
+      `/chat/completions`、`/models`，行为与从前一致），新增
+      `iphoneIsOpenCodeSessionApiBase`（规范化后精确匹配）、`iphoneHashToHex` /
+      `iphoneGetChatSessionKey` / `iphoneGetOpenCodeSessionId`（会话 id 由当前聊天
+      派生 `iphone-<16 hex>`，同一聊天恒定、不同聊天不同；聊天标识可能含中文 / 空格，
+      不能直接当请求头值）、`iphoneGetEndpointExtraHeaders`（端点专属头，非 OpenCode
+      端点返回空对象）、`iphoneBuildIncludeHeaderLines`（宿主代理
+      `custom_include_headers` 按行拼装：保留原有 Authorization 行，会话头按同样带引号
+      的格式另起一行）。直连（`iphoneGetAuthHeaders` 加第二参 `apiBase`）与宿主代理
+      （`/status` 模型探测、`/generate` 对话）两条路径都带上会话头，代理失败回退直连
+      的那一跳也一样。影响范围严格限定在名单里的 Base URL，其他端点的请求头与请求体
+      逐字不变。验证：脚本化核对 44 项全过（端点识别含末尾斜杠 / 大小写 / 误带
+      `/chat/completions`、会话 id 稳定性与格式、直连与代理两条路径都带会话头、其他
+      端点请求头与请求体逐字未变、产物含全部改动）；`node build.js --check` 与
+      `node --check index.js` 通过。同目录 SoulLink 用同一套改法（v1.7.2）改完后，
+      宿主日志 `logs/llm-api-index.json` 里对 `https://opencode.ai/zen/go/v1/chat/completions`
+      的 `source: "custom"` 请求已由失败转为成功——证明宿主代理确实会把
+      `custom_include_headers` 里的会话头转发给提供方。
 - [ ] 淘宝补全：收藏 / 足迹的真实列表（当前复用订单页换数据源）、
       退款售后与客服的真实流程、商品评价的展开与追评、物流轨迹页
 - [ ] 更多应用图标（相册 / 时钟等占位）

@@ -1153,6 +1153,19 @@ const IPHONE_MODEL_LIST_TIMEOUT_MS = 20000;
 // 对话请求超时（QQ 好友聊天页发消息）：模型生成可能较慢，给足 2 分钟。
 const IPHONE_CHAT_TIMEOUT_MS = 120000;
 
+// ---------- OpenCode 端点会话头 ----------
+// OpenCode Go（https://opencode.ai/docs/go/）要求客户端为每个会话带上稳定的
+// x-opencode-session 请求头（提供方据此做路由与 prompt 缓存）；缺这个头会被直接拒签：
+// 「Request is missing x-opencode-session and cannot be routed efficiently.」。
+// TauriTavern 只在自家 LLM 连接 / agent 配置里注入该头，走
+// /api/backends/chat-completions/generate 的 custom 代理不会补，所以由本插件自己带。
+// 需要附加该头的 Base URL（规范化后精确匹配，只影响这些地址；要支持 Zen 等其他
+// OpenCode 端点，往这个数组里加一行即可）。
+const IPHONE_OPENCODE_SESSION_API_BASES = Object.freeze([
+  'https://opencode.ai/zen/go/v1',
+]);
+const IPHONE_OPENCODE_SESSION_HEADER = 'x-opencode-session';
+
 // ---------- iPhone_Message 楼层 ----------
 // QQ 聊天记录同步进酒馆聊天时用的专用楼层：整个楼层的文本必须是
 // <iPhone_Message>...</iPhone_Message> 的最外层完整包裹。只认这个固定标签名。

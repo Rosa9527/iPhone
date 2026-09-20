@@ -1,5 +1,5 @@
 // ===== iPhone（悬浮球手机）index.js — 构建产物，勿手改 =====
-// 构建时间: 2026-09-20 00:14:56 · 文件数: 12 · 指纹: e87a5a34
+// 构建时间: 2026-09-20 22:44:27 · 文件数: 12 · 指纹: a16c4386
 
 // ===== js/constants.js =====
 // ===== iPhone（悬浮球手机）全局常量 =====
@@ -1157,6 +1157,19 @@ const IPHONE_MODEL_LIST_TIMEOUT_MS = 20000;
 // 对话请求超时（QQ 好友聊天页发消息）：模型生成可能较慢，给足 2 分钟。
 const IPHONE_CHAT_TIMEOUT_MS = 120000;
 
+// ---------- OpenCode 端点会话头 ----------
+// OpenCode Go（https://opencode.ai/docs/go/）要求客户端为每个会话带上稳定的
+// x-opencode-session 请求头（提供方据此做路由与 prompt 缓存）；缺这个头会被直接拒签：
+// 「Request is missing x-opencode-session and cannot be routed efficiently.」。
+// TauriTavern 只在自家 LLM 连接 / agent 配置里注入该头，走
+// /api/backends/chat-completions/generate 的 custom 代理不会补，所以由本插件自己带。
+// 需要附加该头的 Base URL（规范化后精确匹配，只影响这些地址；要支持 Zen 等其他
+// OpenCode 端点，往这个数组里加一行即可）。
+const IPHONE_OPENCODE_SESSION_API_BASES = Object.freeze([
+  'https://opencode.ai/zen/go/v1',
+]);
+const IPHONE_OPENCODE_SESSION_HEADER = 'x-opencode-session';
+
 // ---------- iPhone_Message 楼层 ----------
 // QQ 聊天记录同步进酒馆聊天时用的专用楼层：整个楼层的文本必须是
 // <iPhone_Message>...</iPhone_Message> 的最外层完整包裹。只认这个固定标签名。
@@ -1517,18 +1530,86 @@ function iphoneSaveQqStorage() {
 }
 
 // ---------- API 基础 ----------
-// 归一化 Base URL：去尾部斜杠；误把完整接口路径粘进来时摘掉 /models、/chat/completions。
-function iphoneGetApiBase(settings) {
-  let apiBase = String(settings?.apiUrl || '').trim().replace(/\/+$/, '');
-  apiBase = apiBase.replace(/\/(chat\/completions|models)$/i, '');
-  return apiBase.replace(/\/+$/, '');
+// 归一化 Base URL：去首尾空白与末尾斜杠；误把完整接口路径粘进来时摘掉
+// /models、/chat/completions。
+function iphoneNormalizeApiBase(apiBase) {
+  let base = String(apiBase || '').trim().replace(/\/+$/, '');
+  base = base.replace(/\/(chat\/completions|models)$/i, '');
+  return base.replace(/\/+$/, '');
 }
 
-function iphoneGetAuthHeaders(settings) {
+function iphoneGetApiBase(settings) {
+  return iphoneNormalizeApiBase(settings?.apiUrl);
+}
+
+// 是否是需要附加 x-opencode-session 的 OpenCode 端点（大小写、末尾斜杠、误带
+// /chat/completions 都能识别；名单见 constants.js 的 IPHONE_OPENCODE_SESSION_API_BASES）。
+function iphoneIsOpenCodeSessionApiBase(apiBase) {
+  return IPHONE_OPENCODE_SESSION_API_BASES.includes(iphoneNormalizeApiBase(apiBase).toLowerCase());
+}
+
+// FNV-1a 32 位哈希（十六进制）：把聊天标识压成稳定、可安全放进 HTTP 头的短串。
+function iphoneHashToHex(text) {
+  const source = String(text || '');
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < source.length; i++) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+// 当前聊天的稳定标识（会话头派生用）：优先宿主 chatId，其次群聊 / 角色，最后回退本地。
+function iphoneGetChatSessionKey() {
+  const ctx = iphoneGetContextSafe();
+  if (!ctx) return 'local';
+  const chatId = String(ctx.chatId || '').trim();
+  if (chatId) return chatId;
+  const groupId = ctx.groupId !== undefined && ctx.groupId !== null ? String(ctx.groupId) : '';
+  if (groupId) return `g${groupId}`;
+  const characterId = ctx.characterId !== undefined && ctx.characterId !== null ? String(ctx.characterId) : '';
+  return characterId ? `c${characterId}` : 'local';
+}
+
+// OpenCode 会话 id：由当前聊天标识派生——同一聊天每次请求都相同（提供方要求
+// 「按会话稳定」，用于路由与 prompt 缓存），不同聊天互不相同。聊天标识可能含
+// 中文 / 空格 / 文件名后缀，不能直接当请求头值，所以取哈希。
+function iphoneGetOpenCodeSessionId() {
+  const chatKey = iphoneGetChatSessionKey();
+  return `iphone-${iphoneHashToHex(chatKey)}${iphoneHashToHex(`iphone:${chatKey}`)}`;
+}
+
+// 端点专属请求头（直连与宿主代理共用）。目前只有 OpenCode 端点需要按会话稳定的
+// x-opencode-session；其他端点返回空对象，请求与从前完全一致。
+function iphoneGetEndpointExtraHeaders(apiBase) {
+  const headers = {};
+  if (!iphoneIsOpenCodeSessionApiBase(apiBase)) return headers;
+  const sessionId = iphoneGetOpenCodeSessionId();
+  headers[IPHONE_OPENCODE_SESSION_HEADER] = sessionId;
+  iphoneLog('debug', 'OpenCode 端点：本请求已附加会话头', `${IPHONE_OPENCODE_SESSION_HEADER}: ${sessionId}`);
+  return headers;
+}
+
+// 直连请求头：Content-Type + Authorization + 端点专属头。
+function iphoneGetAuthHeaders(settings, apiBase) {
   const headers = { 'Content-Type': 'application/json' };
   const apiKey = String(settings?.apiKey || '').trim();
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  return headers;
+  return Object.assign(headers, iphoneGetEndpointExtraHeaders(apiBase || iphoneGetApiBase(settings)));
+}
+
+// TauriTavern 代理解析 custom_include_headers 的格式：值带引号
+// （`Authorization: "Bearer xxx"`，参考宿主自带 st-chatu8 扩展）；端点专属头
+// （OpenCode 的 x-opencode-session）按同样格式另起一行追加。非 OpenCode 端点
+// 的输出与改动前逐字一致（只有 Authorization 行，或空串）。
+function iphoneBuildIncludeHeaderLines(apiBase, settings) {
+  const apiKey = String(settings?.apiKey || '').trim();
+  const lines = [];
+  if (apiKey) lines.push(`Authorization: "Bearer ${apiKey}"`);
+  for (const [key, value] of Object.entries(iphoneGetEndpointExtraHeaders(apiBase))) {
+    lines.push(`${key}: "${String(value).replace(/"/g, '\\"')}"`);
+  }
+  return lines.join('\n');
 }
 
 function iphoneIsCrossOriginUrl(url) {
@@ -1581,9 +1662,9 @@ async function iphoneFetchText(url, options = {}) {
 }
 
 // 宿主代理的模型列表探测：POST /api/backends/chat-completions/status（TauriTavern）。
-// custom_include_headers 的值需带引号（`Authorization: "Bearer xxx"`），参数格式参考宿主自带扩展。
+// custom_include_headers 的值需带引号（`Authorization: "Bearer xxx"`），参数格式参考
+// 宿主自带扩展；OpenCode 端点另起一行附上 x-opencode-session。
 function iphoneRequestHostProxyModelList(apiBase, settings) {
-  const apiKey = String(settings?.apiKey || '').trim();
   return iphoneFetchText('/api/backends/chat-completions/status', {
     method: 'POST',
     headers: iphoneGetHostProxyHeaders(),
@@ -1591,8 +1672,8 @@ function iphoneRequestHostProxyModelList(apiBase, settings) {
       chat_completion_source: 'custom',
       custom_url: apiBase,
       reverse_proxy: apiBase,
-      proxy_password: apiKey,
-      custom_include_headers: apiKey ? `Authorization: "Bearer ${apiKey}"` : '',
+      proxy_password: String(settings?.apiKey || '').trim(),
+      custom_include_headers: iphoneBuildIncludeHeaderLines(apiBase, settings),
     }),
     cache: 'no-cache',
   });
@@ -1659,13 +1740,13 @@ async function iphoneFetchModelList(settings) {
           transport = 'direct-after-proxy-fallback';
           ({ response, responseText } = await iphoneFetchText(url, {
             method: 'GET',
-            headers: iphoneGetAuthHeaders(settings),
+            headers: iphoneGetAuthHeaders(settings, apiBase),
           }));
         }
       } else {
         ({ response, responseText } = await iphoneFetchText(url, {
           method: 'GET',
-          headers: iphoneGetAuthHeaders(settings),
+          headers: iphoneGetAuthHeaders(settings, apiBase),
         }));
       }
     } catch (error) {
@@ -1706,13 +1787,12 @@ async function iphoneFetchModelList(settings) {
 // ---------- 对话请求（OpenAI 兼容 /chat/completions；QQ 好友聊天页发消息用） ----------
 // 跨域先走宿主代理 /api/backends/chat-completions/generate（请求体与 /status 不同，
 // 参考 Kaleidoscope：custom_include_headers 的值需带引号），代理失败或返回无可用
-// 内容时回退直连再试一次。
+// 内容时回退直连再试一次。OpenCode 端点两条路径都带上 x-opencode-session。
 function iphoneBuildHostProxyChatBody(apiBase, settings, body) {
-  const apiKey = String(settings?.apiKey || '').trim();
   return {
     chat_completion_source: 'custom',
     custom_url: apiBase,
-    custom_include_headers: apiKey ? `Authorization: "Bearer ${apiKey}"` : '',
+    custom_include_headers: iphoneBuildIncludeHeaderLines(apiBase, settings),
     ...body,
   };
 }
@@ -1785,7 +1865,7 @@ async function iphoneRequestChatCompletion(settings, messages) {
           transport = 'direct-after-proxy-fallback';
           ({ response, responseText } = await iphoneFetchText(url, {
             method: 'POST',
-            headers: iphoneGetAuthHeaders(settings),
+            headers: iphoneGetAuthHeaders(settings, apiBase),
             body: JSON.stringify(body),
             timeoutMs: IPHONE_CHAT_TIMEOUT_MS,
           }));
@@ -1793,7 +1873,7 @@ async function iphoneRequestChatCompletion(settings, messages) {
       } else {
         ({ response, responseText } = await iphoneFetchText(url, {
           method: 'POST',
-          headers: iphoneGetAuthHeaders(settings),
+          headers: iphoneGetAuthHeaders(settings, apiBase),
           body: JSON.stringify(body),
           timeoutMs: IPHONE_CHAT_TIMEOUT_MS,
         }));
